@@ -1,0 +1,1 @@
+copy config.h nativelib\src\main\cpp\aubio\src

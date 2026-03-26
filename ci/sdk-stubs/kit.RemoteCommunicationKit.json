@@ -1,8 +1,0 @@
-{
-  "symbols": {
-    "rcp": {
-      "source": "@ohos.net.rcp.d.ts",
-      "bindings": "default"
-    }
-  }
-}
