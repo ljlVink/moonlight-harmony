@@ -8,28 +8,30 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
-import { router, promptAction, LengthMetrics } from '@kit.ArkUI';
-import { display } from '@kit.ArkUI';
+
+import { display, LengthMetrics, promptAction, router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { displaySync } from '@kit.ArkGraphics2D';
 import { VirtualControllerOverlay } from '../components/VirtualController';
 import { PerformanceOverlay } from '../components/PerformanceOverlay';
 import { OptionPickerDialog, OptionPickerDialogConfig } from '../components/OptionPickerDialog';
-import { GameMenuDialog, GameMenuCallbacks } from '../components/GameMenuDialog';
+import { GameMenuCallbacks, GameMenuDialog } from '../components/GameMenuDialog';
 import { StreamMenuManager } from '../components/StreamMenuManager';
 import { StreamViewModel, TouchMode } from '../viewmodel/StreamViewModel';
 import { TouchInputHandler, TouchInputMode } from '../service/TouchInputHandler';
 import { StreamWindowManager } from '../service/StreamWindowManager';
-import { ShortcutManager, Shortcut } from '../components/ShortcutManager';
-import { ShortcutEditorDialog, ShortcutEditData } from '../components/ShortcutEditorDialog';
-import { GamepadManager, GamepadState, MoonlightControllerType, MouseEmulationCallback } from '../service/GamepadManager';
+import { Shortcut, ShortcutManager } from '../components/ShortcutManager';
+import { ShortcutEditData, ShortcutEditorDialog } from '../components/ShortcutEditorDialog';
+import {
+  GamepadManager,
+  GamepadState,
+  MoonlightControllerType,
+  MouseEmulationCallback
+} from '../service/GamepadManager';
 import { GyroAssistService } from '../service/GyroAssistService';
-import { MoonBridge, BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE } from '../service/MoonBridge';
+import { BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE, MoonBridge } from '../service/MoonBridge';
 import { SuperCmd } from '../service/NvHttp';
-import { VirtualKey, KeyAction, sendShortcutKeys } from '../service/CustomKeyTypes';
+import { KeyAction, sendShortcutKeys, VirtualKey } from '../service/CustomKeyTypes';
 import { pointer } from '@kit.InputKit';
 import { InputInterceptorService } from '../service/InputInterceptorService';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
@@ -43,7 +45,7 @@ import { CustomKeyManager, CustomKeyManagerHost, SessionLike } from '../service/
 import { CustomKeyStore } from '../service/CustomKeyStore';
 import { PanZoomHandler, PanZoomState, PointXY } from '../service/PanZoomHandler';
 
-/**
+
 class MoonBridgeMouseCallback implements MouseEmulationCallback {
   sendMouseMove(deltaX: number, deltaY: number): void {
     MoonBridge.sendMouseMove(deltaX, deltaY);
@@ -71,7 +73,7 @@ interface StreamPageParams {
   useVdd?: boolean;
 }
 
-/**
+
 class CustomKeyManagerHostImpl implements CustomKeyManagerHost {
   getSessionFn: () => SessionLike | null = () => null;
   toggleVirtualKeyboardFn: () => void = () => {};
@@ -138,23 +140,14 @@ struct StreamPage {
   @State customKeyEditMode: boolean = false;
   @State customKeyProfileVersion: number = 0;
   @State private customKeyHitReady: number = 0;
-  /**
   private useVirtualKeyboard: boolean = false;
-  /**
   private pendingShowIME: boolean = false;
-  /**
   @State touchPassthrough: boolean = false;
-  /**
   @State controllerScaleValue: number = 1.0;
-  /**
   @State controllerOpacityValue: number = 0.75;
-  /**
   @State isTouchOverrideEnabled: boolean = false;
-  /**
   @State videoScale: number = 1.0;
-  /**
   @State videoTranslateX: number = 0;
-  /**
   @State videoTranslateY: number = 0;
   
   private mouseDisplaySync: displaySync.DisplaySync | null = null;
@@ -716,9 +709,6 @@ struct StreamPage {
     }
   }
 
-  /**
-   *
-   */
   private startMouseKeepAlive(): void {
     if (this.mouseDisplaySync) return;
     try {

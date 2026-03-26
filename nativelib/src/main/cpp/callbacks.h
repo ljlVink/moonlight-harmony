@@ -24,8 +24,8 @@
 extern "C" {
 #endif
 
-// =============================================================================
-// =============================================================================
+
+
 
 /**
  * 
@@ -34,8 +34,8 @@ void Callbacks_Init(napi_env env, napi_value callbacks);
 
 void Callbacks_Cleanup(void);
 
-// =============================================================================
-// =============================================================================
+
+
 
 typedef struct {
     napi_threadsafe_function tsfn_setup;
@@ -69,15 +69,15 @@ typedef struct {
     napi_threadsafe_function tsfn_resolutionChanged;
 } ConnectionListenerCallbacks;
 
-// =============================================================================
-// =============================================================================
+
+
 
 extern VideoDecoderCallbacks g_videoCallbacks;
 extern AudioRendererCallbacks g_audioCallbacks;
 extern ConnectionListenerCallbacks g_connCallbacks;
 
-// =============================================================================
-// =============================================================================
+
+
 
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags);
 void BridgeDrStart(void);

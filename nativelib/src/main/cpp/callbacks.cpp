@@ -37,9 +37,9 @@ extern "C" {
 
 #define LOG_TAG "MoonlightCallbacks"
 
-// =============================================================================
+
 // Global variables
-// =============================================================================
+
 
 static napi_env g_env = nullptr;
 static std::mutex g_mutex;
@@ -56,9 +56,9 @@ static short* g_decodedAudioBuffer = nullptr;
 // Bass energy analyzer (extern for moonlight_bridge.cpp access)
 BassEnergyAnalyzer g_bassAnalyzer;
 
-// =============================================================================
+
 // Helper functions
-// =============================================================================
+
 
 /**
  * Create thread-safe function
@@ -88,9 +88,9 @@ static napi_status CreateThreadsafeFunction(
     );
 }
 
-// =============================================================================
+
 // Callback JS call functions
-// =============================================================================
+
 
 // Generic parameter passing structure
 typedef struct {
@@ -357,9 +357,9 @@ static void CallJs_BassEnergy(napi_env env, napi_value js_callback, void* contex
     delete cbData;
 }
 
-// =============================================================================
+
 // Callback initialization
-// =============================================================================
+
 
 void Callbacks_Init(napi_env env, napi_value callbacks) {
     std::lock_guard<std::mutex> lock(g_mutex);
@@ -492,9 +492,9 @@ void Callbacks_Cleanup(void) {
     OH_LOG_INFO(LOG_APP, "Callbacks cleaned up");
 }
 
-// =============================================================================
+
 // moonlight-common-c callback bridge implementation
-// =============================================================================
+
 
 // Video decoder config parameters (saved for decoder creation)
 static int g_videoFormat = 0;

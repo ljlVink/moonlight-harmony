@@ -8,19 +8,14 @@
  * (at your option) any later version.
  */
 
-import { router } from '@kit.ArkUI';
 import { AppColors, AppSizes, AppSpacing } from '../common/Theme';
 
 export interface TitleBarConfig {
-  /**
+
   onlineCount: number;
-  /**
   totalCount: number;
-  /**
   onAboutClick: () => void;
-  /**
   onScanImport: () => void;
-  /**
   onSettingsClick: () => void;
 }
 

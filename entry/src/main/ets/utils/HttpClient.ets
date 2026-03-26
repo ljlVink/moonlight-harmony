@@ -12,15 +12,11 @@ import { rcp } from '@kit.RemoteCommunicationKit';
 import { StringUtil } from './StringUtil';
 
 export interface HttpClientConfig {
-  /**
+
   connectTimeout?: number;
-  /**
   transferTimeout?: number;
-  /**
   skipServerValidation?: boolean;
-  /**
   clientCertPath?: string;
-  /**
   clientKeyPath?: string;
 }
 
@@ -29,15 +25,10 @@ export interface HttpResponse {
   body: string;
 }
 
-/**
- * 
- */
+
 export class HttpClient {
-  /**
   static readonly DEFAULT_CONNECT_TIMEOUT = 5000;
-  /**
   static readonly DEFAULT_TRANSFER_TIMEOUT = 7000;
-  /**
   static readonly LONG_TRANSFER_TIMEOUT = 300000;
 
   static async get(url: string, config?: HttpClientConfig): Promise<string> {
@@ -126,9 +117,7 @@ export class HttpClient {
     });
   }
 
-  /**
-   * @returns ArrayBuffer
-   */
+
   static async getBinary(url: string, config?: HttpClientConfig): Promise<ArrayBuffer> {
     const connectTimeout = config?.connectTimeout ?? HttpClient.DEFAULT_CONNECT_TIMEOUT;
     const transferTimeout = config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT;
@@ -183,9 +172,7 @@ export class HttpClient {
     }
   }
 
-  /**
-   * @returns ArrayBuffer
-   */
+
   static async getBinaryWithClientCert(
     url: string,
     certPath: string,

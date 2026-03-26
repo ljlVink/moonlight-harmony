@@ -9,25 +9,33 @@
  */
 
 import { inputDevice } from '@kit.InputKit';
-import { UsbDriverService, UsbDriverListener, AbstractController, ButtonFlags } from './usbdriver/index';
-import { 
-  gameControllerService, 
-  AxisType, 
-  GameControllerDeviceInfo 
-} from './GameControllerService';
-import { SettingsService, SettingsKeys } from './SettingsService';
+import { AbstractController, UsbDriverListener, UsbDriverService } from './usbdriver/index';
+import { AxisType, GameControllerDeviceInfo, gameControllerService } from './GameControllerService';
+import { SettingsKeys, SettingsService } from './SettingsService';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { DeviceSensorService, LI_MOTION_TYPE_ACCEL, LI_MOTION_TYPE_GYRO } from './DeviceSensorService';
-import { MoonBridge } from './MoonBridge';
-import { MouseEmulationService, MouseEmulationCallback } from './MouseEmulationService';
+import { MouseEmulationCallback, MouseEmulationService } from './MouseEmulationService';
 import { GamepadVibrationService } from './GamepadVibrationService';
 import {
-  GamepadState, GamepadInfo, GamepadInputListener, DeviceBusType,
-  MoonlightButton, GCButton2313Action, GCButton2313ActionCallback,
-  MoonlightControllerType, VendorId, ProductId,
-  AXIS_MAX, TRIGGER_MAX, SPECIAL_KEYCODE_MIN, SPECIAL_KEYCODE_MAX,
-  buttonMap, gcButtonMap, GAMEPAD_NAME_KEYWORDS, NON_GAMEPAD_KEYWORDS, isNonGamepadByName,
-  hasStrongNonGamepadKeyword
+  AXIS_MAX,
+  buttonMap,
+  DeviceBusType,
+  GAMEPAD_NAME_KEYWORDS,
+  GamepadInfo,
+  GamepadInputListener,
+  GamepadState,
+  GCButton2313Action,
+  GCButton2313ActionCallback,
+  gcButtonMap,
+  hasStrongNonGamepadKeyword,
+  isNonGamepadByName,
+  MoonlightButton,
+  MoonlightControllerType,
+  ProductId,
+  SPECIAL_KEYCODE_MAX,
+  SPECIAL_KEYCODE_MIN,
+  TRIGGER_MAX,
+  VendorId
 } from './GamepadTypes';
 
 export {
@@ -37,9 +45,7 @@ export {
 } from './GamepadTypes';
 export { MouseEmulationCallback } from './MouseEmulationService';
 
-/**
- * 
- */
+
 export class GamepadManager implements UsbDriverListener {
   private static instance: GamepadManager;
   private static readonly DEBUG = false;
@@ -54,7 +60,6 @@ export class GamepadManager implements UsbDriverListener {
   private usbDriverService: UsbDriverService;
   
   private useGameControllerKit = false;
-  /**
   private useUsbDriverMode = false;
   private modeInitialized = false;
   private gcDeviceIdToSlot = new Map<string, number>();
@@ -83,31 +88,20 @@ export class GamepadManager implements UsbDriverListener {
   private gcButton2313Action: GCButton2313Action = 'guide';
   private gcButton2313ActionCallback: GCButton2313ActionCallback | null = null;
   
-  /**
+
   private mouseEmulationService: MouseEmulationService;
-  /**
+
   private vibrationService: GamepadVibrationService;
   
   private gcDpadAxisActive = new Set<string>();
-  /**
   private dpadAxisActive = new Set<number>();
-
-  /**
   private gcAxisFlushPending = new Set<number>();
   private gcAxisFlushTimerId: number = -1;
-  
-  /**
   private startKeyDownTime: number = 0;
-  /**
   private static readonly START_LONG_PRESS_MS = 750;
-  /**
   private enableStartKeyMenu = true;
-  /**
   private showGameMenuCallback: (() => void) | null = null;
-
-  /**
   private stickDeadzone: number = 0.07;
-  /**
   private static readonly TRIGGER_DEADZONE: number = 0.13;
 
   private handleStartLongPress(isPressed: boolean): boolean {
@@ -137,10 +131,6 @@ export class GamepadManager implements UsbDriverListener {
     this.loadDeadzoneSetting();
   }
 
-  /**
-   * 
-   * 
-   */
   private loadUsbDriverSetting(): void {
     Promise.all([
       PreferencesUtil.get<boolean>(SettingsKeys.USB_DRIVER_ENABLED, false),
@@ -369,24 +359,22 @@ export class GamepadManager implements UsbDriverListener {
     return this.useGameControllerKit && this.gcDeviceIdToSlot.size > 0;
   }
 
-  /**
+
   setMouseEmulationCallback(callback: MouseEmulationCallback | null): void {
     this.mouseEmulationService.setCallback(callback);
   }
 
-  /**
+
   toggleMouseEmulation(): void {
     this.mouseEmulationService.toggle();
   }
 
-  /**
+
   isMouseEmulationActive(): boolean {
     return this.mouseEmulationService.isActive();
   }
 
-  /**
-   * 
-   */
+
   async reloadSettings(): Promise<void> {
     await Promise.all([
       this.loadStartKeyMenuSetting(),
@@ -404,9 +392,6 @@ export class GamepadManager implements UsbDriverListener {
     });
   }
 
-  /**
-   * 
-   */
   reattachInputCallbacks(): void {
     console.info('[GAMEPAD] 重新挂载输入回调');
 
@@ -921,10 +906,8 @@ export class GamepadManager implements UsbDriverListener {
       }
     }
   }
-  
-  /**
-   *
-   */
+
+
   private async verifyAndRegisterGCDevice(deviceId: string, info: GameControllerDeviceInfo): Promise<void> {
     try {
       const deviceIds = await inputDevice.getDeviceIds();
@@ -1008,8 +991,8 @@ export class GamepadManager implements UsbDriverListener {
       GamepadManager.DEBUG && console.info(`[GAMEPAD-GC] 未映射的按键: buttonCode=${buttonCode}`);
     }
   }
-  
-  /**
+
+
   private gcAxisFirstEventLogged = new Set<string>();
 
   private handleGCAxisEvent(deviceId: string, axisType: number, x: number, y: number): void {
@@ -1065,7 +1048,7 @@ export class GamepadManager implements UsbDriverListener {
     this.scheduleGCAxisFlush();
   }
 
-  /**
+
   private scheduleGCAxisFlush(): void {
     if (this.gcAxisFlushTimerId !== -1) {
       return;
@@ -1107,11 +1090,7 @@ export class GamepadManager implements UsbDriverListener {
       this.listener.onGamepadInput(slot, copy);
     }
   }
-  
-  /**
-   * 
-   * 
-   */
+
   handleKeyEvent(deviceId: number, keyCode: number, isPressed: boolean): void {
     if (!this.modeInitialized) return;
     
@@ -1411,10 +1390,8 @@ export class GamepadManager implements UsbDriverListener {
     this.slotOccupied = [false, false, false, false];
     this.listener = null;
   }
-  
-  /**
-   * 
-   */
+
+
   reportControllerState(
     controllerId: number,
     buttonFlags: number,
@@ -1548,10 +1525,6 @@ export class GamepadManager implements UsbDriverListener {
     }
   }
 
-  /**
-   * 
-   * 
-   */
   handleSetMotionEventState(controllerNumber: number, motionType: number, reportRateHz: number): void {
     console.info(`[GAMEPAD] 主机请求传感器: ctrl=${controllerNumber}, type=${motionType}, rate=${reportRateHz}Hz`);
 
@@ -1725,29 +1698,28 @@ export class GamepadManager implements UsbDriverListener {
       isUsb: true, bus: DeviceBusType.BUS_USB
     });
   }
-  
 
-  /**
+
   handleRumble(controllerNumber: number, lowFreqMotor: number, highFreqMotor: number): void {
     this.vibrationService.handleRumble(controllerNumber, lowFreqMotor, highFreqMotor);
   }
 
-  /**
+
   handleRumbleTriggers(controllerNumber: number, leftTrigger: number, rightTrigger: number): void {
     this.vibrationService.handleRumbleTriggers(controllerNumber, leftTrigger, rightTrigger);
   }
 
-  /**
+
   rumbleUsbControllers(controllerNumber: number, lowFreqMotor: number, highFreqMotor: number): void {
     this.vibrationService.rumbleUsbControllersOnly(controllerNumber, lowFreqMotor, highFreqMotor);
   }
 
-  /**
+
   hasUsbControllers(): boolean {
     return this.vibrationService.hasUsbControllers();
   }
 
-  /**
+
   stopAllVibration(): void {
     this.vibrationService.stopAll();
   }

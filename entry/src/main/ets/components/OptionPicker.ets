@@ -8,49 +8,24 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
-import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
+import { AppColors, AppSizes, AppSpacing } from '../common/Theme';
 
 export interface OptionItem {
-  /**
   title: string;
-  /**
   subtitle?: string;
-  /**
   value: string | number;
-  /**
   icon?: Resource;
 }
 
 export interface OptionPickerConfig {
-  /**
   title: string;
-  /**
   subtitle?: string;
-  /**
   options: OptionItem[];
-  /**
   selectedValue: string | number;
-  /**
   onSelect: (option: OptionItem) => void;
-  /**
   onCancel?: () => void;
 }
 
-/**
- * 
- * 
- * ```
- * Column() {
- * }
- * .bindSheet($$this.showPicker, this.OptionPickerBuilder(), {
- *   height: SheetSize.FIT_CONTENT,
- *   backgroundColor: AppColors.Background
- * })
- * ```
- */
 @Component
 export struct OptionPicker {
   @Prop config: OptionPickerConfig;

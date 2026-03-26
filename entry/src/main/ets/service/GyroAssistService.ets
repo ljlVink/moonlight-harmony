@@ -8,32 +8,21 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- *   DeviceSensorService (deg/s) → GyroAssistService.onGyroData()
- *
- *
- *   effectiveSensitivity = 180° / multiplier
- */
 
 import { DeviceSensorService, LI_MOTION_TYPE_GYRO, SensorDataCallback } from './DeviceSensorService';
 
-/**
 const STICK_MAX: number = 0x7FFE; // 32766
 
-/**
 export const GYRO_ACTIVATION_ALWAYS: number = -1;
 export const GYRO_ACTIVATION_LT: number = 0;
 export const GYRO_ACTIVATION_RT: number = 1;
 
-/**
 const TRIGGER_ACTIVATE_THRESHOLD: number = 51; // 255 * 0.2
 
-/**
+
 const DEFAULT_SENSITIVITY: number = 2.0;
 
-/**
+
 const GYRO_REPORT_RATE_HZ: number = 120;
 
 const PHYS_EPSILON: number = 512;
@@ -134,9 +123,7 @@ export class GyroAssistService {
     this._invertY = invert;
   }
 
-  /**
-   * @param key GYRO_ACTIVATION_ALWAYS / GYRO_ACTIVATION_LT / GYRO_ACTIVATION_RT
-   */
+
   setActivationKey(key: number): void {
     this._activationKey = key;
     if (key === GYRO_ACTIVATION_ALWAYS) {
@@ -159,9 +146,7 @@ export class GyroAssistService {
     }
   }
 
-  /**
-   *
-   */
+
   private onGyroData(controllerNumber: number, motionType: number,
     gx: number, gy: number, gz: number): void {
     if (motionType !== LI_MOTION_TYPE_GYRO) return;
@@ -221,9 +206,7 @@ export class GyroAssistService {
     }
   }
 
-  /**
-   *
-   */
+
   fuseRightStick(physRsX: number, physRsY: number): StickXY {
     const result: StickXY = { x: physRsX, y: physRsY };
     if (!this._enabled || !this.holdActive) {
@@ -345,7 +328,7 @@ export interface GyroAssistSettings {
   activationKey: number;
 }
 
-/**
+
 export interface StickXY {
   x: number;
   y: number;

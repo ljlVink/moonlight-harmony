@@ -16,9 +16,7 @@ interface Asn1ElementInfo {
   totalLength: number;
 }
 
-/**
- *
- */
+
 export class CryptoUtil {
   static generateRandomBytes(length: number): Uint8Array {
     const random = cryptoFramework.createRandom();
@@ -165,73 +163,117 @@ export class CryptoUtil {
     }
   }
 
-  /**
+  /*
    *
-   * TBSCertificate ::= SEQUENCE {
-   *   version [0] EXPLICIT INTEGER DEFAULT v1,
-   *   serialNumber INTEGER,
-   *   signature AlgorithmIdentifier,
-   *   issuer Name,
-   *   validity Validity,
-   *   subject Name,
+   * SEQUENCE {
+   *   SEQUENCE { ... } -- TBSCertificate
+   *   SEQUENCE { ... } -- signatureAlgorithm
    * }
    */
-  private static extractSubjectPublicKeyInfo(certDer: Uint8Array): Uint8Array | null {
+  static extractCertSignature(certDer: Uint8Array): Uint8Array {
     try {
-      let pos = 0;
-
-      pos = CryptoUtil.skipAsn1Tag(certDer, pos, 0x30);
-      if (pos < 0) return null;
-      pos = CryptoUtil.skipAsn1Length(certDer, pos);
-      if (pos < 0) return null;
-
-      pos = CryptoUtil.skipAsn1Tag(certDer, pos, 0x30);
-      if (pos < 0) return null;
-      pos = CryptoUtil.skipAsn1Length(certDer, pos);
-      if (pos < 0) return null;
-
-      if (certDer[pos] === 0xA0) {
-        pos = CryptoUtil.skipAsn1Element(certDer, pos);
-        if (pos < 0) return null;
+      if (certDer[0] !== 0x30) {
+        console.error('CryptoUtil: 证书不是以 SEQUENCE 开始');
+        return certDer;
       }
 
-      pos = CryptoUtil.skipAsn1Element(certDer, pos);
-      if (pos < 0) return null;
+      let pos = 1;
 
-      // signature AlgorithmIdentifier SEQUENCE
-      pos = CryptoUtil.skipAsn1Element(certDer, pos);
-      if (pos < 0) return null;
+      let outerLen: number;
+      if ((certDer[pos] & 0x80) === 0) {
+        outerLen = certDer[pos];
+        pos++;
+      } else {
+        const lenBytes = certDer[pos] & 0x7F;
+        pos++;
+        outerLen = 0;
+        for (let i = 0; i < lenBytes; i++) {
+          outerLen = (outerLen << 8) | certDer[pos + i];
+        }
+        pos += lenBytes;
+      }
 
-      // issuer Name SEQUENCE
-      pos = CryptoUtil.skipAsn1Element(certDer, pos);
-      if (pos < 0) return null;
+      if (certDer[pos] !== 0x30) {
+        console.error('CryptoUtil: TBSCertificate 不是 SEQUENCE');
+        return certDer;
+      }
+      pos++;
 
-      // validity Validity SEQUENCE
-      pos = CryptoUtil.skipAsn1Element(certDer, pos);
-      if (pos < 0) return null;
+      let tbsLen: number;
+      if ((certDer[pos] & 0x80) === 0) {
+        tbsLen = certDer[pos];
+        pos++;
+      } else {
+        const lenBytes = certDer[pos] & 0x7F;
+        pos++;
+        tbsLen = 0;
+        for (let i = 0; i < lenBytes; i++) {
+          tbsLen = (tbsLen << 8) | certDer[pos + i];
+        }
+        pos += lenBytes;
+      }
+      pos += tbsLen;
 
-      // subject Name SEQUENCE
-      pos = CryptoUtil.skipAsn1Element(certDer, pos);
-      if (pos < 0) return null;
+      if (certDer[pos] !== 0x30) {
+        console.error('CryptoUtil: signatureAlgorithm 不是 SEQUENCE');
+        return certDer;
+      }
+      pos++;
 
-      const spkiResult = CryptoUtil.readAsn1Element(certDer, pos);
-      if (!spkiResult) return null;
+      let sigAlgLen: number;
+      if ((certDer[pos] & 0x80) === 0) {
+        sigAlgLen = certDer[pos];
+        pos++;
+      } else {
+        const lenBytes = certDer[pos] & 0x7F;
+        pos++;
+        sigAlgLen = 0;
+        for (let i = 0; i < lenBytes; i++) {
+          sigAlgLen = (sigAlgLen << 8) | certDer[pos + i];
+        }
+        pos += lenBytes;
+      }
+      pos += sigAlgLen;
 
-      console.info(`CryptoUtil: 提取 SubjectPublicKeyInfo 成功，长度 = ${spkiResult.length}`);
-      return certDer.slice(pos, pos + spkiResult.totalLength);
+      if (certDer[pos] !== 0x03) {
+        console.error('CryptoUtil: signatureValue 不是 BIT STRING');
+        return certDer;
+      }
+      pos++;
+
+      let bitStringLen: number;
+      if ((certDer[pos] & 0x80) === 0) {
+        bitStringLen = certDer[pos];
+        pos++;
+      } else {
+        const lenBytes = certDer[pos] & 0x7F;
+        pos++;
+        bitStringLen = 0;
+        for (let i = 0; i < lenBytes; i++) {
+          bitStringLen = (bitStringLen << 8) | certDer[pos + i];
+        }
+        pos += lenBytes;
+      }
+
+      pos++;
+      bitStringLen--;
+
+      const signature = certDer.slice(pos, pos + bitStringLen);
+      console.info(`CryptoUtil: 提取签名成功，长度 = ${signature.length}`);
+      return signature;
     } catch (err) {
-      console.error('CryptoUtil: extractSubjectPublicKeyInfo 失败', err);
-      return null;
+      console.error('CryptoUtil: 提取签名失败', err);
+      return certDer;
     }
   }
 
-  /**
+
   private static skipAsn1Tag(data: Uint8Array, pos: number, expectedTag: number): number {
     if (pos >= data.length || data[pos] !== expectedTag) return -1;
     return pos + 1;
   }
 
-  /**
+
   private static skipAsn1Length(data: Uint8Array, pos: number): number {
     if (pos >= data.length) return -1;
     if ((data[pos] & 0x80) === 0) {
@@ -241,14 +283,14 @@ export class CryptoUtil {
     return pos + 1 + lenBytes;
   }
 
-  /**
+
   private static skipAsn1Element(data: Uint8Array, pos: number): number {
     const result = CryptoUtil.readAsn1Element(data, pos);
     if (!result) return -1;
     return pos + result.totalLength;
   }
 
-  /**
+
   private static readAsn1Element(data: Uint8Array, pos: number): Asn1ElementInfo | null {
     if (pos >= data.length) return null;
     let offset = pos + 1;
@@ -470,107 +512,85 @@ export class CryptoUtil {
     return CryptoUtil.asn1Sequence(certContent);
   }
 
-  /**
-   * 
-   * SEQUENCE {
-   *   SEQUENCE { ... } -- TBSCertificate
-   *   SEQUENCE { ... } -- signatureAlgorithm
+  /*
+   *
+   * TBSCertificate ::= SEQUENCE {
+   *   version [0] EXPLICIT INTEGER DEFAULT v1,
+   *   serialNumber INTEGER,
+   *   signature AlgorithmIdentifier,
+   *   issuer Name,
+   *   validity Validity,
+   *   subject Name,
    * }
    */
-  static extractCertSignature(certDer: Uint8Array): Uint8Array {
+  private static extractSubjectPublicKeyInfo(certDer: Uint8Array): Uint8Array | null {
     try {
-      if (certDer[0] !== 0x30) {
-        console.error('CryptoUtil: 证书不是以 SEQUENCE 开始');
-        return certDer;
+      let pos = 0;
+
+      pos = CryptoUtil.skipAsn1Tag(certDer, pos, 0x30);
+      if (pos < 0) {
+        return null;
+      }
+      pos = CryptoUtil.skipAsn1Length(certDer, pos);
+      if (pos < 0) {
+        return null;
       }
 
-      let pos = 1;
-      
-      let outerLen: number;
-      if ((certDer[pos] & 0x80) === 0) {
-        outerLen = certDer[pos];
-        pos++;
-      } else {
-        const lenBytes = certDer[pos] & 0x7F;
-        pos++;
-        outerLen = 0;
-        for (let i = 0; i < lenBytes; i++) {
-          outerLen = (outerLen << 8) | certDer[pos + i];
+      pos = CryptoUtil.skipAsn1Tag(certDer, pos, 0x30);
+      if (pos < 0) {
+        return null;
+      }
+      pos = CryptoUtil.skipAsn1Length(certDer, pos);
+      if (pos < 0) {
+        return null;
+      }
+
+      if (certDer[pos] === 0xA0) {
+        pos = CryptoUtil.skipAsn1Element(certDer, pos);
+        if (pos < 0) {
+          return null;
         }
-        pos += lenBytes;
       }
 
-      if (certDer[pos] !== 0x30) {
-        console.error('CryptoUtil: TBSCertificate 不是 SEQUENCE');
-        return certDer;
-      }
-      pos++;
-      
-      let tbsLen: number;
-      if ((certDer[pos] & 0x80) === 0) {
-        tbsLen = certDer[pos];
-        pos++;
-      } else {
-        const lenBytes = certDer[pos] & 0x7F;
-        pos++;
-        tbsLen = 0;
-        for (let i = 0; i < lenBytes; i++) {
-          tbsLen = (tbsLen << 8) | certDer[pos + i];
-        }
-        pos += lenBytes;
-      }
-      pos += tbsLen;
-
-      if (certDer[pos] !== 0x30) {
-        console.error('CryptoUtil: signatureAlgorithm 不是 SEQUENCE');
-        return certDer;
-      }
-      pos++;
-      
-      let sigAlgLen: number;
-      if ((certDer[pos] & 0x80) === 0) {
-        sigAlgLen = certDer[pos];
-        pos++;
-      } else {
-        const lenBytes = certDer[pos] & 0x7F;
-        pos++;
-        sigAlgLen = 0;
-        for (let i = 0; i < lenBytes; i++) {
-          sigAlgLen = (sigAlgLen << 8) | certDer[pos + i];
-        }
-        pos += lenBytes;
-      }
-      pos += sigAlgLen;
-
-      if (certDer[pos] !== 0x03) {
-        console.error('CryptoUtil: signatureValue 不是 BIT STRING');
-        return certDer;
-      }
-      pos++;
-
-      let bitStringLen: number;
-      if ((certDer[pos] & 0x80) === 0) {
-        bitStringLen = certDer[pos];
-        pos++;
-      } else {
-        const lenBytes = certDer[pos] & 0x7F;
-        pos++;
-        bitStringLen = 0;
-        for (let i = 0; i < lenBytes; i++) {
-          bitStringLen = (bitStringLen << 8) | certDer[pos + i];
-        }
-        pos += lenBytes;
+      pos = CryptoUtil.skipAsn1Element(certDer, pos);
+      if (pos < 0) {
+        return null;
       }
 
-      pos++;
-      bitStringLen--;
+      // signature AlgorithmIdentifier SEQUENCE
+      pos = CryptoUtil.skipAsn1Element(certDer, pos);
+      if (pos < 0) {
+        return null;
+      }
 
-      const signature = certDer.slice(pos, pos + bitStringLen);
-      console.info(`CryptoUtil: 提取签名成功，长度 = ${signature.length}`);
-      return signature;
+      // issuer Name SEQUENCE
+      pos = CryptoUtil.skipAsn1Element(certDer, pos);
+      if (pos < 0) {
+        return null;
+      }
+
+      // validity Validity SEQUENCE
+      pos = CryptoUtil.skipAsn1Element(certDer, pos);
+      if (pos < 0) {
+        return null;
+      }
+
+      // subject Name SEQUENCE
+      pos = CryptoUtil.skipAsn1Element(certDer, pos);
+      if (pos < 0) {
+        return null;
+      }
+
+      const spkiResult = CryptoUtil.readAsn1Element(certDer, pos);
+      if (!spkiResult) {
+        return null;
+      }
+
+      console.info(`CryptoUtil: 提取 SubjectPublicKeyInfo 成功，长度 = ${spkiResult.length}`);
+      return certDer.slice(pos, pos + spkiResult.totalLength);
     } catch (err) {
-      console.error('CryptoUtil: 提取签名失败', err);
-      return certDer;
+      console.error('CryptoUtil: extractSubjectPublicKeyInfo 失败', err);
+      return null;
     }
   }
 

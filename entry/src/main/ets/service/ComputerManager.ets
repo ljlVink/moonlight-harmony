@@ -8,15 +8,15 @@
  * (at your option) any later version.
  */
 
-import { ComputerInfo, ComputerState, PairState, ComputerInfoBuilder, selectBestAddress } from '../model/ComputerInfo';
+import { ComputerInfo, ComputerInfoBuilder, ComputerState, PairState, selectBestAddress } from '../model/ComputerInfo';
 import { NvHttp, ServerInfo } from './NvHttp';
 import { PairingManager, PairState as PMPairState } from './PairingManager';
-import { MdnsDiscovery, DiscoveredComputer } from './MdnsDiscovery';
+import { DiscoveredComputer, MdnsDiscovery } from './MdnsDiscovery';
 import { ComputerPersistence } from './ComputerPersistence';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { CryptoUtil } from '../utils/CryptoUtil';
 import { WakeOnLan } from './WakeOnLan';
-import { isLanAddress, getBestIpv6Address, isIPv6Address } from '../utils/NetHelper';
+import { getBestIpv6Address, isIPv6Address, isLanAddress } from '../utils/NetHelper';
 import { connection } from '@kit.NetworkKit';
 import { MAX_PORT } from '../common/NetworkConstants';
 import { common } from '@kit.AbilityKit';
@@ -57,9 +57,7 @@ export class ComputerManager {
   /** Offline polling backoff: tracks consecutive offline count, polls offline hosts every N rounds */
   private offlineStreak: Map<string, number> = new Map();
   
-  // ===========================================================================
   // Initialization & Singleton
-  // ===========================================================================
   
   private constructor() {
     // mdnsDiscovery needs to be initialized with context in init()
@@ -112,9 +110,7 @@ export class ComputerManager {
     this.onComputerListChanged = callback;
   }
 
-  // ===========================================================================
   // mDNS Discovery
-  // ===========================================================================
   
   /**
    * Handle mDNS discovered computer
@@ -224,9 +220,7 @@ export class ComputerManager {
     }
   }
 
-  // ===========================================================================
   // CRUD Operations
-  // ===========================================================================
   
   /**
    * Get all computers list
@@ -466,9 +460,7 @@ export class ComputerManager {
     await this.saveComputers();
   }
 
-  // ===========================================================================
   // Polling & Network Listener
-  // ===========================================================================
   
   /**
    * Refresh all computer status

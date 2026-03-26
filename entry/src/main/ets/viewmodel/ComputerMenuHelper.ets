@@ -8,39 +8,23 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
 import { OptionItem } from '../components/OptionPickerDialog';
 import { ObservableComputer } from './ComputerViewModel';
-
 export interface ComputerMenuCallbacks {
-  /**
   onWake: (computer: ObservableComputer) => void;
-  /**
   onPair: (computer: ObservableComputer) => void;
-  /**
   onResumeGame: (computer: ObservableComputer) => void | Promise<void>;
-  /**
   onQuitGame: (computer: ObservableComputer) => void;
-  /**
   onAppList: (computer: ObservableComputer) => void;
-  /**
   onUnpair: (computer: ObservableComputer) => void;
-  /**
   onSleep: (computer: ObservableComputer) => void;
-  /**
   onTestNetwork: (computer: ObservableComputer) => void;
-  /**
   onShowDetails: (computer: ObservableComputer) => void;
-  /**
   onDelete: (computer: ObservableComputer) => void;
 }
 
 export interface ComputerMenuResult {
-  /**
   options: OptionItem[];
-  /**
   actionMap: Map<string, () => void>;
 }
 

@@ -11,28 +11,50 @@
 /**
  * Streaming game menu dialog - Cream style + transparent glass effect
  */
-import { display, promptAction } from '@kit.ArkUI';
+import { ColorMetrics, display, LengthMetrics, promptAction } from '@kit.ArkUI';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
-import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
 import { StreamViewModel } from '../viewmodel/StreamViewModel';
-import { VirtualKey, sendShortcutKeys } from '../service/CustomKeyTypes';
+import { sendShortcutKeys, VirtualKey } from '../service/CustomKeyTypes';
 import { CustomKeyStore } from '../service/CustomKeyStore';
-import { ShortcutManager, Shortcut } from './ShortcutManager';
+import { Shortcut, ShortcutManager } from './ShortcutManager';
 import { ActionDialog, ActionDialogConfig, ConfirmDialog, ConfirmDialogConfig } from './ConfirmDialog';
 import { SuperCmd } from '../service/NvHttp';
-import { GyroAssistService, GYRO_ACTIVATION_ALWAYS, GYRO_ACTIVATION_LT, GYRO_ACTIVATION_RT } from '../service/GyroAssistService';
+import {
+  GYRO_ACTIVATION_ALWAYS,
+  GYRO_ACTIVATION_LT,
+  GYRO_ACTIVATION_RT,
+  GyroAssistService
+} from '../service/GyroAssistService';
 import { SettingsKeys } from '../service/SettingsService';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { DeviceSensorService } from '../service/DeviceSensorService';
 import {
-  OV_ACCENT_BLUE, OV_ACCENT_PINK, OV_ACCENT_RED,
-  OV_TEXT_BRIGHT, OV_TEXT_MEDIUM, OV_TEXT_DIM, OV_TEXT_FAINT, OV_TEXT_WHITE, OV_TEXT_ULTRA,
-  OV_BG_TRACK, OV_BG_CARD_LIGHT, OV_BG_CARD_LIGHTER, OV_BG_DIVIDER,
-  OV_BG_CARD_DARK, OV_BG_CARD_DARKER, OV_SHADOW_MEDIUM, OV_SHADOW_LIGHT,
-  OV_BLUE_40, OV_BLUE_50,
-  OV_FONT_XS, OV_FONT_SM, OV_FONT_MD, OV_FONT_LG,
-  OV_CARD_WIDTH, OV_CARD_RADIUS, OV_CARD_BLUR,
+  OV_ACCENT_BLUE,
+  OV_ACCENT_PINK,
+  OV_BG_CARD_DARK,
+  OV_BG_CARD_DARKER,
+  OV_BG_CARD_LIGHT,
+  OV_BG_CARD_LIGHTER,
+  OV_BG_DIVIDER,
+  OV_BG_TRACK,
+  OV_BLUE_40,
+  OV_BLUE_50,
+  OV_CARD_BLUR,
+  OV_CARD_RADIUS,
+  OV_CARD_WIDTH,
+  OV_FONT_LG,
+  OV_FONT_MD,
+  OV_FONT_SM,
+  OV_FONT_XS,
+  OV_SHADOW_LIGHT,
+  OV_SHADOW_MEDIUM,
+  OV_TEXT_BRIGHT,
+  OV_TEXT_DIM,
+  OV_TEXT_FAINT,
+  OV_TEXT_MEDIUM,
+  OV_TEXT_ULTRA,
+  OV_TEXT_WHITE
 } from '../common/OverlayConstants';
 
 /** Menu callbacks interface */
@@ -580,7 +602,6 @@ export struct GameMenuDialog {
     this.sortedMainCards = visible;
   }
 
-  /**
   private hasButtonCards(): boolean {
     return this.viewModel.overlayState.config.isLocked ||
       (this.viewModel.getSession()?.isMicrophoneEnabled() ?? false);
@@ -818,7 +839,7 @@ export struct GameMenuDialog {
         .fontSize(12)
         .fontColor(OV_TEXT_DIM)
         .margin({ right: 6 })
-      Text('More Settings'))
+      Text('More Settings')
         .fontSize(OV_FONT_MD)
         .fontColor(OV_TEXT_DIM)
       Text(` · Virtual Controller${this.hasGyroscope ? ', Gyro Assist' : ''}`)
@@ -844,7 +865,7 @@ export struct GameMenuDialog {
       Row() {
         SymbolGlyph($r('sys.symbol.crown'))
           .fontSize(14).fontColor([Color.Orange])
-        Text(' Custom Keys'))
+        Text('Custom Keys')
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -865,7 +886,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text('Freely placed on-screen virtual keys'))
+      Text('Freely placed on-screen virtual keys')
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -904,7 +925,7 @@ export struct GameMenuDialog {
       }
 
       Row({ space: 8 }) {
-        Text('Edit Layout'))
+        Text('Edit Layout')
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_PINK)
@@ -916,7 +937,7 @@ export struct GameMenuDialog {
             this.callbacks.onEditCustomKeys?.();
             this.animateOut();
           })
-        Text('Export'))
+        Text('Export')
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_BLUE)
@@ -928,7 +949,7 @@ export struct GameMenuDialog {
             this.callbacks.onExportCustomKeys?.();
             this.animateOut();
           })
-        Text('Import'))
+        Text('Import')
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_BLUE)
@@ -950,7 +971,7 @@ export struct GameMenuDialog {
 
       Row() {
         Text('🔎').fontSize(OV_FONT_LG)
-        Text(' Pan/Zoom'))
+        Text(' Pan/Zoom')
           .fontSize(OV_FONT_MD)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_MEDIUM)
@@ -985,7 +1006,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 10, bottom: 4 })
 
-      Text('Pinch to zoom, max 10x'))
+      Text('Pinch to zoom, max 10x')
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1000,7 +1021,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('🎮').fontSize(OV_FONT_LG)
-        Text(' Virtual Controller'))
+        Text(' Virtual Controller')
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1019,7 +1040,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text('On-screen virtual controller overlay'))
+      Text('On-screen virtual controller overlay')
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1045,7 +1066,7 @@ export struct GameMenuDialog {
         .width('100%')
         .padding({ left: 16, right: 12, top: 10, bottom: 4 })
 
-        Text('Allow touch through controller to control screen'))
+        Text('Allow touch through controller to control screen')
           .fontSize(OV_FONT_XS)
           .fontColor('#50FFFFFF')
           .width('100%')
@@ -1151,7 +1172,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('📊').fontSize(OV_FONT_LG)
-        Text(' Bitrate Adjust'))
+        Text(' Bitrate Adjust')
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1164,7 +1185,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 16, top: 14, bottom: 4 })
 
-      Text('Real-time stream quality adjustment, requires Foundation Sunshine support'))
+      Text('Real-time stream quality adjustment, requires Foundation Sunshine support')
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1216,7 +1237,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('🎮').fontSize(OV_FONT_LG)
-        Text(' Gyro Assist'))
+        Text(' Gyro Assist')
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1235,7 +1256,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text(this.hasGyroscope ? 'Gyroscope → Right Stick mapping' : '⚠ Device has no gyroscope'))
+      Text(this.hasGyroscope ? 'Gyroscope → Right Stick mapping' : '⚠ Device has no gyroscope')
         .fontSize(OV_FONT_SM)
         .fontColor(this.hasGyroscope ? OV_TEXT_FAINT : OV_ACCENT_PINK)
         .width('100%')
@@ -1358,7 +1379,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('🎯').fontSize(OV_FONT_LG)
-        Text(' Server Commands'))
+        Text(' Server Commands')
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1366,7 +1387,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text('Execute Sunshine preset scripts'))
+      Text('Execute Sunshine preset scripts')
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1394,7 +1415,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('⚡').fontSize(OV_FONT_LG)
-        Text(' Shortcuts'))
+        Text(' Shortcuts')
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)

@@ -16,17 +16,12 @@ interface SendResult {
   errors: number;
 }
 
-/**
- * 
- */
+
 export class WakeOnLan {
-  /**
   private static readonly STATIC_PORTS: number[] = [
     9,
     47009,
   ];
-
-  /**
   private static readonly DYNAMIC_PORT_BASES: number[] = [
     47998, 47999, 48000, 48002, 48010,
   ];
@@ -37,9 +32,6 @@ export class WakeOnLan {
   private static readonly MAC_REPETITIONS = 16;
   private static readonly ZERO_MAC = '00:00:00:00:00:00';
 
-  /**
-   * 
-   */
   static async sendWolPacket(macAddress: string, address: string, httpPort: number = WakeOnLan.DEFAULT_HTTP_PORT): Promise<void> {
     WakeOnLan.validateMacAddress(macAddress);
     
@@ -61,9 +53,7 @@ export class WakeOnLan {
     }
   }
 
-  /**
-   * 
-   */
+
   static async sendWolToAddresses(macAddress: string, addresses: string[], httpPort: number = WakeOnLan.DEFAULT_HTTP_PORT): Promise<void> {
     WakeOnLan.validateMacAddress(macAddress);
     

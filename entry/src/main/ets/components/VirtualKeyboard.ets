@@ -8,21 +8,13 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- */
 
-import { picker } from '@kit.CoreFileKit';
-import { fileIo } from '@kit.CoreFileKit';
+import { fileIo, picker } from '@kit.CoreFileKit';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { vibrator } from '@kit.SensorServiceKit';
 import { display } from '@kit.ArkUI';
 
-// =============================================================================
-// =============================================================================
 
-/**
 class VK {
   static readonly ESCAPE: number = 0x1B;
   static readonly F1: number = 0x70;
@@ -111,34 +103,22 @@ class VK {
   static readonly DOWN: number = 0x28;
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 enum KeyType {
   NORMAL,
   MODIFIER,
   SPACER,
 }
 
-/**
 interface KeyDef {
-  /**
   label: string;
-  /**
   subLabel?: string;
-  /**
   vk: number;
-  /**
   weight?: number;
-  /**
   type?: KeyType;
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 const ROW_FUNC: KeyDef[] = [
   { label: 'Esc', vk: VK.ESCAPE },
   { label: 'F1', vk: VK.F1 }, { label: 'F2', vk: VK.F2 },
@@ -150,7 +130,6 @@ const ROW_FUNC: KeyDef[] = [
   { label: 'Ins', vk: VK.INSERT }, { label: 'Del', vk: VK.DELETE },
 ];
 
-/**
 const ROW_NUM: KeyDef[] = [
   { label: '`', subLabel: '~', vk: VK.OEM_3 },
   { label: '1', vk: VK.KEY_1 }, { label: '2', vk: VK.KEY_2 },
@@ -163,7 +142,6 @@ const ROW_NUM: KeyDef[] = [
   { label: '⌫', vk: VK.BACK, weight: 2 },
 ];
 
-/**
 const ROW_Q: KeyDef[] = [
   { label: 'Tab', vk: VK.TAB, weight: 1.5 },
   { label: 'Q', vk: VK.KEY_Q }, { label: 'W', vk: VK.KEY_W },
@@ -176,7 +154,6 @@ const ROW_Q: KeyDef[] = [
   { label: '\\', subLabel: '|', vk: VK.OEM_5, weight: 1.5 },
 ];
 
-/**
 const ROW_A: KeyDef[] = [
   { label: 'Caps', vk: VK.CAPS_LOCK, weight: 1.8 },
   { label: 'A', vk: VK.KEY_A }, { label: 'S', vk: VK.KEY_S },
@@ -189,7 +166,6 @@ const ROW_A: KeyDef[] = [
   { label: 'Enter', vk: VK.RETURN, weight: 2.2 },
 ];
 
-/**
 const ROW_Z: KeyDef[] = [
   { label: 'Shift', vk: VK.LSHIFT, weight: 2.4, type: KeyType.MODIFIER },
   { label: 'Z', vk: VK.KEY_Z }, { label: 'X', vk: VK.KEY_X },
@@ -202,7 +178,6 @@ const ROW_Z: KeyDef[] = [
   { label: 'Shift', vk: VK.RSHIFT, weight: 2.4, type: KeyType.MODIFIER },
 ];
 
-/**
 const ROW_BOTTOM: KeyDef[] = [
   { label: 'Ctrl', vk: VK.LCONTROL, weight: 1.5, type: KeyType.MODIFIER },
   { label: 'Win', vk: VK.LWIN, weight: 1.2, type: KeyType.MODIFIER },
@@ -216,55 +191,34 @@ const ROW_BOTTOM: KeyDef[] = [
   { label: '→', vk: VK.RIGHT },
 ];
 
-/**
 const KEYBOARD_ROWS: KeyDef[][] = [
   ROW_FUNC, ROW_NUM, ROW_Q, ROW_A, ROW_Z, ROW_BOTTOM,
 ];
 
-// =============================================================================
-// =============================================================================
 
-/**
 const KEY_GAP = 4;
-/**
 const ROW_GAP = 4;
-/**
 const KEY_RADIUS = 10;
-/**
 const KB_PADDING = 8;
-/**
 const TITLE_BAR_HEIGHT = 36;
-/**
 const KEY_HEIGHT = 36;
-/**
 const FUNC_KEY_HEIGHT = 30;
 
-/**
 const KB_BG_IMAGE_KEY = 'virtual_keyboard_bg_image';
 
-// =============================================================================
-// =============================================================================
 
 @Component
 export struct VirtualKeyboard {
-  /**
-  onVirtualKeyEvent: (vk: number, isDown: boolean) => void = () => {};
-  /**
-  onClose: () => void = () => {};
-
-  /**
+  onVirtualKeyEvent: (vk: number, isDown: boolean) => void = () => {
+  };
+  onClose: () => void = () => {
+  };
   @State private opacity_: number = 0.85;
-  /**
   @State private posX: number = 0;
   @State private posY: number = 0;
-
-  /**
   @State private backgroundImageUri: string = '';
-  /**
   @State private comboMode: boolean = false;
-  /**
   @State private stickyModifiers: Set<number> = new Set<number>();
-  /**
   private dragStartX: number = 0;
   private dragStartY: number = 0;
   private dragStartOffsetX: number = 0;
@@ -536,7 +490,6 @@ export struct VirtualKeyboard {
     return '#E8F0FFFF';
   }
 
-  /**
   private isKeyActive(key: KeyDef): boolean {
     return this.comboMode && this.stickyModifiers.has(key.vk);
   }

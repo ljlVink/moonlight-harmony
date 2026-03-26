@@ -82,9 +82,6 @@ private:
     
     AudioRendererConfig config_;
     
-    // =========================================================================
-    // =========================================================================
-    //
     static constexpr int TARGET_BUFFER_MS = 50;
     static constexpr int MAX_AUDIO_LATENCY_MS = 40;
     

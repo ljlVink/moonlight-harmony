@@ -9,20 +9,20 @@
  */
 
 /**
- * 
+ *
  */
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { display } from '@kit.ArkUI';
 import {
-  StreamConfig,
   AudioConfiguration,
   ColorRange,
+  getRecommendedBitrate,
   HdrMode,
-  RemoteConfig,
-  ScreenCombinationMode,
   PerfOverlayOrientation,
   PerfOverlayPosition,
-  getRecommendedBitrate
+  RemoteConfig,
+  ScreenCombinationMode,
+  StreamConfig
 } from '../model/StreamConfig';
 
 export class SettingsKeys {
@@ -124,8 +124,6 @@ export class SettingsKeys {
   static readonly ENABLE_BACKGROUND_TASK: string = 'settings_enable_background_task';
 
   static readonly SMALL_ICON_MODE: string = 'settings_small_icon_mode';
-  static readonly BACKGROUND_IMAGE_URL: string = 'settings_background_image_url';
-  static readonly BACKGROUND_IMAGE_TYPE: string = 'settings_background_image_type';
   static readonly RESUME_STREAM: string = 'settings_resume_stream';
   
   static readonly DEVELOPER_MODE: string = 'settings_developer_mode';

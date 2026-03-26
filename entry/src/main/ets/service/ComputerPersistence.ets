@@ -11,13 +11,11 @@
 /**
  *
  */
-import { ComputerInfo, ComputerState, PairState, ComputerInfoBuilder } from '../model/ComputerInfo';
+import { ComputerInfo, ComputerInfoBuilder, ComputerState, PairState } from '../model/ComputerInfo';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { NvHttp } from './NvHttp';
 import { MAX_PORT } from '../common/NetworkConstants';
 
-// =============================================================================
-// =============================================================================
 
 interface SavedComputerData {
   uuid: string;
@@ -40,20 +38,15 @@ interface ExtractedHostPort {
   port: number;
 }
 
-/**
+
 const STORAGE_KEY = 'saved_computers';
 
-// =============================================================================
-// ComputerPersistence
-// =============================================================================
 
-/**
- *
- */
+// ComputerPersistence
+
+
 export class ComputerPersistence {
 
-  // ---------------------------------------------------------------------------
-  // ---------------------------------------------------------------------------
 
   static cloneComputer(computer: ComputerInfo): ComputerInfo {
     return {

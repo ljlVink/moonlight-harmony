@@ -24,13 +24,13 @@
 extern "C" {
 #endif
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_Init(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info);
 
@@ -40,8 +40,8 @@ napi_value MoonBridge_InterruptConnection(napi_env env, napi_callback_info info)
 
 napi_value MoonBridge_ResumeDecoder(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SendMouseMove(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendMousePosition(napi_env env, napi_callback_info info);
@@ -50,14 +50,14 @@ napi_value MoonBridge_SendMouseButton(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendMouseHighResScroll(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendMouseHighResHScroll(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SendKeyboardInput(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendUtf8Text(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SendMultiControllerInput(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendControllerArrivalEvent(napi_env env, napi_callback_info info);
@@ -65,29 +65,29 @@ napi_value MoonBridge_SendControllerTouchEvent(napi_env env, napi_callback_info 
 napi_value MoonBridge_SendControllerMotionEvent(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendControllerBatteryEvent(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SendTouchEvent(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendPenEvent(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_GetMicPortNumber(napi_env env, napi_callback_info info);
 napi_value MoonBridge_IsMicrophoneRequested(napi_env env, napi_callback_info info);
 napi_value MoonBridge_SendMicrophoneOpusData(napi_env env, napi_callback_info info);
 napi_value MoonBridge_IsMicrophoneEncryptionEnabled(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_OpusEncoderCreate(napi_env env, napi_callback_info info);
 napi_value MoonBridge_OpusEncoderEncode(napi_env env, napi_callback_info info);
 napi_value MoonBridge_OpusEncoderDestroy(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_NativeMicStart(napi_env env, napi_callback_info info);
 napi_value MoonBridge_NativeMicStop(napi_env env, napi_callback_info info);
@@ -95,8 +95,8 @@ napi_value MoonBridge_NativeMicPause(napi_env env, napi_callback_info info);
 napi_value MoonBridge_NativeMicResume(napi_env env, napi_callback_info info);
 napi_value MoonBridge_NativeMicGetStats(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_GetStageName(napi_env env, napi_callback_info info);
 napi_value MoonBridge_GetPendingAudioDuration(napi_env env, napi_callback_info info);
@@ -105,8 +105,8 @@ napi_value MoonBridge_GetEstimatedRttInfo(napi_env env, napi_callback_info info)
 napi_value MoonBridge_GetHostFeatureFlags(napi_env env, napi_callback_info info);
 napi_value MoonBridge_GetLaunchUrlQueryParameters(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_TestClientConnectivity(napi_env env, napi_callback_info info);
 napi_value MoonBridge_GetPortFlagsFromStage(napi_env env, napi_callback_info info);
@@ -117,8 +117,8 @@ napi_value MoonBridge_GuessControllerType(napi_env env, napi_callback_info info)
 napi_value MoonBridge_GuessControllerHasPaddles(napi_env env, napi_callback_info info);
 napi_value MoonBridge_GuessControllerHasShareButton(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info);
 
@@ -160,8 +160,8 @@ napi_value MoonBridge_SetVsyncEnabled(napi_env env, napi_callback_info info);
  */
 napi_value MoonBridge_IsVsyncEnabled(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 /**
  * @param enabled boolean
@@ -175,8 +175,8 @@ napi_value MoonBridge_IsSpatialAudioEnabled(napi_env env, napi_callback_info inf
 
 napi_value MoonBridge_SetAudioVolume(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 /**
  * @return boolean
@@ -193,18 +193,18 @@ napi_value MoonBridge_SetPerformanceModeEnabled(napi_env env, napi_callback_info
  */
 napi_value MoonBridge_GetPerformanceModeEnabled(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SetBassVibrationConfig(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 napi_value MoonBridge_SetXComponentFrameRate(napi_env env, napi_callback_info info);
 
-// =============================================================================
-// =============================================================================
+
+
 
 #define BUTTON_ACTION_PRESS 0x07
 #define BUTTON_ACTION_RELEASE 0x08

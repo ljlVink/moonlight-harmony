@@ -8,11 +8,9 @@
  * (at your option) any later version.
  */
 
-import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { util } from '@kit.ArkTS';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { DEV_KEY_SALT } from '../config/DevKeySecret';
 
 export class DevKeyVerifier {
   static getDeviceId(context: common.Context): string {

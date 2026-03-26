@@ -8,23 +8,19 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
+
 import { display, promptAction } from '@kit.ArkUI';
 import { StreamViewModel } from '../viewmodel/StreamViewModel';
 import { StreamWindowManager } from '../service/StreamWindowManager';
-import { AppStateService, AppState } from '../service/AppStateService';
+import { AppState, AppStateService } from '../service/AppStateService';
 import { BackgroundStreamService, BroadcastControlCallbacks } from '../service/BackgroundStreamService';
 import { common } from '@kit.AbilityKit';
-import { MoonBridge, ML_TEST_RESULT_INCONCLUSIVE, CONNECTION_TEST_SERVER } from '../service/MoonBridge';
+import { CONNECTION_TEST_SERVER, ML_TEST_RESULT_INCONCLUSIVE, MoonBridge } from '../service/MoonBridge';
 
 export interface LifecycleCallbacks {
-  /**
+
   updateXComponentSize: (width: Length, height: Length) => void;
-  /**
   stopStreaming: () => void;
-  /**
   reconnectStreaming: () => void;
 }
 
@@ -38,14 +34,12 @@ export class StreamLifecycleManager {
   private wasInBackground: boolean = false;
   private backgroundService: BackgroundStreamService = BackgroundStreamService.getInstance();
   private enableBackgroundTask: boolean = true;
-  /**
   private pendingTerminationErrorCode: number | null = null;
 
   private displayChangeCallback: ((displayId: number) => void) | null = null;
   private lastDisplayOrientation: boolean | null = null;
 
   private latencyToastEnabled: boolean = false;
-  /**
   private disableWarnings: boolean = false;
 
   initialize(viewModel: StreamViewModel, windowManager: StreamWindowManager | null,
@@ -179,7 +173,7 @@ export class StreamLifecycleManager {
     }
   }
 
-  /**
+  /*
    * @param context UIAbilityContext
    */
   async startBackgroundTask(context: common.UIAbilityContext, gameName?: string): Promise<void> {

@@ -8,29 +8,25 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 
 import { componentSnapshot, display, LengthMetrics, promptAction, window } from '@kit.ArkUI';
 import {
-  CustomKeyDef,
-  KeyAction,
-  KeyBehavior,
-  KeyShape,
   AnalogStickAction,
-  DPadAction,
-  WheelPadAction,
-  WheelPadSegment,
-  DigitalStickAction,
-  KeyboardAction,
-  createDefaultKeyDef,
   cloneKeyDef,
+  createDefaultKeyDef,
+  CustomKeyDef,
+  DigitalStickAction,
   generateKeyId,
   getActionDisplayName,
   KEY_PRESET_CATEGORIES,
+  KeyAction,
+  KeyBehavior,
+  KeyboardAction,
   KeyPreset,
   KeyPresetCategory,
+  KeyShape,
+  WheelPadAction,
+  WheelPadSegment
 } from '../service/CustomKeyTypes';
 import { CustomKeyStore } from '../service/CustomKeyStore';
 import { QrShareService } from '../service/QrShareService';
@@ -43,67 +39,73 @@ import { systemShare } from '@kit.ShareKit';
 import { fileIo, fileUri } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import {
-  OV_ACCENT_BLUE, OV_TEXT_BRIGHT, OV_TEXT_MEDIUM, OV_TEXT_DIM,
-  OV_TEXT_WHITE, OV_TEXT_SUBTLE, OV_BG_TRACK, OV_BG_CARD_LIGHTER,
-  OV_BG_CARD_DARK, OV_BLUE_40, OV_BLUE_50,
-  OV_FONT_SM, OV_FONT_MD, OV_FONT_LG,
+  OV_ACCENT_BLUE,
+  OV_BG_CARD_LIGHTER,
+  OV_BG_TRACK,
+  OV_BLUE_50,
+  OV_FONT_LG,
+  OV_FONT_MD,
+  OV_FONT_SM,
+  OV_TEXT_BRIGHT,
+  OV_TEXT_DIM,
+  OV_TEXT_MEDIUM,
+  OV_TEXT_SUBTLE,
+  OV_TEXT_WHITE
 } from '../common/OverlayConstants';
 import {
-  DigitalDirState, SnapResult,
-  EDIT_BORDER_COLOR, SELECT_BORDER_COLOR, EDIT_TOOLBAR_HEIGHT, DRAG_THRESHOLD,
-  BG_COLOR_PRESETS, TEXT_COLOR_PRESETS, PRESSED_COLOR_PRESETS, HAPTIC_OPTIONS,
+  BG_COLOR_PRESETS,
+  DigitalDirState,
   doKeyHaptic,
+  EDIT_TOOLBAR_HEIGHT,
+  HAPTIC_OPTIONS,
+  PRESSED_COLOR_PRESETS,
+  SnapResult,
+  TEXT_COLOR_PRESETS
 } from './CustomKeyConstants';
 import {
-  ColorTheme, COLOR_THEMES, RGBPixel,
-  parseHexRGB, toHexARGB, generateThemeFromAccent,
-  kMeansPlusPlus, pickAccentFromClusters,
+  COLOR_THEMES,
+  ColorTheme,
+  generateThemeFromAccent,
+  kMeansPlusPlus,
+  pickAccentFromClusters,
+  RGBPixel,
+  toHexARGB
 } from '../service/CustomKeyTheme';
 import { CustomKeyBtn } from './CustomKeyBtn';
 
-// =============================================================================
-// =============================================================================
 
 @Component
 export struct CustomKeyOverlay {
-  /**
-  onKeyAction: (action: KeyAction, isDown: boolean) => void = () => {};
-  /**
-  onAnalogStickMovement: (stick: string, x: number, y: number) => void = () => {};
-  /**
-  onAnalogStickClick: (stick: string) => void = () => {};
-  /**
-  onDPadDirectionChange: (direction: number) => void = () => {};
-  /**
-  onEditModeChanged: (editing: boolean) => void = () => {};
+  onKeyAction: (action: KeyAction, isDown: boolean) => void = () => {
+  };
+  onAnalogStickMovement: (stick: string, x: number, y: number) => void = () => {
+  };
+  onAnalogStickClick: (stick: string) => void = () => {
+  };
+  onDPadDirectionChange: (direction: number) => void = () => {
+  };
+  onEditModeChanged: (editing: boolean) => void = () => {
+  };
 
   @State keys: CustomKeyDef[] = [];
   @Link editMode: boolean;
-  /**
   @Prop @Watch('onProfileVersionChanged') profileVersion: number = 0;
   @State selectedKeyId: string = '';
   @State showAddPanel: boolean = false;
   @State showPropertyPanel: boolean = false;
   @State addPanelCategoryIdx: number = 0;
-  /**
   @State private segmentPickerIndex: number = -1;
-  /**
   @State private segmentPickerCategoryIdx: number = 0;
 
   @State private hitTestReady: number = 0;
-
-  /**
   @State private screenWidthVp: number = 0;
   @State private screenHeightVp: number = 0;
-  /**
   private digitalStickStates: Map<string, DigitalDirState> = new Map();
-  /**
   private undoStack: CustomKeyDef[][] = [];
   private redoStack: CustomKeyDef[][] = [];
   private static readonly MAX_UNDO = 50;
   @State private canUndo: boolean = false;
   @State private canRedo: boolean = false;
-  /**
   @State private resizeDragDX: number = 0;
   @State private resizeDragDY: number = 0;
   private resizing: boolean = false;
@@ -111,44 +113,31 @@ export struct CustomKeyOverlay {
   private resizeStartY: number = 0;
   private resizeOrigWidth: number = 0;
   private resizeOrigHeight: number = 0;
-  /**
   @State private snapEnabled: boolean = false;
-  /**
   private static readonly SNAP_THRESHOLD_VP = 8;
-  /**
   @State private alignGuideX: number = -1;
   @State private alignGuideY: number = -1;
-
-  /**
   @State private showSharePanel: boolean = false;
   @State private qrPixelMap: image.PixelMap | undefined = undefined;
   @State private qrLoading: boolean = false;
   @State private qrTooLarge: boolean = false;
   @State private qrError: string = '';
   @State private shareJson: string = '';
-  /**
   @State private importPreviewName: string = '';
   @State private importPreviewCount: number = 0;
   @State private importPreviewKeys: CustomKeyDef[] = [];
   @State private showImportConfirm: boolean = false;
-
-  /**
-  /**
   @State private showThemePanel: boolean = false;
-  /**
   @State private showProfilePanel: boolean = false;
   @State private profileNames: string[] = [];
   @State private activeProfileName: string = '';
-  /**
   @State private editingProfileName: string = '';
   @State private editingProfileNewName: string = '';
-  /**
-  onProfileSwitched: () => void = () => {};
+  onProfileSwitched: () => void = () => {
+  };
   @State private themeExtracting: boolean = false;
   @State private extractedAccentColor: string = '';
-  /**
   @State private hidingForCapture: boolean = false;
-  /**
   @State private captureAnimColor: string = '';
   @State private captureAnimActive: boolean = false;
   @State private scanLineY: number = 0;
@@ -156,12 +145,10 @@ export struct CustomKeyOverlay {
   @State private scanLabelOpacity: number = 0;
   @State private scanFlashOpacity: number = 0;
 
-  /**
   private getSortedKeys(): CustomKeyDef[] {
     return this.keys.slice().sort((a: CustomKeyDef, b: CustomKeyDef) => a.layer - b.layer);
   }
 
-  /**
   private displayChangeCallback: ((displayId: number) => void) | null = null;
 
   async aboutToAppear(): Promise<void> {
@@ -207,7 +194,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   async onProfileVersionChanged(): Promise<void> {
     this.keys = await CustomKeyStore.getKeys();
     this.activeProfileName = await CustomKeyStore.getActiveProfileName();
@@ -617,7 +603,6 @@ export struct CustomKeyOverlay {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /**
   private pushUndoState(): void {
     this.undoStack.push(this.keys.map(k => cloneKeyDef(k)));
     if (this.undoStack.length > CustomKeyOverlay.MAX_UNDO) {
@@ -628,7 +613,6 @@ export struct CustomKeyOverlay {
     this.canRedo = false;
   }
 
-  /**
   private async performUndo(): Promise<void> {
     if (this.undoStack.length === 0) return;
     this.redoStack.push(this.keys.map(k => cloneKeyDef(k)));
@@ -640,7 +624,6 @@ export struct CustomKeyOverlay {
     await CustomKeyStore.saveKeys(this.keys);
   }
 
-  /**
   private async performRedo(): Promise<void> {
     if (this.redoStack.length === 0) return;
     this.undoStack.push(this.keys.map(k => cloneKeyDef(k)));
@@ -694,7 +677,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private releaseAllDigitalDirections(keyId: string, action: DigitalStickAction): void {
     const state = this.digitalStickStates.get(keyId);
     if (!state) return;
@@ -924,7 +906,6 @@ export struct CustomKeyOverlay {
     this.showPropertyPanel = false;
   }
 
-  /**
   private async cloneSelectedKey(): Promise<void> {
     const src = this.getSelectedKey();
     if (!src) return;
@@ -941,7 +922,6 @@ export struct CustomKeyOverlay {
     promptAction.showToast({ message: '已复制按键', duration: 1200 });
   }
 
-  /**
   private nudgeSelectedKey(dx: number, dy: number): void {
     const idx = this.keys.findIndex(k => k.id === this.selectedKeyId);
     if (idx === -1 || this.screenWidthVp <= 0) return;
@@ -1025,7 +1005,6 @@ export struct CustomKeyOverlay {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /**
   private async applyThemeToAllKeys(theme: ColorTheme): Promise<void> {
     if (this.keys.length === 0) return;
     this.pushUndoState();
@@ -1159,14 +1138,12 @@ export struct CustomKeyOverlay {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /**
   private async openProfilePanel(): Promise<void> {
     this.profileNames = await CustomKeyStore.getProfileNames();
     this.activeProfileName = await CustomKeyStore.getActiveProfileName();
     this.showProfilePanel = true;
   }
 
-  /**
   private async switchToProfile(name: string): Promise<void> {
     if (name === this.activeProfileName) return;
     await CustomKeyStore.saveKeys(this.keys);
@@ -1184,7 +1161,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private async createNewProfile(): Promise<void> {
     let idx = this.profileNames.length + 1;
     let name = `配置 ${idx}`;
@@ -1208,7 +1184,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private async duplicateCurrentProfile(): Promise<void> {
     let idx = 1;
     let name = `${this.activeProfileName} (复制)`;
@@ -1232,7 +1207,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private async deleteProfileByName(name: string): Promise<void> {
     if (this.profileNames.length <= 1) {
       promptAction.showToast({ message: '至少保留一个配置', duration: 1500 });
@@ -1270,7 +1244,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   async cycleNextProfile(): Promise<void> {
     const names = await CustomKeyStore.getProfileNames();
     if (names.length <= 1) {
@@ -1412,7 +1385,6 @@ export struct CustomKeyOverlay {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /**
   private async openSharePanel(): Promise<void> {
     this.showSharePanel = true;
     this.showImportConfirm = false;
@@ -1440,7 +1412,6 @@ export struct CustomKeyOverlay {
     this.qrLoading = false;
   }
 
-  /**
   private async copyToClipboard(): Promise<void> {
     try {
       const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.shareJson);
@@ -1452,7 +1423,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private async shareToFriend(): Promise<void> {
     try {
       const context = getContext(this) as common.UIAbilityContext;
@@ -1598,7 +1568,6 @@ export struct CustomKeyOverlay {
     .clip(true)
   }
 
-  /**
   private async pasteFromClipboard(): Promise<void> {
     try {
       const sysBoard = pasteboard.getSystemPasteboard();
@@ -1614,7 +1583,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private async scanAndImport(): Promise<void> {
     const result = await QrShareService.scanQrCode();
     if (!result) {
@@ -1624,7 +1592,6 @@ export struct CustomKeyOverlay {
     this.handleImportJson(result);
   }
 
-  /**
   private handleImportJson(json: string): void {
     const parsed = QrShareService.deserialize(json);
     if (!parsed) {
@@ -1637,7 +1604,6 @@ export struct CustomKeyOverlay {
     this.showImportConfirm = true;
   }
 
-  /**
   private async doImportReplace(): Promise<void> {
     this.pushUndoState();
     this.keys = this.importPreviewKeys;
@@ -1650,7 +1616,6 @@ export struct CustomKeyOverlay {
     });
   }
 
-  /**
   private async doImportMerge(): Promise<void> {
     this.pushUndoState();
     const merged = this.keys.slice();
@@ -2069,7 +2034,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private applyResize(newWidth: number, newHeight: number): void {
     const idx = this.keys.findIndex(k => k.id === this.selectedKeyId);
     if (idx === -1) return;
@@ -2416,7 +2380,6 @@ export struct CustomKeyOverlay {
     .transition(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 200 }))
   }
 
-  /**
   private getWheelPadSegments(): WheelPadSegment[] {
     const key = this.getSelectedKey();
     if (key && key.action.type === 'wheelPad') {
@@ -2425,7 +2388,6 @@ export struct CustomKeyOverlay {
     return [];
   }
 
-  /**
   private updateSegmentLabel(segIndex: number, label: string): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2437,7 +2399,6 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /**
   private updateSegmentAction(segIndex: number, action: KeyAction): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2450,7 +2411,6 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /**
   private addWheelPadSegment(): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2465,7 +2425,6 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /**
   private removeWheelPadSegment(segIndex: number): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2479,7 +2438,6 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /**
   private forceRefreshSelectedKey(): void {
     const idx = this.keys.findIndex(k => k.id === this.selectedKeyId);
     if (idx >= 0) {
@@ -2491,7 +2449,6 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /**
   private static readonly SEGMENT_PICKER_CATEGORIES: string[] = [
     '常用键', '功能键', '鼠标', '手柄', '方向键', '字母', '数字', '符号',
   ];
@@ -2538,7 +2495,6 @@ export struct CustomKeyOverlay {
     .borderRadius(6)
   }
 
-  /**
   private getSegmentPickerPresets(): KeyPreset[] {
     const catName = CustomKeyOverlay.SEGMENT_PICKER_CATEGORIES[this.segmentPickerCategoryIdx];
     if (!catName) return [];

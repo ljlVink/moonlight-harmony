@@ -8,10 +8,8 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
-import { window, display } from '@kit.ArkUI';
+
+import { display, window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 
 export interface DisplaySize {
@@ -30,14 +28,10 @@ export class StreamWindowManager {
   private streamHeight: number = 1080;
   private screenWidth: number = 1920;
   private screenHeight: number = 1080;
-  /**
   private _isFullscreen: boolean = true;
-  /**
   private onWindowSizeChanged: (() => void) | null = null;
-  /**
   private windowSizeChangeHandler: ((size: window.Size) => void) | null = null;
 
-  /**
   get isFullscreen(): boolean {
     return this._isFullscreen;
   }
@@ -113,9 +107,7 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   *
-   */
+
   async toggleWindowMode(): Promise<void> {
     try {
       const win = await window.getLastWindow(this.context);
@@ -193,11 +185,11 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   *
-   * 2. ENTER_IMMERSIVE (API 12+) + setTitleAndDockHoverShown(false)
-   * 3. maximize() + setTitleAndDockHoverShown(false)
-   */
+  /*
+    *
+    * 2. ENTER_IMMERSIVE (API 12+) + setTitleAndDockHoverShown(false)
+    * 3. maximize() + setTitleAndDockHoverShown(false)
+    */
   private async maximizeImmersive(win: window.Window): Promise<void> {
     try {
       await win.maximize(window.MaximizePresentation.ENTER_IMMERSIVE_DISABLE_TITLE_AND_DOCK_HOVER);
@@ -268,9 +260,6 @@ export class StreamWindowManager {
     return this.getScreenSize();
   }
 
-  /**
-   *
-   */
   async setHdrBrightness(enableHdr: boolean, hdrHighBrightness: boolean): Promise<void> {
     try {
       const win = await window.getLastWindow(this.context);
@@ -285,11 +274,8 @@ export class StreamWindowManager {
       console.warn('StreamWindowManager: 设置 HDR 亮度失败:', JSON.stringify(err));
     }
   }
-  
-  /**
-   *
-   *
-   */
+
+
   calculateXComponentSize(stretchVideo: boolean = false): XComponentSize {
     if (stretchVideo) {
       return { width: '100%', height: '100%' };
@@ -327,9 +313,7 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   * 
-   */
+
   async initialize(): Promise<DisplaySize> {
     await this.initScreenSize();
     await this.configureWindow();

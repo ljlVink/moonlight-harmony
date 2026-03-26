@@ -8,42 +8,25 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- *   custom_key_profiles: JSON string of CustomKeyProfile[]
- */
-
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { display } from '@kit.ArkUI';
-import {
-  CustomKeyProfile,
-  CustomKeyDef,
-  createDefaultProfile,
-  cloneKeyDef,
-  generateKeyId,
-  KeyAction,
-} from './CustomKeyTypes';
+import { cloneKeyDef, createDefaultProfile, CustomKeyDef, CustomKeyProfile, generateKeyId } from './CustomKeyTypes';
 
-/**
+
 interface ExportData {
   version: number;
   profile: CustomKeyProfile;
 }
 
-/**
+
 const STORAGE_KEY_PROFILES = 'custom_key_profiles';
 const STORAGE_KEY_ACTIVE = 'custom_key_active_profile';
 const STORAGE_KEY_GAME_PROFILES = 'custom_key_game_profiles';
 
-/**
- *
- */
 export class CustomKeyStore {
 
   private static profiles: CustomKeyProfile[] | null = null;
   private static activeProfileName: string = '';
-  /**
   private static gameProfiles: Record<string, string> | null = null;
 
   static async init(): Promise<void> {
@@ -86,14 +69,14 @@ export class CustomKeyStore {
     }
   }
 
-  /**
+
   private static async ensureInit(): Promise<void> {
     if (CustomKeyStore.profiles === null) {
       await CustomKeyStore.init();
     }
   }
 
-  /**
+
   private static async save(): Promise<void> {
     const json = JSON.stringify(CustomKeyStore.profiles);
     await PreferencesUtil.put(STORAGE_KEY_PROFILES, json);
@@ -138,26 +121,26 @@ export class CustomKeyStore {
     return migrated;
   }
 
-  /**
+
   static async getProfileNames(): Promise<string[]> {
     await CustomKeyStore.ensureInit();
     return CustomKeyStore.profiles!.map(p => p.name);
   }
 
-  /**
+
   static async getActiveProfileName(): Promise<string> {
     await CustomKeyStore.ensureInit();
     return CustomKeyStore.activeProfileName;
   }
 
-  /**
+
   static async getActiveProfile(): Promise<CustomKeyProfile> {
     await CustomKeyStore.ensureInit();
     const profile = CustomKeyStore.profiles!.find(p => p.name === CustomKeyStore.activeProfileName);
     return profile ?? CustomKeyStore.profiles![0];
   }
 
-  /**
+
   static async switchProfile(name: string): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     const profile = CustomKeyStore.profiles!.find(p => p.name === name);
@@ -167,7 +150,7 @@ export class CustomKeyStore {
     return profile;
   }
 
-  /**
+
   static async cycleNextProfile(): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.length <= 1) return null;
@@ -179,7 +162,7 @@ export class CustomKeyStore {
     return next;
   }
 
-  /**
+
   static async createProfile(name: string): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.find(p => p.name === name)) {
@@ -192,7 +175,7 @@ export class CustomKeyStore {
     return profile;
   }
 
-  /**
+
   static async deleteProfile(name: string): Promise<boolean> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.length <= 1) return false;
@@ -206,7 +189,7 @@ export class CustomKeyStore {
     return true;
   }
 
-  /**
+
   static async renameProfile(oldName: string, newName: string): Promise<boolean> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.find(p => p.name === newName)) return false;
@@ -220,7 +203,7 @@ export class CustomKeyStore {
     return true;
   }
 
-  /**
+
   static async duplicateProfile(newName: string): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.find(p => p.name === newName)) {
@@ -241,20 +224,20 @@ export class CustomKeyStore {
     return cloned;
   }
 
-  /**
+
   static async getKeys(): Promise<CustomKeyDef[]> {
     const profile = await CustomKeyStore.getActiveProfile();
     return profile.keys;
   }
 
-  /**
+
   static async addKey(key: CustomKeyDef): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     profile.keys.push(key);
     await CustomKeyStore.save();
   }
 
-  /**
+
   static async updateKey(key: CustomKeyDef): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     const idx = profile.keys.findIndex(k => k.id === key.id);
@@ -264,7 +247,7 @@ export class CustomKeyStore {
     }
   }
 
-  /**
+
   static async deleteKey(keyId: string): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     const idx = profile.keys.findIndex(k => k.id === keyId);
@@ -274,14 +257,14 @@ export class CustomKeyStore {
     }
   }
 
-  /**
+
   static async saveKeys(keys: CustomKeyDef[]): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     profile.keys = keys;
     await CustomKeyStore.save();
   }
 
-  /**
+
   static async exportProfile(): Promise<string> {
     const profile = await CustomKeyStore.getActiveProfile();
     const exportData: ExportData = {
@@ -291,7 +274,7 @@ export class CustomKeyStore {
     return JSON.stringify(exportData);
   }
 
-  /**
+
   static async importProfile(json: string): Promise<boolean> {
     try {
       const data = JSON.parse(json) as ExportData;

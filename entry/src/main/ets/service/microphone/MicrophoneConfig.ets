@@ -10,29 +10,16 @@
 
 
 export class MicrophoneConfig {
-  /**
   static readonly SAMPLE_RATE: number = 48000;
-  /**
   static readonly CHANNELS: number = 1;
-  
-  /**
   static readonly FRAME_SIZE_MS: number = 20;
-  /**
   static readonly SAMPLES_PER_FRAME: number = MicrophoneConfig.SAMPLE_RATE * MicrophoneConfig.FRAME_SIZE_MS / 1000;
-  /**
   static readonly BYTES_PER_FRAME: number = MicrophoneConfig.SAMPLES_PER_FRAME * MicrophoneConfig.CHANNELS * 2;
-  
-  /**
   static readonly CAPTURE_BUFFER_SIZE_MS: number = 40;
-  /**
-  static readonly CAPTURE_BUFFER_SIZE: number = 
+  static readonly CAPTURE_BUFFER_SIZE: number =
     MicrophoneConfig.SAMPLE_RATE * MicrophoneConfig.CAPTURE_BUFFER_SIZE_MS / 1000 * MicrophoneConfig.CHANNELS * 2;
-  
-  /**
   static readonly MAX_QUEUE_SIZE: number = 5;
-  /**
   static readonly FRAME_INTERVAL_MS: number = 20;
-  /**
   static readonly SENDER_THREAD_SLEEP_MS: number = 5;
   
   private static opusBitrateKbps: number = 64;
@@ -59,26 +46,26 @@ Opus 比特率: ${MicrophoneConfig.opusBitrateKbps} Kbps
 }
 
 export enum MicrophoneState {
-  /**
+
   STOPPED = 'stopped',
-  /**
+
   INITIALIZING = 'initializing',
-  /**
+
   CAPTURING = 'capturing',
-  /**
+
   PAUSED = 'paused',
-  /**
+
   ERROR = 'error'
 }
 
 export enum MicrophoneEventType {
-  /**
+
   STATE_CHANGED = 'stateChanged',
-  /**
+
   HOST_REQUESTED = 'hostRequested',
-  /**
+
   ERROR = 'error',
-  /**
+
   DATA_SENT = 'dataSent'
 }
 

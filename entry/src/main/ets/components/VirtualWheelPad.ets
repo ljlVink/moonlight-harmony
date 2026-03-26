@@ -8,38 +8,23 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import { KeyAction, WheelPadSegment } from '../service/CustomKeyTypes';
 
-/**
 export type WheelSegmentActionCallback = (action: KeyAction, isDown: boolean) => void;
 
-/**
 export type WheelEditModeGetter = () => boolean;
 
 @Component
 export struct VirtualWheelPad {
-  /**
   @Prop wheelSize: number = 150;
-  /**
   @Prop normalColor: string = '#6050C080';
-  /**
   @Prop pressedColor: string = '#C070E090';
-  /**
   @Prop bgColor: string = '#3050C080';
-  /**
   @Prop textColor: string = '#E0FFFFFF';
-  /**
   @Prop opacity_: number = 80;
-
-  /**
   segments: WheelPadSegment[] = [];
-  /**
-  onSegmentAction: WheelSegmentActionCallback = (_a: KeyAction, _d: boolean): void => {};
-  /**
+  onSegmentAction: WheelSegmentActionCallback = (_a: KeyAction, _d: boolean): void => {
+  };
   isEditMode: WheelEditModeGetter = (): boolean => false;
 
   @State @Watch('onActiveChanged') private activeIndex: number = -1;

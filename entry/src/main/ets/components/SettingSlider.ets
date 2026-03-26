@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
 import { AppColors, AppSizes } from '../common/Theme';
 import { vibrator } from '@kit.SensorServiceKit';
 
@@ -42,25 +39,15 @@ export class LogarithmicSlider {
 }
 
 export interface SettingSliderConfig {
-  /**
   value: number;
-  /**
   min: number;
-  /**
   max: number;
-  /**
   step?: number;
-  /**
   unit?: string;
-  /**
   isLogarithmic?: boolean;
-  /**
   snapValues?: number[];
-  /**
   snapThreshold?: number;
-  /**
   formatValue?: (value: number) => string;
-  /**
   onChange: (value: number) => void;
 }
 

@@ -8,7 +8,14 @@
  * (at your option) any later version.
  */
 
-import { InputEvent, InputType, ControllerButton, ControllerButtonEvent, ControllerAxis, ControllerAxisEvent } from '../model/InputEvent';
+import {
+  ControllerAxis,
+  ControllerAxisEvent,
+  ControllerButton,
+  ControllerButtonEvent,
+  InputEvent,
+  InputType
+} from '../model/InputEvent';
 import { AnalogStick, AnalogStickConfig } from './AnalogStick';
 import { vibrator } from '@kit.SensorServiceKit';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
@@ -18,29 +25,17 @@ const SCALE_KEY = 'virtual_controller_scale';
 const OPACITY_KEY = 'virtual_controller_opacity';
 
 export interface VirtualControllerConfig {
-  /**
   opacity?: number;
-  /**
   scale?: number;
-  /**
   showLeftStick?: boolean;
-  /**
   showRightStick?: boolean;
-  /**
   showDpad?: boolean;
-  /**
   showButtons?: boolean;
-  /**
   showShoulder?: boolean;
-  /**
   showCenter?: boolean;
-  /**
   showGuideButton?: boolean;
-  /**
   showL3R3?: boolean;
-  /**
   enableVibration?: boolean;
-  /**
   deadzone?: number;
 }
 
@@ -49,11 +44,7 @@ export struct VirtualController {
   config: VirtualControllerConfig = {};
 
   onInput: (input: InputEvent) => void = () => {};
-
-  /**
   touchPassthrough: boolean = false;
-
-  /**
   @Prop controllerScale: number = 1.0;
 
   private controllerOpacity: number = 0.75;
@@ -577,30 +568,17 @@ export struct VirtualController {
 
 }
 
-// =============================================================================
-// =============================================================================
 
 @Component
 export struct VirtualControllerOverlay {
-  /**
-  onInput: (input: InputEvent) => void = () => {};
-
-  /**
+  onInput: (input: InputEvent) => void = () => {
+  };
   @Link touchPassthrough: boolean;
-
-  /**
   @Link controllerScale: number;
-
-  /**
   @Link controllerOpacity: number;
-
-  /**
   onlyL3R3: boolean = false;
-  /**
   showGuideButton: boolean = true;
-  /**
   vibrateOsc: boolean = true;
-  /**
   halfHeightPortrait: boolean = true;
 
   @State private hitTestReady: number = 0;

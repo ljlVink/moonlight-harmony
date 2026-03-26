@@ -22,9 +22,9 @@
 
 #define LOG_TAG "AudioRenderer"
 
-// =============================================================================
+
 // OHAudio callback API dynamic loading (compatibility for older devices)
-// =============================================================================
+
 
 // Function pointer type definitions - Renderer
 typedef OH_AudioStream_Result (*PFN_SetRendererWriteDataCb)(
@@ -89,9 +89,9 @@ static void LoadAudioApis() {
     // Don't dlclose, keep library loaded
 }
 
-// =============================================================================
+
 // AudioRenderer class implementation
-// =============================================================================
+
 
 AudioRenderer::AudioRenderer() {
     // ringBuffer_ is dynamically allocated in Init
@@ -556,9 +556,9 @@ double AudioRenderer::GetBufferLatencyMs() const {
         : 0.0;
 }
 
-// =============================================================================
+
 // OHAudio callback implementations
-// =============================================================================
+
 
 OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* renderer, void* userData,
                                     void* buffer, int32_t bufferLen) {
@@ -740,9 +740,9 @@ void AudioRenderer::OnError(OH_AudioRenderer* renderer, void* userData,
     }
 }
 
-// =============================================================================
+
 // Global simplified interface
-// =============================================================================
+
 
 namespace {
     // Use atomic pointer for thread-safety of high-frequency calls like PlaySamples

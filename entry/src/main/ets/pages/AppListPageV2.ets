@@ -8,16 +8,15 @@
  * (at your option) any later version.
  */
 
-import { router, promptAction } from '@kit.ArkUI';
-import { display } from '@kit.ArkUI';
+import { display, promptAction, router } from '@kit.ArkUI';
 import { ComputerManager } from '../service/ComputerManager';
-import { NvHttp, AppEntry, DisplayInfo } from '../service/NvHttp';
+import { AppEntry, DisplayInfo, NvHttp } from '../service/NvHttp';
 import { AppCard } from '../components/AppCard';
 import { AppListViewModel, ObservableApp } from '../viewmodel/AppViewModel';
-import { AppColors, AppSizes, AppSpacing, AppAnimation, AppShadows } from '../common/Theme';
+import { AppAnimation, AppColors, AppSizes, AppSpacing } from '../common/Theme';
 import { common } from '@kit.AbilityKit';
 import { PairState, selectBestAddress } from '../model/ComputerInfo';
-import { OptionPickerDialog, OptionPickerDialogConfig, OptionItem } from '../components/OptionPickerDialog';
+import { OptionItem, OptionPickerDialog, OptionPickerDialogConfig } from '../components/OptionPickerDialog';
 import { ConfirmDialog, ConfirmDialogConfig } from '../components/ConfirmDialog';
 
 interface AppListPageParams {
@@ -42,8 +41,6 @@ struct AppListPageV2 {
   @State searchText: string = '';
   @State showSearch: boolean = false;
   @State gridColumns: number = 3;
-  @State backgroundImageUrl: string = '';
-  @State backgroundOpacity: number = 0;
   @State rowCount: number = DEFAULT_HORIZONTAL_ROW_COUNT;
   @State isLandscape: boolean = true;
   @State availableDisplays: DisplayInfo[] = [];
@@ -220,7 +217,6 @@ struct AppListPageV2 {
       this.viewModel.setApps(apps, this.nvHttp);
       this.calculateOptimalRowCount();
       this.loadDisplays();
-      this.waitForFirstAppIcon();
     } catch (err) {
       promptAction.showToast({ message: `Load failed: ${(err as Error).message}` });
     } finally {
@@ -228,61 +224,6 @@ struct AppListPageV2 {
     }
   }
   
-/**
-   * Wait for first app icon to load before setting background
-   */
-  private waitForFirstAppIcon(): void {
-
-    if (this.iconPollIntervalId !== -1) {
-      clearInterval(this.iconPollIntervalId);
-      this.iconPollIntervalId = -1;
-    }
-    
-    if (this.viewModel.filteredApps.length === 0) return;
-    
-    const firstApp = this.viewModel.filteredApps[0];
-    
-    const setBackground = () => {
-      if (firstApp.iconLoaded && firstApp.localIconPath) {
-        this.backgroundImageUrl = `file://${firstApp.localIconPath}`;
-        setTimeout(() => {
-          animateTo({ duration: 500, curve: Curve.EaseOut }, () => {
-            this.backgroundOpacity = 0.7;
-          });
-        }, 50);
-        return true;
-      }
-      return false;
-    };
-    
-    if (setBackground()) return;
-    
-
-    let attempts = 0;
-    this.iconPollIntervalId = setInterval(() => {
-      if (setBackground() || ++attempts >= 30) {
-        if (this.iconPollIntervalId !== -1) {
-          clearInterval(this.iconPollIntervalId);
-          this.iconPollIntervalId = -1;
-        }
-      }
-    }, 100);
-  }
-
-/**
-   * Update background image
-   */
-  private updateBackgroundForApp(app: ObservableApp): void {
-    if (!app.localIconPath || !app.iconLoaded) return;
-    
-    const newUrl = `file://${app.localIconPath}`;
-    if (this.backgroundImageUrl !== newUrl) {
-      animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
-        this.backgroundImageUrl = newUrl;
-      });
-    }
-  }
-
   private async refreshApps(silent: boolean = false): Promise<void> {
     this.isRefreshing = true;
     
@@ -352,29 +293,6 @@ struct AppListPageV2 {
         .width('100%')
         .height('100%')
         .backgroundColor(AppColors.Background)
-      
-
-      if (this.backgroundImageUrl.length > 0) {
-        Image(this.backgroundImageUrl)
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Cover)
-          .opacity(this.backgroundOpacity)
-        
-
-        Column()
-          .width('100%')
-          .height('100%')
-          .linearGradient({
-            angle: 180,
-            colors: [
-              [AppColors.Background, 0.0],
-              ['rgba(0,0,0,0)', 0.4],
-              [AppColors.Background, 1.0]
-            ]
-          })
-          .opacity(this.backgroundOpacity > 0 ? 1 : 0)
-      }
       
 
       Column() {
@@ -732,7 +650,6 @@ struct AppListPageV2 {
                   onTap: () => this.launchApp(app),
                   onLongPress: () => this.openAppMenu(app),
                   onSelect: () => {
-                    this.updateBackgroundForApp(app);
                   }
                 })
               }, (app: ObservableApp) => `${app.id}_${app.isRunning}_${app.iconLoaded}`)
@@ -869,9 +786,6 @@ struct AppListPageV2 {
   }
 
   private openAppMenu(app: ObservableApp): void {
-    
-    this.updateBackgroundForApp(app);
-    
     const options: OptionItem[] = [];
     const actionMap = new Map<string, () => void>();
     let actionIndex = 0;

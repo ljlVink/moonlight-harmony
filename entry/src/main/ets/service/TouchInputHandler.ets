@@ -8,9 +8,7 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
+
 import nativeLib from 'libmoonlight_nativelib.so';
 import { PointXY } from './PanZoomHandler';
 import {
@@ -18,19 +16,12 @@ import {
   BUTTON_ACTION_RELEASE,
   BUTTON_LEFT,
   BUTTON_RIGHT,
-  TOUCH_EVENT_DOWN,
-  TOUCH_EVENT_UP,
-  TOUCH_EVENT_MOVE,
-  TOUCH_EVENT_CANCEL,
-  TOUCH_EVENT_HOVER,
-  TOUCH_EVENT_CANCEL_ALL,
-  LI_TOOL_TYPE_UNKNOWN,
+  LI_ROT_UNKNOWN,
   LI_TOOL_TYPE_PEN,
-  LI_TOOL_TYPE_ERASER,
-  LI_PEN_BUTTON_PRIMARY,
-  LI_PEN_BUTTON_SECONDARY,
-  LI_TILT_UNKNOWN,
-  LI_ROT_UNKNOWN
+  TOUCH_EVENT_CANCEL,
+  TOUCH_EVENT_DOWN,
+  TOUCH_EVENT_MOVE,
+  TOUCH_EVENT_UP
 } from './MoonBridge';
 
 export enum TouchInputMode {
@@ -62,11 +53,9 @@ interface TouchState {
 }
 
 export interface TouchInputConfig {
-  /**
+
   sensitivity?: number;
-  /**
   clickThreshold?: number;
-  /**
   clickTimeThreshold?: number;
 }
 
@@ -75,94 +64,50 @@ export class TouchInputHandler {
   private mode: TouchInputMode = TouchInputMode.TRACKPAD;
   private touchStates: Map<number, TouchState> = new Map();
   private config: TouchInputConfig;
-  /**
   private lastForce: Map<number, number> = new Map();
-  /**
   private lastSize: Map<number, number> = new Map();
-  /**
   private penUnsupported: boolean = false;
-  /**
   private penFirstEventLogged: boolean = false;
-  
-  /**
   private static readonly FORCE_MAX = 65535.0;
-  
-  /**
   private twoFingerDownTime: number = 0;
-  /**
   private firstFingerUpTime: number = 0;
-  /**
   private twoFingerTapPending: boolean = false;
-  /**
   private twoFingerMoved: boolean = false;
-  /**
   private twoFingerStartX: number = 0;
   private twoFingerStartY: number = 0;
-  /**
   private activePointerCount: number = 0;
-  /**
   private maxPointerCountInGesture: number = 0;
-  /**
   private confirmedScroll: boolean = false;
-  /**
   private secondFingerLastY: number = 0;
-
-  /**
   private twoFingerTapThreshold: number = 250;
-  /**
   private static readonly TWO_FINGER_MOVE_THRESHOLD = 30;
-  /**
   private static readonly SCROLL_SPEED_FACTOR = 5;
-
-  /**
   private mouseDownX: number = 0;
   private mouseDownY: number = 0;
   private mouseDownTime: number = 0;
-  /**
   private mouseLastUpX: number = 0;
   private mouseLastUpY: number = 0;
   private mouseLastUpTime: number = 0;
-  /**
   private mouseLastX: number = 0;
   private mouseLastY: number = 0;
-  /**
   private mouseCancelled: boolean = false;
-  /**
   private mouseConfirmedTap: boolean = false;
-  /**
   private mouseConfirmedLongPress: boolean = false;
-  /**
   private mouseLongPressTimer: number = -1;
-  /**
   private mouseTapDownTimer: number = -1;
-  /**
   private mouseLeftButtonUpTimer: number = -1;
-  /**
   private mousePrimaryFingerId: number = -1;
-  /**
   private mouseSecondFingerId: number = -1;
-  /**
   private mouseSecondFingerLastY: number = 0;
-  /**
   private mouseAreaWidth: number = 0;
   private mouseAreaHeight: number = 0;
-
-  /**
   private coordinateTransform: ((x: number, y: number) => PointXY) | null = null;
-
-  /**
   private static readonly MOUSE_LONG_PRESS_TIME = 650;
-  /**
   private static readonly MOUSE_LONG_PRESS_DISTANCE = 30;
-  /**
   private static readonly MOUSE_DEADZONE_TIME = 100;
-  /**
   private static readonly MOUSE_DEADZONE_DISTANCE = 20;
-  /**
   private mouseDoubleTapTime: number = 250;
-  /**
   private static readonly MOUSE_DOUBLE_TAP_DISTANCE = 60;
-  /**
   private static readonly MOUSE_SCROLL_SPEED_FACTOR = 3;
 
   private static readonly DEFAULT_SENSITIVITY = 1.5;
@@ -330,10 +275,8 @@ export class TouchInputHandler {
         break;
     }
   }
-  
-  /**
-   * 
-   */
+
+
   private handleTrackpadEvent(event: TouchEvent): void {
     const touches = event.touches;
     const changedTouches = event.changedTouches;
@@ -742,9 +685,7 @@ export class TouchInputHandler {
     return LI_TOOL_TYPE_PEN;
   }
 
-  /**
-   *
-   */
+
   private computePenTilt(tiltX: number, tiltY: number): number {
     if (tiltX === 0 && tiltY === 0) {
       return 0;

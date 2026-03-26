@@ -8,22 +8,28 @@
  * (at your option) any later version.
  */
 
-import { router, promptAction, display } from '@kit.ArkUI';
-import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
-import { common, Want, bundleManager } from '@kit.AbilityKit';
+import { ColorMetrics, display, LengthMetrics, promptAction, router } from '@kit.ArkUI';
+import { bundleManager, common, Want } from '@kit.AbilityKit';
 import { pasteboard } from '@kit.BasicServicesKit';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { AppColors, AppSizes, AppSpacing, AppAnimation, AppShadows } from '../common/Theme';
-import { StreamingSession, DecoderCapabilities } from '../service/StreamingSession';
+import { AppAnimation, AppColors, AppSizes, AppSpacing } from '../common/Theme';
+import { DecoderCapabilities, StreamingSession } from '../service/StreamingSession';
 import { getRecommendedBitrate } from '../model/StreamConfig';
 import { PerfIcons, PerfLabels } from '../components/PerformanceOverlayManager';
-import { SettingSlider, SettingSliderConfig, LogarithmicSlider } from '../components/SettingSlider';
-import { OptionPickerDialog, OptionPickerDialogConfig, OptionItem as DialogOptionItem } from '../components/OptionPickerDialog';
-import { MultiOptionPickerDialog, MultiOptionPickerDialogConfig, MultiOptionItem as DialogMultiOptionItem } from '../components/MultiOptionPickerDialog';
-import { BackgroundImageUtil, BackgroundImageType } from '../utils/BackgroundImageUtil';
+import { SettingSlider } from '../components/SettingSlider';
+import {
+  OptionItem as DialogOptionItem,
+  OptionPickerDialog,
+  OptionPickerDialogConfig
+} from '../components/OptionPickerDialog';
+import {
+  MultiOptionItem as DialogMultiOptionItem,
+  MultiOptionPickerDialog,
+  MultiOptionPickerDialogConfig
+} from '../components/MultiOptionPickerDialog';
 import { InputInterceptorService } from '../service/InputInterceptorService';
 import { SettingsKeys } from '../service/SettingsService';
-import { loadChangelog, ChangelogEntry, ChangeItem, getChangeTypeConfig } from '../common/Changelog';
+import { ChangeItem, ChangelogEntry, getChangeTypeConfig, loadChangelog } from '../common/Changelog';
 import { InlineSegmentPicker } from '../components/InlineSegmentPicker';
 import { DevKeyVerifier } from '../utils/DevKeyVerifier';
 
@@ -200,10 +206,8 @@ struct SettingsPageV2 {
   @State enableBackgroundTask: boolean = true;
   
   @State smallIconMode: boolean = false;
-  @State backgroundImageType: string = 'default';
-  @State backgroundImageUrl: string = '';
   @State resumeStream: boolean = false;
-  @State developerMode: boolean = false;
+  @State developerMode: boolean = true;
   private devKeyActivated: boolean = false;
   
   @State appVersion: string = '';
@@ -374,414 +378,6 @@ struct SettingsPageV2 {
     return Math.round(getRecommendedBitrate(width, height, fps) / 1000);
   }
 
-  private async loadSettings(): Promise<void> {
-    try {
-      this.resolution = await PreferencesUtil.get<string>(SettingsKeys.RESOLUTION, '1080p');
-      const customResStr = await PreferencesUtil.get<string>(SettingsKeys.CUSTOM_RESOLUTIONS, '');
-      this.customResolutions = customResStr ? customResStr.split(',').filter(s => s.length > 0) : [];
-      this.fps = await PreferencesUtil.get<string>(SettingsKeys.FPS, '60 FPS');
-      this.customFps = await PreferencesUtil.get<number>(SettingsKeys.CUSTOM_FPS, 0);
-      this.bitrate = await PreferencesUtil.get<number>(SettingsKeys.BITRATE, 0);
-      this.hostScale = await PreferencesUtil.get<number>(SettingsKeys.HOST_SCALE, 100);
-      this.enableHdr = await this.loadBoolean(SettingsKeys.ENABLE_HDR, false);
-      this.hdrMode = await PreferencesUtil.get<string>(SettingsKeys.HDR_MODE, 'HDR10');
-      this.enableHdrHighBrightness = await this.loadBoolean(SettingsKeys.ENABLE_HDR_HIGH_BRIGHTNESS, false);
-      this.videoFormat = await PreferencesUtil.get<string>(SettingsKeys.VIDEO_FORMAT, '自动');
-      this.stretchVideo = await this.loadBoolean(SettingsKeys.STRETCH_VIDEO, false);
-      this.screenPosition = await PreferencesUtil.get<string>(SettingsKeys.SCREEN_POSITION, '居中');
-      this.screenOffsetX = await PreferencesUtil.get<number>(SettingsKeys.SCREEN_OFFSET_X, 0);
-      this.screenOffsetY = await PreferencesUtil.get<number>(SettingsKeys.SCREEN_OFFSET_Y, 0);
-      this.fullRange = await this.loadBoolean(SettingsKeys.FULL_RANGE, false);
-      this.reverseResolution = await this.loadBoolean(SettingsKeys.REVERSE_RESOLUTION, false);
-      this.rotableScreen = await this.loadBoolean(SettingsKeys.ROTABLE_SCREEN, false);
-      
-      this.audioConfig = await PreferencesUtil.get<string>(SettingsKeys.AUDIO_CONFIG, '立体声');
-      this.enableLocalAudio = await this.loadBoolean(SettingsKeys.ENABLE_LOCAL_AUDIO, false);
-      this.enableSpatializer = await this.loadBoolean(SettingsKeys.ENABLE_SPATIALIZER, false);
-      this.controlOnly = await this.loadBoolean(SettingsKeys.CONTROL_ONLY, false);
-      this.enableMic = await this.loadBoolean(SettingsKeys.ENABLE_MIC, false);
-      this.micBitrate = await PreferencesUtil.get<number>(SettingsKeys.MIC_BITRATE, 64);
-      
-      this.enableVibration = await this.loadBoolean(SettingsKeys.ENABLE_VIBRATION, true);
-      this.vibrationMode = await PreferencesUtil.get<string>(SettingsKeys.VIBRATION_MODE, '自动');
-      this.vibrateFallbackStrength = await PreferencesUtil.get<number>(SettingsKeys.VIBRATE_FALLBACK_STRENGTH, 100);
-      this.enableAudioVibration = await this.loadBoolean(SettingsKeys.ENABLE_AUDIO_VIBRATION, false);
-      this.audioVibrationStrength = await PreferencesUtil.get<number>(SettingsKeys.AUDIO_VIBRATION_STRENGTH, 60);
-      this.audioVibrationSceneMode = await PreferencesUtil.get<string>(SettingsKeys.AUDIO_VIBRATION_SCENE_MODE, '游戏/电影');
-      this.multiController = await this.loadBoolean(SettingsKeys.MULTI_CONTROLLER, true);
-      this.flipFaceButtons = await this.loadBoolean(SettingsKeys.FLIP_FACE_BUTTONS, false);
-      this.deadzone = await PreferencesUtil.get<number>(SettingsKeys.DEADZONE, 7);
-      this.gamepadMotionSensors = await this.loadBoolean(SettingsKeys.GAMEPAD_MOTION_SENSORS, true);
-      this.gamepadMotionFallback = await this.loadBoolean(SettingsKeys.GAMEPAD_MOTION_FALLBACK, false);
-      this.gamepadTouchpadMouse = await this.loadBoolean(SettingsKeys.GAMEPAD_TOUCHPAD_MOUSE, false);
-      this.enableStartKeyMenu = await this.loadBoolean(SettingsKeys.ENABLE_START_KEY_MENU, true);
-      this.ignoreDeviceDisconnect = await this.loadBoolean(SettingsKeys.IGNORE_DEVICE_DISCONNECT, false);
-      this.enableKeyInterceptor = await this.loadBoolean(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
-      this.keyInterceptorAvailable = InputInterceptorService.getInstance().isInjectApiAvailable();
-      if (!this.keyInterceptorAvailable && this.enableKeyInterceptor) {
-        this.enableKeyInterceptor = false;
-        this.saveSetting(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
-      }
-      this.gcButtonHomeMapping = await PreferencesUtil.get<string>(SettingsKeys.GC_BUTTON_HOME_MAPPING, 'guide');
-      this.usbDriverEnabled = await this.loadBoolean(SettingsKeys.USB_DRIVER_ENABLED, false);
-      this.forceUsbDriverOnly = await this.loadBoolean(SettingsKeys.FORCE_USB_DRIVER_ONLY, false);
-      this.ddkHighSpeedPolling = await this.loadBoolean(SettingsKeys.DDK_HIGH_SPEED_POLLING, false);
-      
-      this.enableOnscreenControls = await this.loadBoolean(SettingsKeys.ENABLE_ONSCREEN_CONTROLS, false);
-      this.enableOnscreenKeyboard = await this.loadBoolean(SettingsKeys.ENABLE_ONSCREEN_KEYBOARD, false);
-      this.onlyL3R3 = await this.loadBoolean(SettingsKeys.ONLY_L3_R3, false);
-      this.showGuideButton = await this.loadBoolean(SettingsKeys.SHOW_GUIDE_BUTTON, true);
-      this.halfHeightOscPortrait = await this.loadBoolean(SettingsKeys.HALF_HEIGHT_OSC_PORTRAIT, true);
-      this.oscOpacity = await PreferencesUtil.get<number>(SettingsKeys.OSC_OPACITY, 90);
-      this.vibrateOsc = await this.loadBoolean(SettingsKeys.VIBRATE_OSC, true);
-      
-      this.showLocalCursor = await this.loadBoolean(SettingsKeys.SHOW_LOCAL_CURSOR, false);
-      this.touchscreenTrackpad = await this.loadBoolean(SettingsKeys.TOUCHSCREEN_TRACKPAD, false);
-      this.enableDoubleClickDrag = await this.loadBoolean(SettingsKeys.ENABLE_DOUBLE_CLICK_DRAG, false);
-      this.doubleTapTimeThreshold = await PreferencesUtil.get<number>(SettingsKeys.DOUBLE_TAP_TIME_THRESHOLD, 125);
-      this.mouseNavButtons = await this.loadBoolean(SettingsKeys.MOUSE_NAV_BUTTONS, false);
-      this.gameMouseMode = await this.loadBoolean(SettingsKeys.GAME_MOUSE_MODE, false);
-      
-      this.enableEnhancedTouch = await this.loadBoolean(SettingsKeys.ENABLE_ENHANCED_TOUCH, true);
-      this.enhancedTouchOnRight = await this.loadBoolean(SettingsKeys.ENHANCED_TOUCH_ON_RIGHT, false);
-      this.enhancedTouchZoneDivider = await PreferencesUtil.get<number>(SettingsKeys.ENHANCED_TOUCH_ZONE_DIVIDER, 50);
-      this.pointerVelocityFactor = await PreferencesUtil.get<number>(SettingsKeys.POINTER_VELOCITY_FACTOR, 100);
-      this.longPressFlatRegion = await PreferencesUtil.get<number>(SettingsKeys.LONG_PRESS_FLAT_REGION, 0);
-      
-      this.enableSops = await this.loadBoolean(SettingsKeys.ENABLE_SOPS, true);
-      this.screenCombinationMode = await PreferencesUtil.get<string>(SettingsKeys.SCREEN_COMBINATION_MODE, '主机默认');
-      this.lockScreenAfterDisconnect = await this.loadBoolean(SettingsKeys.LOCK_SCREEN_AFTER_DISCONNECT, false);
-      
-      this.decoderBufferCount = await PreferencesUtil.get<number>(SettingsKeys.DECODER_BUFFER_COUNT, 0);
-      this.enableSyncDecode = await this.loadBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false);
-      this.enableVrr = await this.loadBoolean(SettingsKeys.ENABLE_VRR, false);
-      this.enableVsync = await this.loadBoolean(SettingsKeys.ENABLE_VSYNC, false);
-      this.performanceMode = await this.loadBoolean(SettingsKeys.PERFORMANCE_MODE, false);
-      this.enablePerfOverlay = await this.loadBoolean(SettingsKeys.ENABLE_PERF_OVERLAY, false);
-      this.perfOverlayOrientation = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_ORIENTATION, '垂直');
-      this.perfOverlayPosition = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_POSITION, '右上角');
-      this.perfOverlayLocked = await this.loadBoolean(SettingsKeys.PERF_OVERLAY_LOCKED, false);
-      const itemsStr = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_ITEMS, 'resolution,decoder,render_fps,packet_loss,bitrate,network_latency,decode_latency');
-      this.perfOverlayItems = itemsStr.split(',').filter(item => item.length > 0);
-      this.latencyToast = await this.loadBoolean(SettingsKeys.LATENCY_TOAST, false);
-      this.disableWarnings = await this.loadBoolean(SettingsKeys.DISABLE_WARNINGS, false);
-      this.enableStun = await this.loadBoolean(SettingsKeys.ENABLE_STUN, false);
-      this.enableEscMenu = await this.loadBoolean(SettingsKeys.ENABLE_ESC_MENU, true);
-      this.escMenuKey = await PreferencesUtil.get<string>(SettingsKeys.ESC_MENU_KEY, 'ESC');
-      this.enableBackgroundTask = await this.loadBoolean(SettingsKeys.ENABLE_BACKGROUND_TASK, true);
-      
-      this.smallIconMode = await this.loadBoolean(SettingsKeys.SMALL_ICON_MODE, false);
-      this.backgroundImageType = await PreferencesUtil.get<string>(SettingsKeys.BACKGROUND_IMAGE_TYPE, 'default');
-      this.backgroundImageUrl = await PreferencesUtil.get<string>(SettingsKeys.BACKGROUND_IMAGE_URL, '');
-      this.resumeStream = await this.loadBoolean(SettingsKeys.RESUME_STREAM, false);
-      this.developerMode = await this.loadBoolean(SettingsKeys.DEVELOPER_MODE, false);
-      this.devKeyActivated = await this.loadBoolean(SettingsKeys.DEV_KEY_ACTIVATED, false);
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-    } finally {
-      this.isLoading = false;
-    }
-  }
-  
-  private getHomeButtonActionDescription(): string {
-    switch (this.gcButtonHomeMapping) {
-      case 'guide': return '发送 Guide 键';
-      case 'select': return '发送 Select 键';
-      case 'toggle_mouse': return '切换鼠标模式';
-      case 'toggle_perf': return '切换性能图层';
-      case 'show_menu': return '显示游戏菜单';
-      case 'none': return '无动作';
-      default: return '发送 Guide 键';
-    }
-  }
-
-  private async loadBoolean(key: string, defaultVal: boolean): Promise<boolean> {
-    const val = await PreferencesUtil.get<boolean>(key, defaultVal);
-    if (typeof val === 'boolean') return val;
-    return String(val) === 'true';
-  }
-
-  private async saveSetting(key: string, value: string | boolean | number): Promise<void> {
-    try {
-      await PreferencesUtil.put(key, value);
-    } catch (error) {
-      console.error('Failed to save setting:', error);
-      this.showToast('保存设置失败');
-    }
-  }
-  
-  private showPicker(config: PickerConfig): void {
-    console.info(`SettingsPageV2: showPicker 被调用, title=${config.title}`);
-    console.info(`SettingsPageV2: options count = ${config.options?.length}`);
-    
-    const options: DialogOptionItem[] = config.options.map((option: PickerOption) => {
-      return {
-        title: option.title,
-        subtitle: option.subtitle,
-        value: option.value
-      } as DialogOptionItem;
-    });
-    
-    this.optionPickerDialogConfig = {
-      title: config.title,
-      subtitle: config.subtitle,
-      options: options,
-      selectedValue: config.selectedValue,
-      onSelect: (option: DialogOptionItem) => {
-        console.info(`SettingsPageV2: 选中了 ${option.title}`);
-        const pickerOption: PickerOption = {
-          title: option.title,
-          subtitle: option.subtitle,
-          value: option.value
-        };
-        config.onSelect(pickerOption);
-      }
-    };
-    
-    this.optionPickerDialogController = new CustomDialogController({
-      builder: OptionPickerDialog({
-        config: this.optionPickerDialogConfig
-      }),
-      alignment: DialogAlignment.Bottom,
-      customStyle: true,
-      backgroundColor: Color.Transparent
-    });
-    
-    this.optionPickerDialogController.open();
-  }
-  
-  @Builder
-  BottomSheetContent() {
-    if (this.bottomSheetType === 'resolution') {
-      this.CustomResolutionSheet()
-    } else {
-      this.TextInputSheet()
-    }
-  }
-
-  @Builder
-  TextInputSheet() {
-    Column({ space: AppSpacing.Large }) {
-      Row() {
-        Text(this.textInputTitle)
-          .fontSize(AppSizes.FontTitle)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TextPrimary)
-      }
-      .width('100%')
-      .padding({ top: AppSpacing.Large, left: AppSpacing.Large, right: AppSpacing.Large })
-      
-      TextInput({ text: this.textInputValue, placeholder: this.textInputPlaceholder })
-        .width('100%')
-        .height(48)
-        .fontSize(AppSizes.FontBody)
-        .fontColor(AppColors.TextPrimary)
-        .backgroundColor(AppColors.Surface)
-        .borderRadius(AppSizes.RadiusMedium)
-        .padding({ left: AppSpacing.Medium, right: AppSpacing.Medium })
-        .margin({ left: AppSpacing.Large, right: AppSpacing.Large })
-        .onChange((value: string) => {
-          this.textInputValue = value;
-        })
-      
-      Row({ space: AppSpacing.Medium }) {
-        Button('清除')
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.Error)
-          .backgroundColor(Color.Transparent)
-          .layoutWeight(1)
-          .height(48)
-          .onClick(() => {
-            this.textInputValue = '';
-            if (this.textInputCallback) {
-              this.textInputCallback('');
-            }
-            this.showTextInputDialog = false;
-          })
-        
-        Button('取消')
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.TextSecondary)
-          .backgroundColor(Color.Transparent)
-          .layoutWeight(1)
-          .height(48)
-          .onClick(() => {
-            this.showTextInputDialog = false;
-          })
-        
-        Button('确定')
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.TextOnPrimary)
-          .backgroundColor(AppColors.Primary)
-          .layoutWeight(1)
-          .height(48)
-          .borderRadius(AppSizes.RadiusMedium)
-          .onClick(() => {
-            if (this.textInputCallback) {
-              this.textInputCallback(this.textInputValue);
-            }
-            this.showTextInputDialog = false;
-          })
-      }
-      .width('100%')
-      .padding({ left: AppSpacing.Large, right: AppSpacing.Large, bottom: AppSpacing.Large })
-    }
-    .width('100%')
-    .backgroundColor(AppColors.CardBackground)
-    .borderRadius(24)
-  }
-
-  private calcAspectRatio(w: number, h: number): string {
-    if (w <= 0 || h <= 0) return '';
-    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-    const d = gcd(w, h);
-    const rw = w / d;
-    const rh = h / d;
-    const ratio = w / h;
-    if (Math.abs(ratio - 16 / 9) < 0.02) return '16:9';
-    if (Math.abs(ratio - 16 / 10) < 0.02) return '16:10';
-    if (Math.abs(ratio - 21 / 9) < 0.05) return '21:9 超宽';
-    if (Math.abs(ratio - 32 / 9) < 0.05) return '32:9 超超宽';
-    if (Math.abs(ratio - 4 / 3) < 0.02) return '4:3';
-    if (Math.abs(ratio - 3 / 2) < 0.02) return '3:2';
-    if (Math.abs(ratio - 5 / 4) < 0.02) return '5:4';
-    return `${rw}:${rh}`;
-  }
-
-  @Builder
-  CustomResolutionSheet() {
-    Column({ space: AppSpacing.Medium }) {
-      Text('添加自定义分辨率')
-        .fontSize(AppSizes.FontTitle)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TextPrimary)
-        .width('100%')
-        .padding({ top: AppSpacing.Large, left: AppSpacing.Large, right: AppSpacing.Large })
-
-      Row({ space: AppSpacing.Small }) {
-        TextInput({ text: this.customResWidth, placeholder: '宽度' })
-          .type(InputType.Number)
-          .width(0)
-          .layoutWeight(1)
-          .height(48)
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.TextPrimary)
-          .backgroundColor(AppColors.Surface)
-          .borderRadius(AppSizes.RadiusMedium)
-          .textAlign(TextAlign.Center)
-          .onChange((value: string) => {
-            this.customResWidth = value;
-            const w = parseInt(value) || 0;
-            const h = parseInt(this.customResHeight) || 0;
-            this.customResAspectRatio = this.calcAspectRatio(w, h);
-          })
-
-        Text('×')
-          .fontSize(20)
-          .fontColor(AppColors.TextSecondary)
-          .fontWeight(FontWeight.Bold)
-
-        TextInput({ text: this.customResHeight, placeholder: '高度' })
-          .type(InputType.Number)
-          .width(0)
-          .layoutWeight(1)
-          .height(48)
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.TextPrimary)
-          .backgroundColor(AppColors.Surface)
-          .borderRadius(AppSizes.RadiusMedium)
-          .textAlign(TextAlign.Center)
-          .onChange((value: string) => {
-            this.customResHeight = value;
-            const w = parseInt(this.customResWidth) || 0;
-            const h = parseInt(value) || 0;
-            this.customResAspectRatio = this.calcAspectRatio(w, h);
-          })
-      }
-      .width('100%')
-      .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
-
-      if (this.customResAspectRatio.length > 0) {
-        Text(`宽高比: ${this.customResAspectRatio}`)
-          .fontSize(AppSizes.FontCaption)
-          .fontColor(AppColors.Primary)
-          .width('100%')
-          .textAlign(TextAlign.Center)
-      }
-
-      Text('快速选择')
-        .fontSize(AppSizes.FontCaption)
-        .fontColor(AppColors.TextSecondary)
-        .width('100%')
-        .padding({ left: AppSpacing.Large })
-
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-        ForEach([
-          new ResolutionPreset('2K 超宽', '2560', '1080'),
-          new ResolutionPreset('QHD 超宽', '3440', '1440'),
-          new ResolutionPreset('1920×1200', '1920', '1200'),
-          new ResolutionPreset('2560×1600', '2560', '1600'),
-          new ResolutionPreset('1280×1024', '1280', '1024'),
-          new ResolutionPreset('5120×1440', '5120', '1440'),
-          new ResolutionPreset('5K', '5120', '2880'),
-          new ResolutionPreset('8K', '7680', '4320'),
-        ] as ResolutionPreset[], (item: ResolutionPreset) => {
-          Button(item.label)
-            .fontSize(AppSizes.FontCaption)
-            .fontColor(AppColors.TextPrimary)
-            .backgroundColor(AppColors.Surface)
-            .height(32)
-            .borderRadius(16)
-            .padding({ left: 12, right: 12 })
-            .onClick(() => {
-              this.customResWidth = item.w;
-              this.customResHeight = item.h;
-              const w = parseInt(item.w);
-              const h = parseInt(item.h);
-              this.customResAspectRatio = this.calcAspectRatio(w, h);
-            })
-        })
-      }
-      .width('100%')
-      .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
-
-      Row({ space: AppSpacing.Medium }) {
-        Button('取消')
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.TextSecondary)
-          .backgroundColor(Color.Transparent)
-          .layoutWeight(1)
-          .height(48)
-          .onClick(() => {
-            this.showTextInputDialog = false;
-          })
-        
-        Button('添加')
-          .fontSize(AppSizes.FontBody)
-          .fontColor(AppColors.TextOnPrimary)
-          .backgroundColor(AppColors.Primary)
-          .layoutWeight(1)
-          .height(48)
-          .borderRadius(AppSizes.RadiusMedium)
-          .onClick(() => {
-            const w = this.customResWidth.trim();
-            const h = this.customResHeight.trim();
-            if (w.length > 0 && h.length > 0) {
-              this.addCustomResolution(`${w}x${h}`);
-            } else {
-              this.showToast('请输入宽度和高度');
-            }
-            this.showTextInputDialog = false;
-          })
-      }
-      .width('100%')
-      .padding({ left: AppSpacing.Large, right: AppSpacing.Large, bottom: AppSpacing.Large })
-    }
-    .width('100%')
-    .backgroundColor(AppColors.CardBackground)
-    .borderRadius(24)
-  }
-
   build() {
     Column() {
       if (this.isWideScreen) {
@@ -793,12 +389,12 @@ struct SettingsPageV2 {
           }
         }
       }
-      
+
       Row() {
         if (this.isWideScreen) {
           this.SettingsSidebar()
         }
-        
+
         Scroll() {
           GridRow({ columns: 12 }) {
             GridCol({
@@ -821,16 +417,16 @@ struct SettingsPageV2 {
               },
               {
                 title: '帧率',
-                subtitle: this.fps.startsWith('自定义:') 
-                  ? `${this.fps.split(':')[1]} FPS (自定义)` 
+                subtitle: this.fps.startsWith('自定义:')
+                  ? `${this.fps.split(':')[1]} FPS (自定义)`
                   : this.fps,
                 type: 'select',
                 action: () => this.showFpsPicker()
               },
               {
                 title: '码率',
-                subtitle: this.bitrate === 0 
-                  ? `自动 (推荐: ${this.getRecommendedBitrateForCurrentSettings()} Mbps)` 
+                subtitle: this.bitrate === 0
+                  ? `自动 (推荐: ${this.getRecommendedBitrateForCurrentSettings()} Mbps)`
                   : '视频传输比特率',
                 type: 'slider',
                 value: this.bitrate,
@@ -886,8 +482,8 @@ struct SettingsPageV2 {
               },
               {
                 title: 'HDR',
-                subtitle: this.videoFormat === 'H.264' 
-                  ? '❌ H.264 不支持 HDR' 
+                subtitle: this.videoFormat === 'H.264'
+                  ? '❌ H.264 不支持 HDR'
                   : '需要支持 HDR 的显示器',
                 type: 'toggle',
                 value: this.enableHdr,
@@ -919,8 +515,8 @@ struct SettingsPageV2 {
               },
               {
                 title: 'HDR 高亮度',
-                subtitle: this.videoFormat === 'H.264' 
-                  ? '❌ 需要 HEVC/AV1' 
+                subtitle: this.videoFormat === 'H.264'
+                  ? '❌ 需要 HEVC/AV1'
                   : '使用高亮度 HDR 模式',
                 type: 'toggle',
                 visible: this.enableHdr,
@@ -1028,8 +624,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'audio',
             icon: $r('sys.symbol.speaker_wave_2_fill'),
             title: '音频',
@@ -1136,8 +732,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'gamepad',
             icon: $r('sys.symbol.gamecontroller_fill'),
             title: '手柄',
@@ -1285,8 +881,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'usb_driver',
             icon: $r('app.media.ic_controller'),
             useSymbol: false,
@@ -1350,8 +946,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'osc',
             icon: $r('sys.symbol.gamecontroller'),
             title: '屏幕控制器',
@@ -1437,8 +1033,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'mouse',
             icon: $r('app.media.ic_mouse'),
             useSymbol: false,
@@ -1511,8 +1107,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'enhanced_touch',
             icon: $r('sys.symbol.bolt_fill'),
             title: '增强触控 (实验性)',
@@ -1585,8 +1181,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'host',
             icon: $r('app.media.ic_host'),
             useSymbol: false,
@@ -1646,8 +1242,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'performance',
             icon: $r('app.media.ic_advanced'),
             useSymbol: false,
@@ -1789,7 +1385,7 @@ struct SettingsPageV2 {
                 value: this.developerMode,
                 action: () => {
                   if (this.developerMode) {
-                    this.developerMode = false;
+
                     this.saveSetting(SettingsKeys.DEVELOPER_MODE, false);
                   } else if (this.devKeyActivated) {
                     this.developerMode = true;
@@ -1802,8 +1398,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'ui',
             icon: $r('sys.symbol.display'),
             title: '界面',
@@ -1817,18 +1413,6 @@ struct SettingsPageV2 {
                   this.smallIconMode = !this.smallIconMode;
                   this.saveSetting(SettingsKeys.SMALL_ICON_MODE, this.smallIconMode);
                 }
-              },
-              {
-                title: '背景图片',
-                subtitle: this.getBackgroundImageTypeLabel(),
-                type: 'select',
-                action: () => this.showBackgroundImageTypePicker()
-              },
-              {
-                title: '自定义背景图 URL',
-                subtitle: this.backgroundImageUrl || '使用默认 API',
-                type: 'action',
-                action: () => this.showBackgroundImageUrlInput()
               },
               {
                 title: '恢复串流',
@@ -1873,8 +1457,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          this.SettingsGroup({
+
+                this.SettingsGroup({
             id: 'about',
             icon: $r('sys.symbol.info_circle_fill'),
             title: '关于',
@@ -1935,8 +1519,8 @@ struct SettingsPageV2 {
               }
             ]
           })
-          
-          Column()
+
+                Column()
             .height(AppSpacing.XXLarge)
               }
               .width('100%')
@@ -1972,6 +1556,443 @@ struct SettingsPageV2 {
         }
       }
     } as SheetOptions)
+  }
+
+  @Builder
+  BottomSheetContent() {
+    if (this.bottomSheetType === 'resolution') {
+      this.CustomResolutionSheet()
+    } else {
+      this.TextInputSheet()
+    }
+  }
+
+  @Builder
+  TextInputSheet() {
+    Column({ space: AppSpacing.Large }) {
+      Row() {
+        Text(this.textInputTitle)
+          .fontSize(AppSizes.FontTitle)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TextPrimary)
+      }
+      .width('100%')
+      .padding({ top: AppSpacing.Large, left: AppSpacing.Large, right: AppSpacing.Large })
+
+      TextInput({ text: this.textInputValue, placeholder: this.textInputPlaceholder })
+        .width('100%')
+        .height(48)
+        .fontSize(AppSizes.FontBody)
+        .fontColor(AppColors.TextPrimary)
+        .backgroundColor(AppColors.Surface)
+        .borderRadius(AppSizes.RadiusMedium)
+        .padding({ left: AppSpacing.Medium, right: AppSpacing.Medium })
+        .margin({ left: AppSpacing.Large, right: AppSpacing.Large })
+        .onChange((value: string) => {
+          this.textInputValue = value;
+        })
+
+      Row({ space: AppSpacing.Medium }) {
+        Button('清除')
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.Error)
+          .backgroundColor(Color.Transparent)
+          .layoutWeight(1)
+          .height(48)
+          .onClick(() => {
+            this.textInputValue = '';
+            if (this.textInputCallback) {
+              this.textInputCallback('');
+            }
+            this.showTextInputDialog = false;
+          })
+
+        Button('取消')
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.TextSecondary)
+          .backgroundColor(Color.Transparent)
+          .layoutWeight(1)
+          .height(48)
+          .onClick(() => {
+            this.showTextInputDialog = false;
+          })
+
+        Button('确定')
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.TextOnPrimary)
+          .backgroundColor(AppColors.Primary)
+          .layoutWeight(1)
+          .height(48)
+          .borderRadius(AppSizes.RadiusMedium)
+          .onClick(() => {
+            if (this.textInputCallback) {
+              this.textInputCallback(this.textInputValue);
+            }
+            this.showTextInputDialog = false;
+          })
+      }
+      .width('100%')
+      .padding({ left: AppSpacing.Large, right: AppSpacing.Large, bottom: AppSpacing.Large })
+    }
+    .width('100%')
+    .backgroundColor(AppColors.CardBackground)
+    .borderRadius(24)
+  }
+
+  @Builder
+  CustomResolutionSheet() {
+    Column({ space: AppSpacing.Medium }) {
+      Text('添加自定义分辨率')
+        .fontSize(AppSizes.FontTitle)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(AppColors.TextPrimary)
+        .width('100%')
+        .padding({ top: AppSpacing.Large, left: AppSpacing.Large, right: AppSpacing.Large })
+
+      Row({ space: AppSpacing.Small }) {
+        TextInput({ text: this.customResWidth, placeholder: '宽度' })
+          .type(InputType.Number)
+          .width(0)
+          .layoutWeight(1)
+          .height(48)
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.TextPrimary)
+          .backgroundColor(AppColors.Surface)
+          .borderRadius(AppSizes.RadiusMedium)
+          .textAlign(TextAlign.Center)
+          .onChange((value: string) => {
+            this.customResWidth = value;
+            const w = parseInt(value) || 0;
+            const h = parseInt(this.customResHeight) || 0;
+            this.customResAspectRatio = this.calcAspectRatio(w, h);
+          })
+
+        Text('×')
+          .fontSize(20)
+          .fontColor(AppColors.TextSecondary)
+          .fontWeight(FontWeight.Bold)
+
+        TextInput({ text: this.customResHeight, placeholder: '高度' })
+          .type(InputType.Number)
+          .width(0)
+          .layoutWeight(1)
+          .height(48)
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.TextPrimary)
+          .backgroundColor(AppColors.Surface)
+          .borderRadius(AppSizes.RadiusMedium)
+          .textAlign(TextAlign.Center)
+          .onChange((value: string) => {
+            this.customResHeight = value;
+            const w = parseInt(this.customResWidth) || 0;
+            const h = parseInt(value) || 0;
+            this.customResAspectRatio = this.calcAspectRatio(w, h);
+          })
+      }
+      .width('100%')
+      .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
+
+      if (this.customResAspectRatio.length > 0) {
+        Text(`宽高比: ${this.customResAspectRatio}`)
+          .fontSize(AppSizes.FontCaption)
+          .fontColor(AppColors.Primary)
+          .width('100%')
+          .textAlign(TextAlign.Center)
+      }
+
+      Text('快速选择')
+        .fontSize(AppSizes.FontCaption)
+        .fontColor(AppColors.TextSecondary)
+        .width('100%')
+        .padding({ left: AppSpacing.Large })
+
+      Flex({
+        wrap: FlexWrap.Wrap,
+        justifyContent: FlexAlign.Start,
+        space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) }
+      }) {
+        ForEach([
+          new ResolutionPreset('2K 超宽', '2560', '1080'),
+          new ResolutionPreset('QHD 超宽', '3440', '1440'),
+          new ResolutionPreset('1920×1200', '1920', '1200'),
+          new ResolutionPreset('2560×1600', '2560', '1600'),
+          new ResolutionPreset('1280×1024', '1280', '1024'),
+          new ResolutionPreset('5120×1440', '5120', '1440'),
+          new ResolutionPreset('5K', '5120', '2880'),
+          new ResolutionPreset('8K', '7680', '4320'),
+        ] as ResolutionPreset[], (item: ResolutionPreset) => {
+          Button(item.label)
+            .fontSize(AppSizes.FontCaption)
+            .fontColor(AppColors.TextPrimary)
+            .backgroundColor(AppColors.Surface)
+            .height(32)
+            .borderRadius(16)
+            .padding({ left: 12, right: 12 })
+            .onClick(() => {
+              this.customResWidth = item.w;
+              this.customResHeight = item.h;
+              const w = parseInt(item.w);
+              const h = parseInt(item.h);
+              this.customResAspectRatio = this.calcAspectRatio(w, h);
+            })
+        })
+      }
+      .width('100%')
+      .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
+
+      Row({ space: AppSpacing.Medium }) {
+        Button('取消')
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.TextSecondary)
+          .backgroundColor(Color.Transparent)
+          .layoutWeight(1)
+          .height(48)
+          .onClick(() => {
+            this.showTextInputDialog = false;
+          })
+
+        Button('添加')
+          .fontSize(AppSizes.FontBody)
+          .fontColor(AppColors.TextOnPrimary)
+          .backgroundColor(AppColors.Primary)
+          .layoutWeight(1)
+          .height(48)
+          .borderRadius(AppSizes.RadiusMedium)
+          .onClick(() => {
+            const w = this.customResWidth.trim();
+            const h = this.customResHeight.trim();
+            if (w.length > 0 && h.length > 0) {
+              this.addCustomResolution(`${w}x${h}`);
+            } else {
+              this.showToast('请输入宽度和高度');
+            }
+            this.showTextInputDialog = false;
+          })
+      }
+      .width('100%')
+      .padding({ left: AppSpacing.Large, right: AppSpacing.Large, bottom: AppSpacing.Large })
+    }
+    .width('100%')
+    .backgroundColor(AppColors.CardBackground)
+    .borderRadius(24)
+  }
+
+  private getHomeButtonActionDescription(): string {
+    switch (this.gcButtonHomeMapping) {
+      case 'guide':
+        return '发送 Guide 键';
+      case 'select':
+        return '发送 Select 键';
+      case 'toggle_mouse':
+        return '切换鼠标模式';
+      case 'toggle_perf':
+        return '切换性能图层';
+      case 'show_menu':
+        return '显示游戏菜单';
+      case 'none':
+        return '无动作';
+      default:
+        return '发送 Guide 键';
+    }
+  }
+
+  private async loadBoolean(key: string, defaultVal: boolean): Promise<boolean> {
+    const val = await PreferencesUtil.get<boolean>(key, defaultVal);
+    if (typeof val === 'boolean') {
+      return val;
+    }
+    return String(val) === 'true';
+  }
+
+  private async saveSetting(key: string, value: string | boolean | number): Promise<void> {
+    try {
+      await PreferencesUtil.put(key, value);
+    } catch (error) {
+      console.error('Failed to save setting:', error);
+      this.showToast('保存设置失败');
+    }
+  }
+
+  private showPicker(config: PickerConfig): void {
+    console.info(`SettingsPageV2: showPicker 被调用, title=${config.title}`);
+    console.info(`SettingsPageV2: options count = ${config.options?.length}`);
+
+    const options: DialogOptionItem[] = config.options.map((option: PickerOption) => {
+      return {
+        title: option.title,
+        subtitle: option.subtitle,
+        value: option.value
+      } as DialogOptionItem;
+    });
+
+    this.optionPickerDialogConfig = {
+      title: config.title,
+      subtitle: config.subtitle,
+      options: options,
+      selectedValue: config.selectedValue,
+      onSelect: (option: DialogOptionItem) => {
+        console.info(`SettingsPageV2: 选中了 ${option.title}`);
+        const pickerOption: PickerOption = {
+          title: option.title,
+          subtitle: option.subtitle,
+          value: option.value
+        };
+        config.onSelect(pickerOption);
+      }
+    };
+
+    this.optionPickerDialogController = new CustomDialogController({
+      builder: OptionPickerDialog({
+        config: this.optionPickerDialogConfig
+      }),
+      alignment: DialogAlignment.Bottom,
+      customStyle: true,
+      backgroundColor: Color.Transparent
+    });
+
+    this.optionPickerDialogController.open();
+  }
+
+  private calcAspectRatio(w: number, h: number): string {
+    if (w <= 0 || h <= 0) {
+      return '';
+    }
+    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+    const d = gcd(w, h);
+    const rw = w / d;
+    const rh = h / d;
+    const ratio = w / h;
+    if (Math.abs(ratio - 16 / 9) < 0.02) {
+      return '16:9';
+    }
+    if (Math.abs(ratio - 16 / 10) < 0.02) {
+      return '16:10';
+    }
+    if (Math.abs(ratio - 21 / 9) < 0.05) {
+      return '21:9 超宽';
+    }
+    if (Math.abs(ratio - 32 / 9) < 0.05) {
+      return '32:9 超超宽';
+    }
+    if (Math.abs(ratio - 4 / 3) < 0.02) {
+      return '4:3';
+    }
+    if (Math.abs(ratio - 3 / 2) < 0.02) {
+      return '3:2';
+    }
+    if (Math.abs(ratio - 5 / 4) < 0.02) {
+      return '5:4';
+    }
+    return `${rw}:${rh}`;
+  }
+
+  private async loadSettings(): Promise<void> {
+    try {
+      this.resolution = await PreferencesUtil.get<string>(SettingsKeys.RESOLUTION, '1080p');
+      const customResStr = await PreferencesUtil.get<string>(SettingsKeys.CUSTOM_RESOLUTIONS, '');
+      this.customResolutions = customResStr ? customResStr.split(',').filter(s => s.length > 0) : [];
+      this.fps = await PreferencesUtil.get<string>(SettingsKeys.FPS, '60 FPS');
+      this.customFps = await PreferencesUtil.get<number>(SettingsKeys.CUSTOM_FPS, 0);
+      this.bitrate = await PreferencesUtil.get<number>(SettingsKeys.BITRATE, 0);
+      this.hostScale = await PreferencesUtil.get<number>(SettingsKeys.HOST_SCALE, 100);
+      this.enableHdr = await this.loadBoolean(SettingsKeys.ENABLE_HDR, false);
+      this.hdrMode = await PreferencesUtil.get<string>(SettingsKeys.HDR_MODE, 'HDR10');
+      this.enableHdrHighBrightness = await this.loadBoolean(SettingsKeys.ENABLE_HDR_HIGH_BRIGHTNESS, false);
+      this.videoFormat = await PreferencesUtil.get<string>(SettingsKeys.VIDEO_FORMAT, '自动');
+      this.stretchVideo = await this.loadBoolean(SettingsKeys.STRETCH_VIDEO, false);
+      this.screenPosition = await PreferencesUtil.get<string>(SettingsKeys.SCREEN_POSITION, '居中');
+      this.screenOffsetX = await PreferencesUtil.get<number>(SettingsKeys.SCREEN_OFFSET_X, 0);
+      this.screenOffsetY = await PreferencesUtil.get<number>(SettingsKeys.SCREEN_OFFSET_Y, 0);
+      this.fullRange = await this.loadBoolean(SettingsKeys.FULL_RANGE, false);
+      this.reverseResolution = await this.loadBoolean(SettingsKeys.REVERSE_RESOLUTION, false);
+      this.rotableScreen = await this.loadBoolean(SettingsKeys.ROTABLE_SCREEN, false);
+
+      this.audioConfig = await PreferencesUtil.get<string>(SettingsKeys.AUDIO_CONFIG, '立体声');
+      this.enableLocalAudio = await this.loadBoolean(SettingsKeys.ENABLE_LOCAL_AUDIO, false);
+      this.enableSpatializer = await this.loadBoolean(SettingsKeys.ENABLE_SPATIALIZER, false);
+      this.controlOnly = await this.loadBoolean(SettingsKeys.CONTROL_ONLY, false);
+      this.enableMic = await this.loadBoolean(SettingsKeys.ENABLE_MIC, false);
+      this.micBitrate = await PreferencesUtil.get<number>(SettingsKeys.MIC_BITRATE, 64);
+
+      this.enableVibration = await this.loadBoolean(SettingsKeys.ENABLE_VIBRATION, true);
+      this.vibrationMode = await PreferencesUtil.get<string>(SettingsKeys.VIBRATION_MODE, '自动');
+      this.vibrateFallbackStrength = await PreferencesUtil.get<number>(SettingsKeys.VIBRATE_FALLBACK_STRENGTH, 100);
+      this.enableAudioVibration = await this.loadBoolean(SettingsKeys.ENABLE_AUDIO_VIBRATION, false);
+      this.audioVibrationStrength = await PreferencesUtil.get<number>(SettingsKeys.AUDIO_VIBRATION_STRENGTH, 60);
+      this.audioVibrationSceneMode =
+        await PreferencesUtil.get<string>(SettingsKeys.AUDIO_VIBRATION_SCENE_MODE, '游戏/电影');
+      this.multiController = await this.loadBoolean(SettingsKeys.MULTI_CONTROLLER, true);
+      this.flipFaceButtons = await this.loadBoolean(SettingsKeys.FLIP_FACE_BUTTONS, false);
+      this.deadzone = await PreferencesUtil.get<number>(SettingsKeys.DEADZONE, 7);
+      this.gamepadMotionSensors = await this.loadBoolean(SettingsKeys.GAMEPAD_MOTION_SENSORS, true);
+      this.gamepadMotionFallback = await this.loadBoolean(SettingsKeys.GAMEPAD_MOTION_FALLBACK, false);
+      this.gamepadTouchpadMouse = await this.loadBoolean(SettingsKeys.GAMEPAD_TOUCHPAD_MOUSE, false);
+      this.enableStartKeyMenu = await this.loadBoolean(SettingsKeys.ENABLE_START_KEY_MENU, true);
+      this.ignoreDeviceDisconnect = await this.loadBoolean(SettingsKeys.IGNORE_DEVICE_DISCONNECT, false);
+      this.enableKeyInterceptor = await this.loadBoolean(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
+      this.keyInterceptorAvailable = InputInterceptorService.getInstance().isInjectApiAvailable();
+      if (!this.keyInterceptorAvailable && this.enableKeyInterceptor) {
+        this.enableKeyInterceptor = false;
+        this.saveSetting(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
+      }
+      this.gcButtonHomeMapping = await PreferencesUtil.get<string>(SettingsKeys.GC_BUTTON_HOME_MAPPING, 'guide');
+      this.usbDriverEnabled = await this.loadBoolean(SettingsKeys.USB_DRIVER_ENABLED, false);
+      this.forceUsbDriverOnly = await this.loadBoolean(SettingsKeys.FORCE_USB_DRIVER_ONLY, false);
+      this.ddkHighSpeedPolling = await this.loadBoolean(SettingsKeys.DDK_HIGH_SPEED_POLLING, false);
+
+      this.enableOnscreenControls = await this.loadBoolean(SettingsKeys.ENABLE_ONSCREEN_CONTROLS, false);
+      this.enableOnscreenKeyboard = await this.loadBoolean(SettingsKeys.ENABLE_ONSCREEN_KEYBOARD, false);
+      this.onlyL3R3 = await this.loadBoolean(SettingsKeys.ONLY_L3_R3, false);
+      this.showGuideButton = await this.loadBoolean(SettingsKeys.SHOW_GUIDE_BUTTON, true);
+      this.halfHeightOscPortrait = await this.loadBoolean(SettingsKeys.HALF_HEIGHT_OSC_PORTRAIT, true);
+      this.oscOpacity = await PreferencesUtil.get<number>(SettingsKeys.OSC_OPACITY, 90);
+      this.vibrateOsc = await this.loadBoolean(SettingsKeys.VIBRATE_OSC, true);
+
+      this.showLocalCursor = await this.loadBoolean(SettingsKeys.SHOW_LOCAL_CURSOR, false);
+      this.touchscreenTrackpad = await this.loadBoolean(SettingsKeys.TOUCHSCREEN_TRACKPAD, false);
+      this.enableDoubleClickDrag = await this.loadBoolean(SettingsKeys.ENABLE_DOUBLE_CLICK_DRAG, false);
+      this.doubleTapTimeThreshold = await PreferencesUtil.get<number>(SettingsKeys.DOUBLE_TAP_TIME_THRESHOLD, 125);
+      this.mouseNavButtons = await this.loadBoolean(SettingsKeys.MOUSE_NAV_BUTTONS, false);
+      this.gameMouseMode = await this.loadBoolean(SettingsKeys.GAME_MOUSE_MODE, false);
+
+      this.enableEnhancedTouch = await this.loadBoolean(SettingsKeys.ENABLE_ENHANCED_TOUCH, true);
+      this.enhancedTouchOnRight = await this.loadBoolean(SettingsKeys.ENHANCED_TOUCH_ON_RIGHT, false);
+      this.enhancedTouchZoneDivider = await PreferencesUtil.get<number>(SettingsKeys.ENHANCED_TOUCH_ZONE_DIVIDER, 50);
+      this.pointerVelocityFactor = await PreferencesUtil.get<number>(SettingsKeys.POINTER_VELOCITY_FACTOR, 100);
+      this.longPressFlatRegion = await PreferencesUtil.get<number>(SettingsKeys.LONG_PRESS_FLAT_REGION, 0);
+
+      this.enableSops = await this.loadBoolean(SettingsKeys.ENABLE_SOPS, true);
+      this.screenCombinationMode = await PreferencesUtil.get<string>(SettingsKeys.SCREEN_COMBINATION_MODE, '主机默认');
+      this.lockScreenAfterDisconnect = await this.loadBoolean(SettingsKeys.LOCK_SCREEN_AFTER_DISCONNECT, false);
+
+      this.decoderBufferCount = await PreferencesUtil.get<number>(SettingsKeys.DECODER_BUFFER_COUNT, 0);
+      this.enableSyncDecode = await this.loadBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false);
+      this.enableVrr = await this.loadBoolean(SettingsKeys.ENABLE_VRR, false);
+      this.enableVsync = await this.loadBoolean(SettingsKeys.ENABLE_VSYNC, false);
+      this.performanceMode = await this.loadBoolean(SettingsKeys.PERFORMANCE_MODE, false);
+      this.enablePerfOverlay = await this.loadBoolean(SettingsKeys.ENABLE_PERF_OVERLAY, false);
+      this.perfOverlayOrientation = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_ORIENTATION, '垂直');
+      this.perfOverlayPosition = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_POSITION, '右上角');
+      this.perfOverlayLocked = await this.loadBoolean(SettingsKeys.PERF_OVERLAY_LOCKED, false);
+      const itemsStr = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_ITEMS,
+        'resolution,decoder,render_fps,packet_loss,bitrate,network_latency,decode_latency');
+      this.perfOverlayItems = itemsStr.split(',').filter(item => item.length > 0);
+      this.latencyToast = await this.loadBoolean(SettingsKeys.LATENCY_TOAST, false);
+      this.disableWarnings = await this.loadBoolean(SettingsKeys.DISABLE_WARNINGS, false);
+      this.enableStun = await this.loadBoolean(SettingsKeys.ENABLE_STUN, false);
+      this.enableEscMenu = await this.loadBoolean(SettingsKeys.ENABLE_ESC_MENU, true);
+      this.escMenuKey = await PreferencesUtil.get<string>(SettingsKeys.ESC_MENU_KEY, 'ESC');
+      this.enableBackgroundTask = await this.loadBoolean(SettingsKeys.ENABLE_BACKGROUND_TASK, true);
+
+      this.smallIconMode = await this.loadBoolean(SettingsKeys.SMALL_ICON_MODE, false);
+      this.resumeStream = await this.loadBoolean(SettingsKeys.RESUME_STREAM, false);
+      this.developerMode = true;
+      this.devKeyActivated = await this.loadBoolean(SettingsKeys.DEV_KEY_ACTIVATED, false);
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   @Builder
@@ -3129,72 +3150,11 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
   
-  private getBackgroundImageTypeLabel(): string {
-    switch (this.backgroundImageType) {
-      case 'default':
-      case 'pipw':
-        return 'Pipw 二次元 (默认)';
-      case 'picsum':
-        return 'Lorem Picsum (摄影)';
-      case 'api':
-        return '自定义 URL';
-      case 'none':
-        return '关闭';
-      default:
-        return 'Pipw 二次元 (默认)';
-    }
-  }
-  
-  private showBackgroundImageTypePicker(): void {
-    const options: PickerOption[] = [
-      { title: 'Pipw 二次元', subtitle: '二次元壁纸 (默认)', value: 'default' } as PickerOption,
-      { title: 'Lorem Picsum', subtitle: '摄影壁纸 (Unsplash授权)', value: 'picsum' } as PickerOption,
-      { title: '自定义 URL', subtitle: '使用自定义图片链接', value: 'api' } as PickerOption,
-      { title: '关闭', subtitle: '不使用背景图片', value: 'none' } as PickerOption
-    ];
-    const config: PickerConfig = {
-      title: '选择背景图片类型',
-      subtitle: '选择背景图片来源',
-      selectedValue: this.backgroundImageType,
-      options: options,
-      onSelect: async (option: PickerOption) => {
-        this.backgroundImageType = option.value as string;
-        const bgUtil = BackgroundImageUtil.getInstance();
-        await bgUtil.setBackgroundImageType(option.value as BackgroundImageType);
-        if (option.value === 'none') {
-          bgUtil.disableBackgroundImage();
-        }
-        this.showToast(`背景图片设置为: ${option.title}`);
-      }
-    };
-    this.showPicker(config);
-  }
-  
-  private showBackgroundImageUrlInput(): void {
-    this.textInputTitle = '设置自定义背景图片 URL';
-    this.textInputPlaceholder = '输入图片网址，留空使用默认 API';
-    this.textInputValue = this.backgroundImageUrl;
-    this.textInputCallback = (value: string) => {
-      this.backgroundImageUrl = value;
-      this.saveSetting(SettingsKeys.BACKGROUND_IMAGE_URL, value);
-      if (value) {
-        this.backgroundImageType = 'api';
-        this.saveSetting(SettingsKeys.BACKGROUND_IMAGE_TYPE, 'api');
-        this.showToast('自定义背景图片已设置');
-      } else {
-        this.backgroundImageType = 'default';
-        this.saveSetting(SettingsKeys.BACKGROUND_IMAGE_TYPE, 'default');
-        this.showToast('已恢复使用默认 API');
-      }
-    };
-    this.showTextInputDialog = true;
-  }
-
   private showDevKeyActivation(): void {
     const context = getContext(this) as common.Context;
     const deviceId = DevKeyVerifier.getDeviceId(context);
     if (!deviceId) {
-      this.developerMode = false;
+
       promptAction.showToast({ message: '无法获取设备 ID，请先连接一次服务器', duration: 3000 });
       return;
     }
@@ -3207,7 +3167,7 @@ struct SettingsPageV2 {
     this.textInputCallback = (value: string) => {
       this.textInputDismissCallback = null;
       if (!value) {
-        this.developerMode = false;
+
         return;
       }
       if (DevKeyVerifier.verify(deviceId, value)) {
@@ -3217,12 +3177,12 @@ struct SettingsPageV2 {
         this.saveSetting(SettingsKeys.DEV_KEY_ACTIVATED, true);
         promptAction.showToast({ message: '开发者模式已激活', duration: 2000 });
       } else {
-        this.developerMode = false;
+
         promptAction.showToast({ message: '激活码无效', duration: 2000 });
       }
     };
     this.textInputDismissCallback = () => {
-      this.developerMode = false;
+
     };
     this.showTextInputDialog = true;
   }

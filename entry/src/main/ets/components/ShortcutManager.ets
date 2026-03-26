@@ -8,12 +8,10 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
+
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
-import { VirtualKey, VK_DISPLAY_NAMES, getVkDisplayName } from '../service/CustomKeyTypes';
+import { getVkDisplayName, VirtualKey, VK_DISPLAY_NAMES } from '../service/CustomKeyTypes';
 
 export interface Shortcut {
   id: string;

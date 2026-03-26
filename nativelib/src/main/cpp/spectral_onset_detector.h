@@ -220,9 +220,7 @@ public:
     bool IsInitialized() const { return initialized_; }
 
 private:
-    // ====================================================================
     //  Core Processing: STFT → Spectral Flux → Peak Picker
-    // ====================================================================
 
     bool processHop() {
         // ---- 1. Phase Vocoder: overlap-save STFT ----
@@ -328,9 +326,9 @@ private:
         return isOnset;
     }
 
-    // ====================================================================
+
     //  Peak Picker: sliding window, median+mean adaptive threshold
-    // ====================================================================
+
     //
     //  Algorithm (following Bello et al. & Dixon):
     //    1. Maintain a ring buffer of the last PICKER_WIN_SIZE flux values.
@@ -398,9 +396,9 @@ private:
         return false;
     }
 
-    // ====================================================================
+
     //  Radix-2 Cooley-Tukey FFT (in-place, Decimation-In-Time)
-    // ====================================================================
+
     //
     //  Standard DIT FFT with precomputed twiddle factors.
     //  Complexity: O(N log N), N ≤ 2048.
@@ -446,9 +444,9 @@ private:
         }
     }
 
-    // ====================================================================
+
     //  State
-    // ====================================================================
+
 
     // Configuration
     int sampleRate_ = 48000;

@@ -12,7 +12,6 @@ import { PreferencesUtil } from './PreferencesUtil';
 import { display, promptAction } from '@kit.ArkUI';
 import { http } from '@kit.NetworkKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
-import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 
@@ -60,13 +59,10 @@ export enum BackgroundImageType {
 }
 
 export interface BackgroundConfig {
-  /**
+
   imageUrl: string;
-  /**
   opacity: number;
-  /**
   enableBlur: boolean;
-  /**
   blurRadius: number;
 }
 

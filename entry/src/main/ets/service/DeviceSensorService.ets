@@ -16,14 +16,11 @@
 import { sensor } from '@kit.SensorServiceKit';
 import { display } from '@kit.ArkUI';
 
-// =============================================================================
-// =============================================================================
 
-/**
 export const LI_MOTION_TYPE_ACCEL = 0x01;
 export const LI_MOTION_TYPE_GYRO = 0x02;
 
-/**
+
 const RAD_TO_DEG = 57.2957795;
 
 export type SensorDataCallback = (
@@ -34,9 +31,7 @@ export type SensorDataCallback = (
   z: number
 ) => void;
 
-/**
- * 
- */
+
 export class DeviceSensorService {
   private static instance: DeviceSensorService;
 

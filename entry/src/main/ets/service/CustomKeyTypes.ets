@@ -8,60 +8,45 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 
-// =============================================================================
-// =============================================================================
-
-/**
 export interface KeyboardAction {
   type: 'keyboard';
   /** Windows Virtual-Key Code */
   vk: number;
 }
 
-/**
+
 export interface MouseButtonAction {
   type: 'mouse';
-  /**
   button: number;
 }
 
-/**
+
 export interface MouseScrollAction {
   type: 'mouseScroll';
-  /**
   direction: number;
 }
 
-/**
+
 export interface GamepadButtonAction {
   type: 'gamepadButton';
-  /**
   mask: number;
 }
 
-/**
+
 export interface GamepadTriggerAction {
   type: 'gamepadTrigger';
-  /** 'left' = LT, 'right' = RT */
   trigger: 'left' | 'right';
 }
 
-/**
 export interface GamepadStickAction {
   type: 'gamepadStick';
-  /**
   stick: 'left' | 'right';
-  /**
   direction: 'up' | 'down' | 'left' | 'right';
 }
 
 export interface AnalogStickAction {
   type: 'analogStick';
-  /**
   stick: 'left' | 'right';
   invisible?: boolean;
   sensitivity?: number;
@@ -71,35 +56,27 @@ export interface DPadAction {
   type: 'dpad';
 }
 
-/**
+
 export interface WheelPadSegment {
-  /**
   label: string;
-  /**
   action: KeyAction;
 }
 
 export interface WheelPadAction {
   type: 'wheelPad';
-  /**
   segments: WheelPadSegment[];
 }
 
 export interface DigitalStickAction {
   type: 'digitalStick';
-  /**
   upAction: KeyAction;
-  /**
   downAction: KeyAction;
-  /**
   leftAction: KeyAction;
-  /**
   rightAction: KeyAction;
-  /**
   clickAction?: KeyAction;
 }
 
-/**
+
 export interface ComboAction {
   type: 'combo';
   actions: KeyAction[];
@@ -107,20 +84,16 @@ export interface ComboAction {
 
 export interface ShortcutAction {
   type: 'shortcut';
-  /**
   keys: number[];
-  /**
   keySequence?: number[][];
 }
 
-/**
 export interface SpecialAction {
   type: 'special';
-  /**
   id: SpecialActionId;
 }
 
-/**
+
 export type SpecialActionId =
   | 'toggleKeyboard'
   | 'toggleIME'
@@ -131,7 +104,7 @@ export type SpecialActionId =
   | 'hideCustomKeys'
   | 'none';
 
-/**
+
 export type KeyAction =
   | KeyboardAction
   | MouseButtonAction
@@ -147,82 +120,48 @@ export type KeyAction =
   | ShortcutAction
   | SpecialAction;
 
-// =============================================================================
-// =============================================================================
 
-/**
 export type KeyShape = 'rect' | 'circle';
 
-/**
 export type KeyBehavior = 'momentary' | 'toggle';
 
-// =============================================================================
-// =============================================================================
 
-/**
 export interface CustomKeyDef {
-  /**
   id: string;
-  /**
   label: string;
-  /**
   action: KeyAction;
-  /**
   shape: KeyShape;
-  /**
   behavior: KeyBehavior;
   xPercent: number;
   yPercent: number;
-  /**
   x?: number;
-  /**
   y?: number;
-  /**
   width: number;
-  /**
   height: number;
-  /**
   layer: number;
-  /**
   opacity: number;
-  /**
   borderRadius: number;
-  /**
   normalColor: string;
-  /**
   pressedColor: string;
-  /**
   bgColor: string;
-  /**
   textColor: string;
-  /**
   fontSize: number;
-  /**
   borderWidth: number;
-  /**
   haptic: string;
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 export interface CustomKeyProfile {
-  /**
   name: string;
-  /**
   keys: CustomKeyDef[];
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 export function generateKeyId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
 }
 
-/**
+
 export function cloneKeyDef(src: CustomKeyDef): CustomKeyDef {
   const dst: CustomKeyDef = {
     id: src.id,
@@ -248,7 +187,7 @@ export function cloneKeyDef(src: CustomKeyDef): CustomKeyDef {
   return dst;
 }
 
-/**
+
 export function createDefaultKeyDef(partial?: Partial<CustomKeyDef>): CustomKeyDef {
   const def: CustomKeyDef = {
     id: generateKeyId(),
@@ -295,7 +234,7 @@ export function createDefaultKeyDef(partial?: Partial<CustomKeyDef>): CustomKeyD
   return def;
 }
 
-/**
+
 export function createDefaultProfile(name: string = '默认'): CustomKeyProfile {
   return {
     name,
@@ -303,12 +242,7 @@ export function createDefaultProfile(name: string = '默认'): CustomKeyProfile 
   };
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
- *
- */
 export class VirtualKey {
   static readonly VK_SHIFT = 0x10;
   static readonly VK_CONTROL = 0x11;
@@ -388,12 +322,7 @@ export class VirtualKey {
   static readonly VK_MEDIA_PLAY_PAUSE = 0xB3;
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
- *
- */
 export class GamepadButton {
   // D-Pad
   static readonly UP = 0x0001;
@@ -420,10 +349,7 @@ export class GamepadButton {
   static readonly DPAD_MASK = 0x000F;    // UP | DOWN | LEFT | RIGHT
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 export const VK_DISPLAY_NAMES: Record<number, string> = {
   0x41: 'A', 0x42: 'B', 0x43: 'C', 0x44: 'D', 0x45: 'E',
   0x46: 'F', 0x47: 'G', 0x48: 'H', 0x49: 'I', 0x4A: 'J',
@@ -452,12 +378,12 @@ export const VK_DISPLAY_NAMES: Record<number, string> = {
   0xB0: '⏭', 0xB1: '⏮', 0xB2: '⏹', 0xB3: '⏯',
 };
 
-/**
+
 export function getVkDisplayName(vk: number): string {
   return VK_DISPLAY_NAMES[vk] ?? `0x${vk.toString(16).toUpperCase()}`;
 }
 
-/**
+
 export const GAMEPAD_DISPLAY_NAMES: Record<number, string> = {
   0x1000: 'A', 0x2000: 'B', 0x4000: 'X', 0x8000: 'Y',
   0x0100: 'LB', 0x0200: 'RB',
@@ -469,12 +395,12 @@ export const GAMEPAD_DISPLAY_NAMES: Record<number, string> = {
   0x100000: 'Touchpad', 0x200000: 'Misc',
 };
 
-/**
+
 export function getGamepadDisplayName(mask: number): string {
   return GAMEPAD_DISPLAY_NAMES[mask] ?? `手柄0x${mask.toString(16)}`;
 }
 
-/**
+
 export function getActionDisplayName(action: KeyAction): string {
   switch (action.type) {
     case 'keyboard':
@@ -538,10 +464,7 @@ export function getActionDisplayName(action: KeyAction): string {
   }
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 export interface KeyPresetCategory {
   name: string;
   presets: KeyPreset[];
@@ -552,7 +475,7 @@ export interface KeyPreset {
   action: KeyAction;
 }
 
-/**
+
 export const KEY_PRESET_CATEGORIES: KeyPresetCategory[] = [
   {
     name: '常用键',
@@ -716,7 +639,7 @@ export const KEY_PRESET_CATEGORIES: KeyPresetCategory[] = [
   },
 ];
 
-/**
+
 function buildLetterPresets(): KeyPreset[] {
   const list: KeyPreset[] = [];
   for (let i = 0; i < 26; i++) {
@@ -729,7 +652,7 @@ function buildLetterPresets(): KeyPreset[] {
   return list;
 }
 
-/**
+
 function buildNumberPresets(): KeyPreset[] {
   const list: KeyPreset[] = [];
   for (let i = 0; i < 10; i++) {
@@ -742,7 +665,7 @@ function buildNumberPresets(): KeyPreset[] {
   return list;
 }
 
-/**
+
 function buildWheelPadPresets(): KeyPreset[] {
   const seg1: WheelPadSegment = { label: '1', action: { type: 'keyboard', vk: 0x31 } as KeyboardAction };
   const seg2: WheelPadSegment = { label: '2', action: { type: 'keyboard', vk: 0x32 } as KeyboardAction };
@@ -776,8 +699,6 @@ function buildWheelPadPresets(): KeyPreset[] {
   return list;
 }
 
-// =============================================================================
-// =============================================================================
 
 /**
  *
@@ -798,7 +719,7 @@ export function sendShortcutKeys(
   }
 }
 
-/**
+
 function buildDigitalStickPresets(): KeyPreset[] {
   const list: KeyPreset[] = [
     {

@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- */
 
 import nativeLib from 'libmoonlight_nativelib.so';
 

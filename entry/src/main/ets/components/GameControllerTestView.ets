@@ -9,13 +9,11 @@
  */
 
 
-
-import { gameControllerService, GameControllerService, ButtonCode } from '../service/GameControllerService';
+iimport { gameControllerService } from '../service/GameControllerService';
 import { GamepadManager } from '../service/GamepadManager';
 import { UsbDriverService } from '../service/usbdriver';
-import { gcButtonMap, AXIS_MAX, TRIGGER_MAX } from '../service/GamepadTypes';
+import { AXIS_MAX, gcButtonMap, TRIGGER_MAX } from '../service/GamepadTypes';
 import { AppColors } from '../common/Theme';
-
 
 interface ButtonIndicatorParams {
   name: string;
@@ -507,7 +505,7 @@ export struct GameControllerTestView {
             .width('100%')
 
           if (this.connectedDevices.length === 0) {
-            Text('No gamepad device detected\nPlease ensure Bluetooth gamepad is paired and connected'))
+            Text('No gamepad device detected\nPlease ensure Bluetooth gamepad is paired and connected')
               .fontSize(13)
               .fontColor(AppColors.TextSecondary)
               .textAlign(TextAlign.Center)
@@ -649,7 +647,7 @@ export struct GameControllerTestView {
       // Sticks and triggers
       Row({ space: 16 }) {
         Column({ space: 4 }) {
-          Text('Left Stick'))
+          Text('Left Stick')
             .fontSize(11)
             .fontColor(AppColors.TextSecondary)
           Text(`X: ${this.formatStickValue(this.displayLSX)}`)
@@ -661,7 +659,7 @@ export struct GameControllerTestView {
         }
         
         Column({ space: 4 }) {
-          Text('Right Stick'))
+          Text('Right Stick')
             .fontSize(11)
             .fontColor(AppColors.TextSecondary)
           Text(`X: ${this.formatStickValue(this.displayRSX)}`)
@@ -673,7 +671,7 @@ export struct GameControllerTestView {
         }
         
         Column({ space: 4 }) {
-          Text('Triggers'))
+          Text('Triggers')
             .fontSize(11)
             .fontColor(AppColors.TextSecondary)
           Text(`LT: ${this.displayLT}`)

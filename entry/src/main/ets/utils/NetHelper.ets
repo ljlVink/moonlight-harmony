@@ -8,26 +8,24 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
+
 
 export enum AddressType {
-  /**
+
   LAN_IPV4 = 'LAN_IPV4',
-  /** IPv6 link-local (fe80::/10) */
+  /* IPv6 link-local (fe80::/10) */
   IPV6_LINK_LOCAL = 'IPV6_LINK_LOCAL',
-  /**
+
   IPV6_ULA = 'IPV6_ULA',
-  /**
+
   IPV6_GLOBAL = 'IPV6_GLOBAL',
-  /**
+
   IPV6_TUNNEL = 'IPV6_TUNNEL',
-  /**
+
   WAN = 'WAN',
-  /**
+
   LOOPBACK = 'LOOPBACK',
-  /**
+
   UNKNOWN = 'UNKNOWN',
 }
 
@@ -47,7 +45,7 @@ function parseIPv4(address: string): number[] | null {
   return bytes;
 }
 
-/**
+/*
  *
  * - 10.0.0.0/8
  * - 172.16.0.0/12  (172.16.0.0 – 172.31.255.255)
@@ -113,7 +111,7 @@ export function isIPv6Address(address: string): boolean {
   return colonCount >= 2;
 }
 
-/**
+/*
  *
  */
 export function isIPv6LinkLocal(address: string): boolean {
@@ -133,9 +131,7 @@ export function isIPv6ULA(address: string): boolean {
   return addr.startsWith('fc') || addr.startsWith('fd');
 }
 
-/**
- *
- */
+
 export function isIPv6SiteLocal(address: string): boolean {
   if (!isIPv6Address(address)) {
     return false;
@@ -168,8 +164,7 @@ export function isIPv6Loopback(address: string): boolean {
   return addr === '::1' || addr === '0000:0000:0000:0000:0000:0000:0000:0001';
 }
 
-/**
- *
+/*
  *   addr.isSiteLocalAddress() || addr.isLoopbackAddress() || isPrivateAddress(addr)
  */
 export function isLanAddress(addressStr: string | undefined | null): boolean {
@@ -190,9 +185,6 @@ export function isLanAddress(addressStr: string | undefined | null): boolean {
   return false;
 }
 
-/**
- *
- */
 export function isPublicAddress(addressStr: string | undefined | null): boolean {
   if (!addressStr) {
     return false;
@@ -211,9 +203,7 @@ export function isPublicAddress(addressStr: string | undefined | null): boolean 
   return false;
 }
 
-/**
- *
- */
+
 export function isLanIPv4Address(addressStr: string | undefined | null): boolean {
   if (!addressStr) {
     return false;
@@ -284,11 +274,7 @@ export function getAddressTypeLabel(addressStr: string | undefined | null): stri
   }
 }
 
-/**
- *
- *
- *
- */
+
 export function getBestIpv6Address(addresses: string[]): string | undefined {
   for (const addr of addresses) {
     if (!isIPv6Address(addr)) continue;
@@ -304,7 +290,7 @@ export function isIPv6Global(address: string): boolean {
   return detectAddressType(address) === AddressType.IPV6_GLOBAL;
 }
 
-/**
+/*
  *       "[fe80::1]:47989"   -> "fe80::1"
  *       "fe80::1%eth0"      -> "fe80::1"
  */

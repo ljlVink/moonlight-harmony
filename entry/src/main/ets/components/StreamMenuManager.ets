@@ -8,13 +8,10 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
 import { promptAction } from '@kit.ArkUI';
 import { StreamingSession } from '../service/StreamingSession';
-import { StreamViewModel, TouchMode } from '../viewmodel/StreamViewModel';
-import { OptionPickerDialogConfig, OptionItem } from './OptionPickerDialog';
+import { StreamViewModel } from '../viewmodel/StreamViewModel';
+import { OptionItem, OptionPickerDialogConfig } from './OptionPickerDialog';
 
 import { VirtualKey } from '../service/CustomKeyTypes';
 export { VirtualKey } from '../service/CustomKeyTypes';

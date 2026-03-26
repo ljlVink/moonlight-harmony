@@ -18,8 +18,8 @@
 import { usbManager } from '@kit.BasicServicesKit';
 import { AbstractController } from './AbstractController';
 import { UsbDriverListener } from './UsbDriverListener';
-import { ControllerType, ControllerCapabilities, ButtonFlags, MotionType } from './ControllerConstants';
-import { isHardwareError, analyzeErrorPattern, createUsbError, UsbError } from './UsbErrorCodes';
+import { ButtonFlags, ControllerCapabilities, ControllerType, MotionType } from './ControllerConstants';
+import { analyzeErrorPattern, createUsbError, isHardwareError, UsbError } from './UsbErrorCodes';
 import { DdkUsbPoller } from './DdkUsbPoller';
 
 const TAG = '[USB-DS]';
@@ -499,38 +499,25 @@ export abstract class AbstractDualSenseController extends AbstractController {
     if (this.stopped) {
       return;
     }
-    
     console.info(`${TAG} Stopping controller`);
     this.stopped = true;
     this.markStopped();
-
-    // Send rumble stop command first (must be done before DDK release, otherwise cannot send)
-
-    // Save DDK state, then stop DDK poller
     if (this.ddkPoller) {
       this.ddkPoller.stop();
       this.ddkPoller = null;
       this.useDdkPolling = false;
     }
-    
-    // Release interface (usbManager path only, DDK path is released internally by stopPoller)
-      try {
+    try {
         usbManager.releaseInterface(this.pipe, this.usbInterface);
       } catch (err) {
         console.error(`${TAG} Failed to release interface:`, err);
       }
+    try {
+      usbManager.closePipe(this.pipe);
+    } catch (err) {
+      console.error(`${TAG} Failed to close pipe:`, err);
     }
-    
-    // Close pipe
-      try {
-        usbManager.closePipe(this.pipe);
-      } catch (err) {
-        console.error(`${TAG} Failed to close pipe:`, err);
-      }
-      this.pipe = null;
-    }
-    
-    // Notify device removed
+    this.pipe = null;
   }
   
   isConnected(): boolean {

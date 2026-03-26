@@ -8,10 +8,8 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-import { ShortcutManager, Shortcut, KeyOption } from './ShortcutManager';
+
+import { KeyOption, Shortcut, ShortcutManager } from './ShortcutManager';
 import { AppAnimation } from '../common/Theme';
 
 export interface ShortcutEditData {

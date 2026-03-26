@@ -174,7 +174,7 @@ export function getPerformanceItemInfo(item: PerformanceItem): PerformanceItemIn
   }
 }
 
-/**
+
 export function isClockTime(): boolean {
   return new Date().getMinutes() % 15 === 0;
 }

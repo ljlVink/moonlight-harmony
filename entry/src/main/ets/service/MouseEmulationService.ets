@@ -8,13 +8,10 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
 
 import { GamepadState, MoonlightButton } from './GamepadTypes';
 
-/**
+
 const MOUSE_EMULATION_REPORT_PERIOD = 50;
 
 export interface MouseEmulationCallback {
@@ -25,7 +22,7 @@ export interface MouseEmulationCallback {
   sendMouseHighResHScroll(scrollAmount: number): void;
 }
 
-/**
+
 class StickMovement {
   x: number = 0;
   y: number = 0;
@@ -38,22 +35,14 @@ class StickMovement {
   }
 }
 
-/**
- * 
- */
+
 export class MouseEmulationService {
-  /**
   private active = false;
-  /**
   private callback: MouseEmulationCallback | null = null;
-  /**
   private timerId: number = -1;
-  /**
   private lastButtons: number = 0;
-  /**
   private leftStickX: number = 0;
   private leftStickY: number = 0;
-  /**
   private rightStickX: number = 0;
   private rightStickY: number = 0;
 
@@ -76,9 +65,7 @@ export class MouseEmulationService {
     return this.active;
   }
 
-  /**
-   * 
-   */
+
   intercept(state: GamepadState, onSendZeroState: () => void): boolean {
     if (!this.active) {
       return false;

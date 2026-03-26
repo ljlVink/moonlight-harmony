@@ -22,8 +22,8 @@
 
 #define LOG_TAG "OpusEncoder"
 
-// =============================================================================
-// =============================================================================
+
+
 
 OhosOpusEncoder::OhosOpusEncoder() {
     OH_LOG_INFO(LOG_APP, "OhosOpusEncoder constructor (libopus)");
@@ -145,4 +145,4 @@ void OhosOpusEncoder::Cleanup() {
     currentLossPercent_.store(1, std::memory_order_relaxed);
     OH_LOG_INFO(LOG_APP, "Cleanup completed");
 }
-
+

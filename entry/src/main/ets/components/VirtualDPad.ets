@@ -8,48 +8,32 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
-/**
 export const DPAD_LEFT: number = 0x0004;
 export const DPAD_UP: number = 0x0001;
 export const DPAD_RIGHT: number = 0x0008;
 export const DPAD_DOWN: number = 0x0002;
 
-/**
 export type DPadDirectionCallback = (direction: number) => void;
 
-/**
 export type DPadEditModeGetter = () => boolean;
 
 @Component
 export struct VirtualDPad {
-  /**
   @Prop dpadSize: number = 120;
-  /**
   @Prop normalColor: string = '#6050C080';
-  /**
   @Prop pressedColor: string = '#C070E090';
-  /**
   @Prop bgColor: string = '#3050C080';
-  /**
   @Prop opacity_: number = 80;
 
   onDirectionChange: DPadDirectionCallback = (_dir: number): void => {};
   isEditMode: DPadEditModeGetter = (): boolean => false;
-
-  /**
   @State private currentDir: number = 0;
 
   private trackingTouchId: number = -1;
 
   private padSize: number = 120;
-  /**
   private threshold33: number = 40;
   private threshold66: number = 80;
-  /**
   private bandWidth: number = 40;
 
   aboutToAppear(): void {
@@ -181,7 +165,7 @@ export struct VirtualDPad {
     }
   }
 
-  /**
+  /*
    * - X < 33% → LEFT,  X > 66% → RIGHT
    * - Y < 33% → UP,    Y > 66% → DOWN
    */

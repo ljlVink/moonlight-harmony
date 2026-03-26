@@ -8,34 +8,22 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 
 export type JoystickMovementCallback = (x: number, y: number) => void;
 
-/**
 export type JoystickClickCallback = () => void;
 
-/**
 export type JoystickRevokeCallback = () => void;
 
-/**
 export type EditModeGetter = () => boolean;
 
 @Component
 export struct VirtualJoystick {
-  /**
   @Prop joystickSize: number = 120;
-  /**
   @Prop ringColor: string = '#6050C080';
-  /**
   @Prop stickColor: string = '#A050C080';
-  /**
   @Prop pressedColor: string = '#C070E090';
-  /**
   @Prop opacity_: number = 80;
-  /**
   @Prop invisibleMode: boolean = false;
 
   onMovement: JoystickMovementCallback = (_x: number, _y: number): void => {};

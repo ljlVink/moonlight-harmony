@@ -8,13 +8,11 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
+
 import { promptAction } from '@kit.ArkUI';
-import { common, bundleManager, Want } from '@kit.AbilityKit';
+import { bundleManager, common, Want } from '@kit.AbilityKit';
 import { pasteboard } from '@kit.BasicServicesKit';
-import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
+import { AppAnimation, AppColors, AppSizes, AppSpacing } from '../common/Theme';
 
 const GITHUB_URL = 'https://github.com/AlkaidLab/moonlight-harmony';
 const QQ_GROUP_NUMBER = '103206957';

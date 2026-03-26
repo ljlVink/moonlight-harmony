@@ -8,58 +8,35 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
-import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
-import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
+import { AppAnimation, AppColors, AppSizes, AppSpacing } from '../common/Theme';
+import { ColorMetrics, LengthMetrics } from '@kit.ArkUI';
 
 export interface OptionItem {
-  /**
   title: string;
-  /**
   subtitle?: string;
-  /**
   value: string | number;
-  /**
   icon?: Resource;
-  /**
   checked?: boolean;
 }
 
 export interface SliderConfig {
-  /**
   title: string;
-  /**
   value: number;
-  /**
   min: number;
-  /**
   max: number;
-  /**
   step: number;
-  /**
   onChange: (value: number) => void;
 }
 
 export interface OptionPickerDialogConfig {
-  /**
   title: string;
-  /**
   subtitle?: string;
-  /**
   options: OptionItem[];
-  /**
   selectedValue?: string | number;
-  /**
   onSelect: (option: OptionItem) => void;
-  /**
   onCancel?: () => void;
-  /**
   sliderConfig?: SliderConfig;
-  /**
   closeOnSelect?: boolean;
-  /**
   refreshOptions?: () => OptionItem[];
 }
 
@@ -71,20 +48,12 @@ export struct OptionPickerDialog {
     options: [],
     onSelect: () => {}
   };
-  
-  /**
   @State liveOptions: OptionItem[] = [];
-  /**
   @State sliderValue: number = 0;
-  /**
   @State showSlider: boolean = false;
-  /**
   @State sliderTitle: string = '';
-  /**
   @State sliderMin: number = 0;
-  /**
   @State sliderMax: number = 100;
-  /**
   @State sliderStep: number = 5;
   
   aboutToAppear(): void {

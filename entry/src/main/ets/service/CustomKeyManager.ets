@@ -8,64 +8,56 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- */
+
 
 import { promptAction } from '@kit.ArkUI';
-import { picker } from '@kit.CoreFileKit';
-import { fileIo } from '@kit.CoreFileKit';
+import { fileIo, picker } from '@kit.CoreFileKit';
 import { util } from '@kit.ArkTS';
-import { MoonBridge, BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE } from './MoonBridge';
+import { BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE, MoonBridge } from './MoonBridge';
 import { CustomKeyStore } from './CustomKeyStore';
 import {
+  ComboAction,
+  GamepadButton,
+  GamepadButtonAction,
+  GamepadStickAction,
+  GamepadTriggerAction,
   KeyAction,
   KeyboardAction,
   MouseButtonAction,
   MouseScrollAction,
-  GamepadButtonAction,
-  GamepadTriggerAction,
-  GamepadStickAction,
-  GamepadButton,
-  ComboAction,
-  ShortcutAction,
-  SpecialAction,
-  DPadAction,
   sendShortcutKeys,
+  ShortcutAction,
+  SpecialAction
 } from './CustomKeyTypes';
 
-// =============================================================================
-// =============================================================================
 
-/**
 export interface CustomKeyManagerHost {
-  /**
+
   getSession(): SessionLike | null;
-  /**
+
   toggleVirtualKeyboard(): void;
-  /**
+
   showIME(): void;
-  /**
+
   openGameMenu(): void;
-  /**
+
   toggleMouseMode(): void;
-  /**
+
   switchProfile(): void;
-  /**
+
   toggleEditMode(): void;
-  /**
+
   hideCustomKeys(): void;
-  /**
+
   onCustomKeysImported(): void;
 }
 
-/**
+
 export interface SessionLike {
   sendKeyboardInput(vk: number, flags: number): void;
-  /**
+
   sendKeys(keyCodes: number[]): void;
-  /**
+
   sendVirtualControllerInput(
     buttonFlags: number,
     leftTrigger: number,
@@ -77,18 +69,15 @@ export interface SessionLike {
   ): void;
 }
 
-// =============================================================================
+
 // Manager
-// =============================================================================
+
 
 export class CustomKeyManager {
   private host: CustomKeyManagerHost;
-
-  /**
   private gamepadInputMap: number = 0;
   private gamepadLeftTrigger: number = 0;
   private gamepadRightTrigger: number = 0;
-  /**
   private static readonly STICK_MAX = 32767;
   private leftStickX: number = 0;
   private leftStickY: number = 0;
@@ -219,10 +208,6 @@ export class CustomKeyManager {
     );
   }
 
-  /**
-   *
-   * @param stick 'left' | 'right'
-   */
   handleAnalogStickMovement(stick: string, x: number, y: number): void {
     const axisX = Math.round(x * 0x7FFE);
     const negY: number = 0 - y;
@@ -237,9 +222,7 @@ export class CustomKeyManager {
     this.sendGamepadState();
   }
 
-  /**
-   * @param stick 'left' | 'right'
-   */
+
   handleAnalogStickClick(stick: string): void {
     const mask: number = stick === 'left' ? GamepadButton.LS : GamepadButton.RS;
     this.gamepadInputMap |= mask;

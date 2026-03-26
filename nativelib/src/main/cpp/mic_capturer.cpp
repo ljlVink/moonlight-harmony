@@ -20,9 +20,9 @@
 
 #define LOG_TAG "MicCapturer"
 
-// =============================================================================
+
 // OHAudio Capturer callback API dynamic loading (for compatibility with older devices)
-// =============================================================================
+
 
 typedef OH_AudioStream_Result (*PFN_SetCapturerReadDataCb)(
     OH_AudioStreamBuilder*, OH_AudioCapturer_OnReadDataCallback, void*);
@@ -65,9 +65,9 @@ extern "C" {
     int sendMicrophoneOpusData(const unsigned char* data, int length);
 }
 
-// =============================================================================
+
 // Constructor / Destructor
-// =============================================================================
+
 
 MicCapturer::MicCapturer() = default;
 
@@ -75,9 +75,9 @@ MicCapturer::~MicCapturer() {
     Cleanup();
 }
 
-// =============================================================================
+
 // Init
-// =============================================================================
+
 
 int MicCapturer::Init(const MicCapturerConfig& config) {
     if (capturer_ != nullptr) {
@@ -188,9 +188,9 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
     return 0;
 }
 
-// =============================================================================
+
 // Start / Stop / Pause / Resume
-// =============================================================================
+
 
 int MicCapturer::Start() {
     if (capturer_ == nullptr) {
@@ -273,9 +273,9 @@ MicCapturerStats MicCapturer::GetStats() const {
     };
 }
 
-// =============================================================================
+
 // OHAudio Callbacks
-// =============================================================================
+
 
 OH_AudioData_Callback_Result MicCapturer::OnReadData(
     OH_AudioCapturer* capturer, void* userData,
@@ -319,9 +319,9 @@ void MicCapturer::OnInterruptEvent(
     }
 }
 
-// =============================================================================
+
 // PCM Frame Processing (executed in audio callback thread)
-// =============================================================================
+
 
 void MicCapturer::ProcessPcmFrame(const uint8_t* data, int32_t length) {
     framesCaptured_.fetch_add(1, std::memory_order_relaxed);

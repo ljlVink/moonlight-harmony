@@ -41,8 +41,8 @@ static PFN_RenderOutputBufferAtTime GetRenderAtTimeFunc() {
     return g_pfnRenderAtTime;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 typedef int (*PFN_OH_NativeVSync_SetExpectedFrameRateRange)(
     OH_NativeVSync* nativeVsync, OH_NativeVSync_ExpectedRateRange* range);
@@ -74,14 +74,14 @@ static bool CheckAndLoadApi20() {
     return g_api20Available;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 NativeRender* NativeRender::instance_ = nullptr;
 std::mutex NativeRender::instanceMutex_;
 
-// =============================================================================
-// =============================================================================
+
+
 
 NativeRender* NativeRender::GetInstance() {
     std::lock_guard<std::mutex> lock(instanceMutex_);
@@ -111,8 +111,8 @@ NativeRender::~NativeRender() {
     surfaceReady_ = false;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 void NativeRender::InitNativeVSync() {
     if (nativeVSync_ != nullptr) {
@@ -136,8 +136,8 @@ void NativeRender::ReleaseNativeVSync() {
     }
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 void NativeRender::SetNativeWindow(OHNativeWindow* window, uint64_t width, uint64_t height) {
     window_ = window;
@@ -197,8 +197,8 @@ void NativeRender::ConfigureNativeWindow() {
     }
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 // OH_NativeWindow_SetFrameRateRange(window, min, max, expected, strategy)
 // strategy: 0 = DEFAULT, 1 = EXACT
@@ -271,8 +271,8 @@ void NativeRender::ApplyFrameRateRange() {
     }
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 int64_t NativeRender::CalculatePresentTime(int64_t pts) const {
     struct timespec ts;
@@ -301,8 +301,8 @@ int64_t NativeRender::CalculatePresentTime(int64_t pts) const {
     return targetPresentTimeNs;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 void NativeRender::SubmitFrame(OH_AVCodec* codec, uint32_t bufferIndex, int64_t pts, int64_t enqueueTimeMs) {
     int32_t renderResult;

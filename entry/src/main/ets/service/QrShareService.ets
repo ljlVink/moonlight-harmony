@@ -8,47 +8,38 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- *
- */
 
-import { scanCore, scanBarcode } from '@kit.ScanKit';
+iimport { scanBarcode, scanCore } from '@kit.ScanKit';
 import { image } from '@kit.ImageKit';
 import { generateQrPixelMap } from './QrCodeGenerator';
 import {
+  AnalogStickAction,
+  ComboAction,
   CustomKeyDef,
+  DigitalStickAction,
+  DPadAction,
+  GamepadButtonAction,
+  GamepadStickAction,
+  GamepadTriggerAction,
+  generateKeyId,
   KeyAction,
-  KeyShape,
   KeyBehavior,
   KeyboardAction,
+  KeyShape,
   MouseButtonAction,
   MouseScrollAction,
-  GamepadButtonAction,
-  GamepadTriggerAction,
-  GamepadStickAction,
-  AnalogStickAction,
-  DPadAction,
-  WheelPadAction,
-  WheelPadSegment,
-  DigitalStickAction,
-  ComboAction,
   ShortcutAction,
   SpecialAction,
   SpecialActionId,
-  generateKeyId,
+  WheelPadAction,
+  WheelPadSegment,
 } from './CustomKeyTypes';
-
 export interface QrCodeResult {
   pixelMap: image.PixelMap | null;
   error?: string;
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 interface CompactKeyV2 {
   l: string;       // label
   a: string;       // action (v2 encoded string)
@@ -69,18 +60,17 @@ interface CompactKeyV2 {
   hp?: string;     // haptic (default='light')
 }
 
-/**
+
 interface CompactExportV2 {
   v: number;       // version (2)
   n: string;       // profile name
   k: CompactKeyV2[]; // keys
 }
 
-/**
+
 const QR_MAX_CHARS = 4000;
 
-// =============================================================================
-// =============================================================================
+
 //   K{vk}                           keyboard
 //   M{button}                       mouse
 //   S{direction}                    mouseScroll
@@ -95,7 +85,7 @@ const QR_MAX_CHARS = 4000;
 //   C|{act}|{act}|...               combo
 //   H,{k1},{k2}[/{sk1},{sk2}/...]   shortcut
 
-/**
+
 function encodeAction(a: KeyAction): string {
   switch (a.type) {
     case 'keyboard':
@@ -163,7 +153,7 @@ function encodeAction(a: KeyAction): string {
   }
 }
 
-/**
+
 function decodeSimpleAction(s: string): KeyAction {
   if (s.startsWith('K')) {
     const vk = parseInt(s.substring(1));
@@ -244,7 +234,7 @@ function decodeSimpleAction(s: string): KeyAction {
   return { type: 'special', id: 'none' } as SpecialAction;
 }
 
-/**
+
 function decodeAction(s: string): KeyAction {
   if (s.startsWith('W|')) {
     const body = s.substring(2);
@@ -284,10 +274,7 @@ function decodeAction(s: string): KeyAction {
   return decodeSimpleAction(s);
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 function toCompact(key: CustomKeyDef): CompactKeyV2 {
   const ck: CompactKeyV2 = {
     l: key.label,
@@ -311,7 +298,7 @@ function toCompact(key: CustomKeyDef): CompactKeyV2 {
   return ck;
 }
 
-/**
+
 function fromCompactV2(ck: CompactKeyV2): CustomKeyDef {
   return {
     id: generateKeyId(),
@@ -336,7 +323,7 @@ function fromCompactV2(ck: CompactKeyV2): CustomKeyDef {
   };
 }
 
-/**
+
 function fromCompactV1(raw: Record<string, Object>): CustomKeyDef {
   return {
     id: generateKeyId(),
@@ -361,8 +348,6 @@ function fromCompactV1(raw: Record<string, Object>): CustomKeyDef {
   };
 }
 
-// =============================================================================
-// =============================================================================
 
 export class QrShareService {
 
@@ -400,7 +385,7 @@ export class QrShareService {
     }
   }
 
-  /**
+
   static canFitInQr(json: string): boolean {
     return json.length <= QR_MAX_CHARS;
   }

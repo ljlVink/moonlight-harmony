@@ -8,15 +8,20 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
-import { StreamConfig, getDefaultStreamConfig } from '../model/StreamConfig';
-import { SettingsService, InputSettings, DisplaySettings, SettingsKeys } from '../service/SettingsService';
-import { StreamingSession, StreamStats } from '../service/StreamingSession';
+
+import { StreamConfig } from '../model/StreamConfig';
+import { DisplaySettings, InputSettings, SettingsKeys, SettingsService } from '../service/SettingsService';
+import { StreamingSession } from '../service/StreamingSession';
 import { InputEvent } from '../model/InputEvent';
-import { OverlayConfig, getDefaultOverlayConfig, SnapPosition, calculateSnapPosition } from '../components/PerformanceOverlayManager';import { PreferencesUtil } from '../utils/PreferencesUtil';import { GamepadManager } from '../service/GamepadManager';
-import { CONTROLLER_TYPE_XBOX, CONN_STATUS_POOR, CONN_STATUS_OKAY } from '../service/MoonBridge';
+import {
+  calculateSnapPosition,
+  getDefaultOverlayConfig,
+  OverlayConfig,
+  SnapPosition
+} from '../components/PerformanceOverlayManager';
+import { PreferencesUtil } from '../utils/PreferencesUtil';
+import { GamepadManager } from '../service/GamepadManager';
+import { CONN_STATUS_POOR, CONTROLLER_TYPE_XBOX } from '../service/MoonBridge';
 import { common } from '@kit.AbilityKit';
 import { inputDevice } from '@kit.InputKit';
 
@@ -74,7 +79,6 @@ export class DisplayInfo {
 @Observed
 export class OverlayState {
   config: OverlayConfig = getDefaultOverlayConfig();
-  /**
   configVersion: number = 0;
   x: number = 0;
   y: number = 8;
@@ -465,10 +469,7 @@ export class StreamViewModel {
       console.info('StreamViewModel: 标记为服务器触发的旋转');
     }
   }
-  
-  /**
-   * 
-   */
+
   handleRotationChange(isLandscape: boolean): void {
     if (!this.displaySettings?.rotableScreen) {
       console.info('StreamViewModel: 屏幕旋转同步未启用');
@@ -524,10 +525,8 @@ export class StreamViewModel {
       this.pendingRotationTimeoutId = -1;
     }, StreamViewModel.ROTATION_DEBOUNCE_MS) as number;
   }
-  
-  /**
-   * 
-   */
+
+
   checkAndSyncOrientation(serverWidth: number, serverHeight: number, clientIsLandscape: boolean): void {
     if (!this.displaySettings?.rotableScreen) {
       return;

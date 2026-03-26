@@ -35,13 +35,13 @@ export interface GamepadInputListener {
   onGamepadInput: (deviceId: number, state: GamepadState) => void;
 }
 
-/**
+
 export class DeviceBusType {
   static readonly BUS_USB = 0x03;
   static readonly BUS_BLUETOOTH = 0x05;
 }
 
-/**
+
 export class MoonlightButton {
   static readonly UP = 0x0001;
   static readonly DOWN = 0x0002;
@@ -69,7 +69,7 @@ export interface GCButton2313ActionCallback {
   onShowMenu?: () => void;
 }
 
-/**
+
 export const AXIS_MAX = 32767;
 export const TRIGGER_MAX = 255;
 export const RUMBLE_MAX = 65535;
@@ -83,18 +83,18 @@ export function readShortLE(buffer: Uint8Array, offset: number): number {
   return toSigned16(value);
 }
 
-/**
+
 export const SPECIAL_KEYCODE_MIN = 2311;
 export const SPECIAL_KEYCODE_MAX = 2315;
 
-/**
+
 export class VendorId {
   static readonly MICROSOFT = 0x045e;
   static readonly SONY = 0x054c;
   static readonly NINTENDO = 0x057e;
 }
 
-/**
+
 export class ProductId {
   // Sony
   static readonly DUALSENSE = 0x0ce6;
@@ -139,7 +139,6 @@ export class MoonlightControllerType {
   }
 }
 
-/**
 export const buttonMap = new Map<number, number>([
   // D-Pad
   [19, MoonlightButton.UP],     // KEYCODE_DPAD_UP
@@ -169,7 +168,7 @@ export const buttonMap = new Map<number, number>([
   [2315, MoonlightButton.RS],
 ]);
 
-/**
+
 export const gcButtonMap = new Map<number, number>([
   // Face buttons
   [2301, MoonlightButton.A],      // BUTTON_A
@@ -193,7 +192,7 @@ export const gcButtonMap = new Map<number, number>([
   [2015, MoonlightButton.RIGHT],  // DPAD_RIGHT
 ]);
 
-/**
+
 export const GAMEPAD_NAME_KEYWORDS: string[] = [
   'controller', 'gamepad', 'joystick', 'joypad',
   'fightstick', 'fight stick', 'arcade stick',
@@ -218,7 +217,7 @@ export const GAMEPAD_NAME_KEYWORDS: string[] = [
   'aula', '狼蛛',
 ];
 
-/**
+
 export const NON_GAMEPAD_KEYWORDS: string[] = [
   'keyboard', '键盘', 'mouse', '鼠标', 'touchpad', 'trackpad', '触摸板',
   'watch', '手表', 'wearable', 'band', '手环', 'smartwatch', 'fitness',
@@ -232,7 +231,7 @@ export function isNonGamepadByName(nameLower: string): boolean {
   return !hasGamepadKeyword;
 }
 
-/**
+
 export const STRONG_NON_GAMEPAD_KEYWORDS: string[] = [
   'keyboard', '键盘', 'mouse', '鼠标', 'touchpad', 'trackpad', '触摸板'
 ];

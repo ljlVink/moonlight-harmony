@@ -8,14 +8,11 @@
  * (at your option) any later version.
  */
 
-/**
- * 
- */
 
 import { usbManager } from '@kit.BasicServicesKit';
 import { AbstractDualSenseController } from './AbstractDualSenseController';
 import { UsbDriverListener } from './UsbDriverListener';
-import { ButtonFlags, DualShock4, DPadDirection, UsbClass } from './ControllerConstants';
+import { ButtonFlags, DPadDirection, DualShock4 } from './ControllerConstants';
 import { readShortLE, TRIGGER_MAX } from '../GamepadTypes';
 
 const TAG = '[USB-DS4]';

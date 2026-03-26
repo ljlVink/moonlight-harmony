@@ -8,30 +8,18 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 
-// =============================================================================
-// =============================================================================
-
-/**
 export interface ColorTheme {
-  /**
+
   name: string;
-  /**
   preview: string;
-  /**
   bgColor: string;
-  /**
   textColor: string;
-  /**
   pressedColor: string;
-  /**
   normalColor: string;
 }
 
-/**
+
 export const COLOR_THEMES: ColorTheme[] = [
   { name: '冰蓝', preview: '#A8D8EA', bgColor: '#301A3050', textColor: '#E0A8D8EA', pressedColor: '#80A8D8EA', normalColor: '#60A8D8EA' },
   { name: '暗夜', preview: '#808080', bgColor: '#301A1A2E', textColor: '#C0FFFFFF', pressedColor: '#60808090', normalColor: '#40FFFFFF' },
@@ -47,8 +35,6 @@ export const COLOR_THEMES: ColorTheme[] = [
   { name: '隐形', preview: '#404040', bgColor: '#10FFFFFF', textColor: '#40FFFFFF', pressedColor: '#30FFFFFF', normalColor: '#20FFFFFF' },
 ];
 
-// =============================================================================
-// =============================================================================
 
 export function parseHexRGB(hex: string): [number, number, number] {
   const clean = hex.replace('#', '');
@@ -92,25 +78,20 @@ export function generateThemeFromAccent(r: number, g: number, b: number): ColorT
   };
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 export interface RGBPixel {
   r: number;
   g: number;
   b: number;
 }
 
-/**
+
 export interface KMeansCluster {
   center: RGBPixel;
   count: number;
 }
 
-/**
- *
- */
+
 export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number = 20): KMeansCluster[] {
   if (samples.length === 0) return [];
   const n = samples.length;
@@ -201,9 +182,7 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
   return result;
 }
 
-/**
- *
- */
+
 export function pickAccentFromClusters(clusters: KMeansCluster[], totalSamples: number): RGBPixel {
   const viable = clusters.filter(c => {
     const ratio = c.count / totalSamples;

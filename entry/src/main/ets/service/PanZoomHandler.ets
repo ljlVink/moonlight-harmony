@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- *
- */
 
 export interface PointXY {
   x: number;
@@ -19,11 +15,9 @@ export interface PointXY {
 }
 
 export interface PanZoomState {
-  /**
+
   scale: number;
-  /**
   translateX: number;
-  /**
   translateY: number;
 }
 
@@ -168,9 +162,7 @@ export class PanZoomHandler {
     return true;
   }
 
-  /**
-   *
-   */
+
   inverseTransform(screenX: number, screenY: number): PointXY {
     const result: PointXY = {
       x: (screenX - this.translateX) / this.scaleFactor,
@@ -179,9 +171,7 @@ export class PanZoomHandler {
     return result;
   }
 
-  /**
-   *
-   */
+
   private constrainToBounds(): void {
     if (this.parentWidth <= 0 || this.parentHeight <= 0) return;
 

@@ -30,12 +30,12 @@ extern "C" {
     void LiRequestIdrFrame(void);
 }
 
-//#define LOG_TAG "VideoDecoder"
+#define LOG_TAG "VideoDecoder"
 
 static bool g_useAsyncRender = true;
 
-// =============================================================================
-// =============================================================================
+
+
 
 static std::vector<int> g_bigCoreIds;
 static bool g_bigCoreDetected = false;
@@ -131,8 +131,8 @@ static void SetupDecodeThreadPriority() {
     }
 }
 
-// =============================================================================
-// =============================================================================
+
+
 typedef OH_AVErrCode (*PFN_OH_VideoDecoder_QueryInputBuffer)(OH_AVCodec*, uint32_t*, int64_t);
 typedef OH_AVErrCode (*PFN_OH_VideoDecoder_QueryOutputBuffer)(OH_AVCodec*, uint32_t*, int64_t);
 typedef OH_AVErrCode (*PFN_OH_VideoDecoder_RenderOutputBufferAtTime)(OH_AVCodec*, uint32_t, int64_t);
@@ -147,9 +147,9 @@ static PFN_OH_VideoDecoder_GetOutputBuffer pfn_GetOutputBuffer = nullptr;
 static bool g_syncApiLoaded = false;
 static bool g_syncApiAvailable = false;
 
-// =============================================================================
+
 // OH_MD_KEY_ENABLE_SYNC_MODE (API 20+), OH_MD_KEY_VIDEO_DECODER_OUTPUT_ENABLE_VRR (API 15+)
-// =============================================================================
+
 static const char* key_enable_sync_mode = nullptr;
 static const char* key_vrr_enable = nullptr;
 static bool g_mediaKeysLoaded = false;
@@ -248,8 +248,8 @@ static void TryLoadMediaKeys() {
 #define VIDEO_FORMAT_MASK_H265   0x0F00
 #define VIDEO_FORMAT_MASK_AV1    0xF000
 
-// =============================================================================
-// =============================================================================
+
+
 
 static constexpr int kMinBufferCount = 2;
 static constexpr int kMaxBufferCount = 8;
@@ -296,8 +296,8 @@ static constexpr double kL5IntervalRatio_HighFps = 0.15;
 static constexpr double kL5HighFpsThreshold = 90.0;
 static constexpr int64_t kL5AbsoluteLatencyFloorMs = 30;
 
-// =============================================================================
-// =============================================================================
+
+
 
 VideoDecoder::VideoDecoder() {
     memset(&stats_, 0, sizeof(stats_));
@@ -1077,8 +1077,8 @@ VideoDecoderStats VideoDecoder::GetStats() const {
     return stats_;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 void VideoDecoder::OnError(OH_AVCodec* codec, int32_t errorCode, void* userData) {
     OH_LOG_ERROR(LOG_APP, "Decoder error: %{public}d", errorCode);
@@ -1194,8 +1194,8 @@ void VideoDecoder::OnOutputBufferAvailable(OH_AVCodec* codec, uint32_t index,
     }
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 void VideoDecoder::UpdateDecodedStats(int64_t pts, int64_t enqueueTimeMs, uint32_t flags) {
     auto currentTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1248,8 +1248,8 @@ void VideoDecoder::UpdateDecodedStats(int64_t pts, int64_t enqueueTimeMs, uint32
     }
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 bool VideoDecoder::CheckDecoderValid() {
     if (decoder_ == nullptr) {
@@ -1280,8 +1280,8 @@ bool VideoDecoder::CheckDecoderValid() {
     return true;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 int VideoDecoder::CheckLatencyRecovery(VideoFrameType frameType, int size, int frameNumber, uint16_t hostProcessingLatency) {
     bool isIFrame = (frameType == VideoFrameType::I_FRAME);
@@ -1585,11 +1585,6 @@ int VideoDecoder::SyncProcessOutput(int64_t timeoutUs) {
         return 0;
     }
     
-    // ================================================================
-    //
-    //
-    // ================================================================
-    
     struct QueuedFrame {
         uint32_t index;
         OH_AVBuffer* buffer;
@@ -1669,8 +1664,8 @@ int VideoDecoder::SyncProcessOutput(int64_t timeoutUs) {
     return 1;
 }
 
-// =============================================================================
-// =============================================================================
+
+
 
 namespace {
     VideoDecoder* g_videoDecoder = nullptr;

@@ -8,21 +8,19 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-import { router, promptAction } from '@kit.ArkUI';
+
+import { promptAction, router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { buffer } from '@kit.ArkTS';
 import { ObservableComputer } from './ComputerViewModel';
 import { ComputerManager } from '../service/ComputerManager';
 import { PairingManager, PairState as PMPairState } from '../service/PairingManager';
 import { NvHttp, ServerInfo } from '../service/NvHttp';
-import { PairState, ComputerState, selectBestAddress, ComputerInfo } from '../model/ComputerInfo';
+import { ComputerInfo, ComputerState, PairState, selectBestAddress } from '../model/ComputerInfo';
 import { ConfirmDialogConfig, InfoDialogConfig } from '../components/ConfirmDialog';
 import { AppColors } from '../common/Theme';
 
-/**
+
 interface AddressTestResult {
   address: string;
   reachable: boolean;
@@ -48,7 +46,7 @@ export class PcListActions {
     this.ui = ui;
   }
 
-  /**
+
   handleComputerTap(computer: ObservableComputer): void {
     if (!computer.isOnline) {
       return;
@@ -60,7 +58,7 @@ export class PcListActions {
     this.pairWithComputer(computer);
   }
 
-  /**
+
   async handleQuickStream(computer: ObservableComputer): Promise<void> {
     if (!computer.isOnline || !computer.isPaired) {
       promptAction.showToast({ message: '设备未就绪' });
@@ -111,7 +109,7 @@ export class PcListActions {
     }
   }
 
-  /**
+
   async pairWithComputer(computer: ObservableComputer): Promise<void> {
     if (!computer.isOnline) {
       promptAction.showToast({ message: '电脑离线，无法配对' });
@@ -151,7 +149,7 @@ export class PcListActions {
     }
   }
 
-  /**
+
   async wakeComputer(computer: ObservableComputer): Promise<void> {
     if (!computer.macAddress || computer.macAddress === '00:00:00:00:00:00') {
       promptAction.showToast({ message: '缺少有效的 MAC 地址。请先在电脑在线时配对，以获取 MAC 地址。' });
@@ -165,7 +163,7 @@ export class PcListActions {
     }
   }
 
-  /**
+
   quitGame(computer: ObservableComputer): void {
     if (!computer.isOnline) {
       promptAction.showToast({ message: '电脑离线，无法退出游戏' });
@@ -206,7 +204,7 @@ export class PcListActions {
     });
   }
 
-  /**
+
   sleepComputer(computer: ObservableComputer): void {
     if (!computer.isOnline) {
       promptAction.showToast({ message: '电脑离线，无法休眠' });
@@ -242,7 +240,7 @@ export class PcListActions {
     });
   }
 
-  /**
+
   async resumeGame(computer: ObservableComputer): Promise<void> {
     try {
       const computerInfo = this.computerManager.getComputer(computer.uuid);
@@ -272,7 +270,7 @@ export class PcListActions {
     });
   }
 
-  /**
+
   unpairComputer(computer: ObservableComputer): void {
     this.ui.showConfirmDialog({
       title: '取消配对',
@@ -293,7 +291,7 @@ export class PcListActions {
     });
   }
 
-  /**
+
   deleteComputer(computer: ObservableComputer): void {
     this.ui.showConfirmDialog({
       title: '删除电脑',
@@ -314,7 +312,7 @@ export class PcListActions {
     });
   }
 
-  /**
+
   async testNetwork(computer: ObservableComputer): Promise<void> {
     promptAction.showToast({ message: '正在检测网络…' });
     const computerInfo = computer.toComputerInfo();
@@ -406,7 +404,7 @@ export class PcListActions {
     this.ui.showInfoDialog({ title: '网络测试 — ' + computer.name, content: lines.join('\n') });
   }
 
-  /**
+
   private getAddressLabel(address: string, computerInfo: ComputerInfo): string {
     if (address === computerInfo.manualAddress) return `手动 (${address})`;
     if (address === computerInfo.localAddress) return `局域网 (${address})`;
@@ -415,7 +413,7 @@ export class PcListActions {
     return address;
   }
 
-  /**
+
   showComputerDetails(computer: ObservableComputer): void {
     const stateText = computer.isOnline ? '在线' : '离线';
     const pairText = computer.isPaired ? '已配对' : '未配对';

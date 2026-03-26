@@ -8,29 +8,24 @@
  * (at your option) any later version.
  */
 
-import { router, promptAction } from '@kit.ArkUI';
+import { promptAction, router } from '@kit.ArkUI';
 import { ComputerInfo, PairState, selectBestAddress } from '../model/ComputerInfo';
 import { ComputerManager } from '../service/ComputerManager';
 import { ComputerCard } from '../components/ComputerCard';
-import { ComputerListViewModel, ObservableComputer, ComputerDataSource } from '../viewmodel/ComputerViewModel';
+import { ComputerDataSource, ComputerListViewModel, ObservableComputer } from '../viewmodel/ComputerViewModel';
 import { AppColors, AppSizes, AppSpacing } from '../common/Theme';
 import { common } from '@kit.AbilityKit';
 import { buffer } from '@kit.ArkTS';
-import { BackgroundImageUtil, BackgroundImageType } from '../utils/BackgroundImageUtil';
-import { BackgroundImage } from '../components/BackgroundImage';
 import { sensor } from '@kit.SensorServiceKit';
-import { OptionPickerDialog, OptionPickerDialogConfig, OptionItem } from '../components/OptionPickerDialog';
+import { OptionItem, OptionPickerDialog, OptionPickerDialogConfig } from '../components/OptionPickerDialog';
 import { ConfirmDialog, ConfirmDialogConfig, InfoDialog, InfoDialogConfig } from '../components/ConfirmDialog';
-import { BusinessError } from '@kit.BasicServicesKit';
-import { photoAccessHelper } from '@kit.MediaLibraryKit';
-import { fileIo } from '@kit.CoreFileKit';
-import { ComputerMenuHelper, ComputerMenuCallbacks } from '../viewmodel/ComputerMenuHelper';
+import { ComputerMenuCallbacks, ComputerMenuHelper } from '../viewmodel/ComputerMenuHelper';
 import { PcListActions, PcListUICallbacks } from '../viewmodel/PcListActions';
 import { PairingManager, PairState as PMPairState } from '../service/PairingManager';
 import { QrShareService } from '../service/QrShareService';
 import { CustomKeyStore } from '../service/CustomKeyStore';
 import { PcListTitleBar, TitleBarConfig } from '../components/PcListTitleBar';
-import { PinDialogView, AboutDialogView } from '../components/PcListDialogs';
+import { AboutDialogView, PinDialogView } from '../components/PcListDialogs';
 
 /**
  * Computer list page (modern version)
@@ -45,7 +40,6 @@ struct PcListPageV2 {
   @State showPinDialog: boolean = false;
   @State currentPin: string = '';
   @State pairingComputerName: string = '';
-  @State backgroundImageUrl: string = '';
   @State showAboutDialog: boolean = false;
   @State isLandscape: boolean = false;
   @State screenWidth: number = 0;
@@ -54,7 +48,6 @@ struct PcListPageV2 {
   private computerDataSource: ComputerDataSource = new ComputerDataSource();
   
   private computerManager: ComputerManager = ComputerManager.getInstance();
-  private backgroundUtil: BackgroundImageUtil = BackgroundImageUtil.getInstance();
   private actions: PcListActions | null = null;
   
   private lastShakeTime: number = 0;
@@ -113,9 +106,6 @@ struct PcListPageV2 {
   }
 
   aboutToAppear(): void {
-    const context = getContext(this) as common.UIAbilityContext;
-    this.backgroundUtil.setContext(context);
-
     this.actions = new PcListActions({
       showConfirmDialog: (config: ConfirmDialogConfig) => this.showConfirmDialog(config),
       showInfoDialog: (config: InfoDialogConfig) => this.showInfoDialog(config),
@@ -129,95 +119,9 @@ struct PcListPageV2 {
     } as PcListUICallbacks);
     
     this.initializeAsync();
-    this.loadBackgroundImage();
     this.startShakeDetection();
   }
   
-  private async loadBackgroundImage(): Promise<void> {
-    try {
-      const bgType = await this.backgroundUtil.getBackgroundImageType();
-      if (bgType === BackgroundImageType.NONE) {
-        this.backgroundImageUrl = '';
-        return;
-      }
-
-      const disclaimerAccepted = await this.backgroundUtil.isDisclaimerAccepted();
-      if (!disclaimerAccepted) {
-        this.showBackgroundDisclaimerDialog();
-        return;
-      }
-      
-      const localPath = await this.backgroundUtil.downloadToLocalCache();
-      if (localPath) {
-        this.backgroundImageUrl = 'file://' + localPath;
-      } else {
-        this.backgroundImageUrl = await this.backgroundUtil.getBackgroundImageUrl();
-      }
-    } catch (err) {
-    }
-  }
-  
-  /**
-   * Reload background image settings when page returns
-   */
-  private async reloadBackgroundImage(): Promise<void> {
-    try {
-      const typeChanged = await this.backgroundUtil.reload();
-      const currentType = await this.backgroundUtil.getBackgroundImageType();
-      if (currentType === BackgroundImageType.NONE) {
-        this.backgroundImageUrl = '';
-      } else if (typeChanged) {
-        this.loadBackgroundImage();
-      }
-    } catch (err) {
-    }
-  }
-
-  /**
-   * Show background image disclaimer dialog
-   */
-  private showBackgroundDisclaimerDialog(): void {
-    const config: ConfirmDialogConfig = {
-      title: '背景壁纸功能说明',
-      message: '本应用的背景壁纸来自互联网公开资源（Pipw API），图片版权归原作者所有。\n\n' +
-        '• 本应用仅提供技术链接，不存储、不拥有这些图片的版权\n' +
-        '• 如有侵权，请联系原图片来源方\n' +
-        '• 您可以在设置中随时关闭壁纸功能或切换为其他来源\n\n' +
-        '继续使用即表示您知悉并同意上述条款。',
-      cancelButton: {
-        text: '关闭壁纸',
-        onClick: async () => {
-          await this.backgroundUtil.setDisclaimerAccepted();
-          await this.backgroundUtil.disableBackgroundImage();
-          this.backgroundImageUrl = '';
-        }
-      },
-      confirmButton: {
-        text: '知悉并继续',
-        onClick: async () => {
-          await this.backgroundUtil.setDisclaimerAccepted();
-          this.loadBackgroundImageAfterDisclaimer();
-        }
-      }
-    };
-    this.showConfirmDialog(config);
-  }
-  
-  /**
-   * Load background image after disclaimer accepted
-   */
-  private async loadBackgroundImageAfterDisclaimer(): Promise<void> {
-    try {
-      const localPath = await this.backgroundUtil.downloadToLocalCache();
-      if (localPath) {
-        this.backgroundImageUrl = 'file://' + localPath;
-      } else {
-        this.backgroundImageUrl = await this.backgroundUtil.getBackgroundImageUrl();
-      }
-    } catch (err) {
-    }
-  }
-
   private async initializeAsync(): Promise<void> {
     try {
       const context = getContext(this) as common.UIAbilityContext;
@@ -314,7 +218,6 @@ struct PcListPageV2 {
       }).catch((err: Error) => {
         console.warn('[MOONLIGHT] PcListPage: Refresh failed', err);
       });
-      this.reloadBackgroundImage();
     }
     this.startShakeDetection();
   }
@@ -324,26 +227,59 @@ struct PcListPageV2 {
     this.stopShakeDetection();
   }
   
-  private startShakeDetection(): void {
-    try {
-      sensor.on(sensor.SensorId.ACCELEROMETER, (data) => {
-        const x = data.x;
-        const y = data.y;
-        const z = data.z;
-        const acceleration = Math.sqrt(x * x + y * y + z * z);
-        
-        const shakeForce = Math.abs(acceleration - 9.8);
-        
-        if (shakeForce > this.shakeThreshold) {
-          const now = Date.now();
-          if (now - this.lastShakeTime > this.shakeCooldown) {
-            this.lastShakeTime = now;
-            this.refreshWallpaper();
-          }
+  @Builder
+  BottomBar() {
+    Row() {
+      Button({ type: ButtonType.Circle }) {
+        if (this.isScanning) {
+          LoadingProgress()
+            .width(22)
+            .height(22)
+            .color(AppColors.TextSecondary)
+        } else {
+          Image($r('app.media.ic_search_network'))
+            .width(22)
+            .height(22)
+            .fillColor(AppColors.TextSecondary)
         }
-      }, { interval: 100000000 });
-    } catch (err) {
+      }
+      .width(44)
+      .height(44)
+      .backgroundColor(0x1A000000)
+      .enabled(!this.isScanning)
+      .onClick(() => this.scanNetwork())
+
+      Button({ type: ButtonType.Circle }) {
+        Image($r('app.media.ic_add'))
+          .width(28)
+          .height(28)
+          .fillColor(Color.White)
+      }
+      .width(56)
+      .height(56)
+      .backgroundColor(AppColors.Primary)
+      .shadow({
+        radius: 12,
+        color: AppColors.PrimaryGlow,
+        offsetX: 0,
+        offsetY: 4
+      })
+      .margin({ left: AppSpacing.XLarge })
+      .onClick(() => router.pushUrl({ url: 'pages/AddPcPageV2' }))
+
+      Blank()
+        .width(44)
+        .height(44)
     }
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      left: AppSpacing.Large,
+      right: AppSpacing.Large,
+      top: AppSpacing.Small,
+      bottom: AppSpacing.Medium
+    })
   }
   
   private stopShakeDetection(): void {
@@ -355,8 +291,6 @@ struct PcListPageV2 {
 
   build() {
     Stack() {
-      BackgroundImage({ imageUrl: this.backgroundImageUrl, imageOpacity: 0.7 })
-  
       Column() {
         PcListTitleBar({
           config: {
@@ -577,132 +511,28 @@ struct PcListPageV2 {
     })
   }
 
-  @Builder
-  BottomBar() {
-    Row() {
-      Button({ type: ButtonType.Circle }) {
-        if (this.isScanning) {
-          LoadingProgress()
-            .width(22)
-            .height(22)
-            .color(AppColors.TextSecondary)
-        } else {
-          Image($r('app.media.ic_search_network'))
-            .width(22)
-            .height(22)
-            .fillColor(AppColors.TextSecondary)
-        }
-      }
-      .width(44)
-      .height(44)
-      .backgroundColor(0x1A000000)
-      .enabled(!this.isScanning)
-      .onClick(() => this.scanNetwork())
-      
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ic_add'))
-          .width(28)
-          .height(28)
-          .fillColor(Color.White)
-      }
-      .width(56)
-      .height(56)
-      .backgroundColor(AppColors.Primary)
-      .shadow({
-        radius: 12,
-        color: AppColors.PrimaryGlow,
-        offsetX: 0,
-        offsetY: 4
-      })
-      .margin({ left: AppSpacing.XLarge, right: AppSpacing.XLarge })
-      .onClick(() => router.pushUrl({ url: 'pages/AddPcPageV2' }))
-      
-      SaveButton({
-        icon: SaveIconStyle.FULL_FILLED, 
-        buttonType: ButtonType.Circle 
-      })
-        .width(44)
-        .height(44)
-        .iconSize(22)
-        .iconColor(AppColors.TextSecondary)
-        .backgroundColor(0x1A000000)
-        .onClick(this.handleSaveWallpaperClick)
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
-    .padding({
-      left: AppSpacing.Large,
-      right: AppSpacing.Large,
-      top: AppSpacing.Small,
-      bottom: AppSpacing.Medium
-    })
-  }
-  
-  private async refreshWallpaper(): Promise<void> {
+  private startShakeDetection(): void {
     try {
-      promptAction.showToast({ message: '正在刷新壁纸...' });
-      const localPath = await this.backgroundUtil.downloadToLocalCache(true);
-      if (localPath) {
-        this.backgroundImageUrl = 'file://' + localPath + '?t=' + Date.now();
-        promptAction.showToast({ message: '壁纸已刷新' });
-      } else {
-        promptAction.showToast({ message: '刷新失败' });
-      }
+      sensor.on(sensor.SensorId.ACCELEROMETER, (data) => {
+        const x = data.x;
+        const y = data.y;
+        const z = data.z;
+        const acceleration = Math.sqrt(x * x + y * y + z * z);
+
+        const shakeForce = Math.abs(acceleration - 9.8);
+
+        if (shakeForce > this.shakeThreshold) {
+          const now = Date.now();
+          if (now - this.lastShakeTime > this.shakeCooldown) {
+            this.lastShakeTime = now;
+            this.refreshComputers();
+          }
+        }
+      }, { interval: 100000000 });
     } catch (err) {
-      promptAction.showToast({ message: '刷新壁纸失败' });
     }
   }
   
-  /**
-   * SaveButton callback for saving wallpaper to album
-   */
-  handleSaveWallpaperClick: SaveButtonCallback = async (
-    event: ClickEvent, 
-    result: SaveButtonOnClickResult, 
-    error?: BusinessError
-  ) => {
-    if (result === SaveButtonOnClickResult.SUCCESS) {
-      const localPath = this.backgroundUtil.getLocalCachePath();
-      if (!localPath) {
-        promptAction.showToast({ message: '没有可下载的壁纸' });
-        return;
-      }
-      
-      try {
-        const context = getContext(this) as common.UIAbilityContext;
-        promptAction.showToast({ message: '正在保存壁纸...' });
-        
-        const stat = fileIo.statSync(localPath);
-        if (!stat || stat.size === 0) {
-          promptAction.showToast({ message: '缓存图片不存在' });
-          return;
-        }
-        
-        const file = fileIo.openSync(localPath, fileIo.OpenMode.READ_ONLY);
-        const imageData = new ArrayBuffer(stat.size);
-        fileIo.readSync(file.fd, imageData);
-        fileIo.closeSync(file.fd);
-        
-        const helper = photoAccessHelper.getPhotoAccessHelper(context);
-        const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpg');
-        
-        const photoFile = await fileIo.open(uri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
-        await fileIo.write(photoFile.fd, imageData);
-        await fileIo.close(photoFile.fd);
-        
-        promptAction.showToast({ message: '壁纸已保存到相册' });
-      } catch (err) {
-        console.error('Failed to save wallpaper', err);
-        const e = err as BusinessError;
-        promptAction.showToast({ message: `Save failed: ${e.message || 'Unknown error'}` });
-      }
-    } else if (result === SaveButtonOnClickResult.TEMPORARY_AUTHORIZATION_FAILED) {
-      console.error('Save authorization failed', error);
-      promptAction.showToast({ message: 'Save authorization failed' });
-    }
-  };
-
   // ==================== Business Logic ====================
   
   private async refreshComputers(): Promise<void> {

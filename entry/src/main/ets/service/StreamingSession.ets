@@ -8,42 +8,40 @@
  * (at your option) any later version.
  */
 
-import { StreamConfig, HdrMode, getSurroundAudioInfo } from '../model/StreamConfig';
-import { InputEvent, InputType, ControllerButtonEvent, ControllerAxisEvent, ControllerButton } from '../model/InputEvent';
+import { getSurroundAudioInfo, HdrMode, StreamConfig } from '../model/StreamConfig';
+import { ControllerAxisEvent, ControllerButtonEvent, InputEvent, InputType } from '../model/InputEvent';
 import { ComputerManager } from './ComputerManager';
 import { ComputerInfo, selectBestAddress } from '../model/ComputerInfo';
-import { NvHttp, LaunchConfig } from './NvHttp';
+import { LaunchConfig, NvHttp } from './NvHttp';
 import { CryptoUtil } from '../utils/CryptoUtil';
-import { common, abilityAccessCtrl, bundleManager, Permissions } from '@kit.AbilityKit';
+import { abilityAccessCtrl, bundleManager, common, Permissions } from '@kit.AbilityKit';
 import { display } from '@kit.ArkUI';
 import { GamepadManager } from './GamepadManager';
 import { MoonlightButton } from './GamepadTypes';
 import { MicrophoneStream } from './microphone/MicrophoneStream';
 import { AudioVibrationService } from './AudioVibrationService';
 import {
-  MoonBridge,
+  CONTROLLER_TYPE_PS,
   CONTROLLER_TYPE_UNKNOWN,
   CONTROLLER_TYPE_XBOX,
-  CONTROLLER_TYPE_PS,
-  LI_CCAP_ANALOG_TRIGGERS,
-  LI_CCAP_RUMBLE,
-  LI_CCAP_ACCEL,
-  LI_CCAP_GYRO,
-  MODIFIER_SHIFT,
-  MODIFIER_CTRL,
-  MODIFIER_ALT,
-  MODIFIER_META,
-  VK_SHIFT,
-  VK_CONTROL,
-  VK_MENU,
-  VK_LWIN,
   KEY_ACTION_DOWN,
-  KEY_ACTION_UP
+  KEY_ACTION_UP,
+  LI_CCAP_ACCEL,
+  LI_CCAP_ANALOG_TRIGGERS,
+  LI_CCAP_GYRO,
+  LI_CCAP_RUMBLE,
+  MODIFIER_ALT,
+  MODIFIER_CTRL,
+  MODIFIER_META,
+  MODIFIER_SHIFT,
+  MoonBridge,
+  VK_CONTROL,
+  VK_LWIN,
+  VK_MENU,
+  VK_SHIFT
 } from './MoonBridge';
 import nativeLib from 'libmoonlight_nativelib.so';
 
-// =============================================================================
-// =============================================================================
 
 export interface StreamStats {
   fps: number;
@@ -79,17 +77,15 @@ export interface DecoderCapabilities {
   maxInstances: number;
 }
 
-/**
+
 export type HdrStateCallback = (isHdr: boolean) => void;
 
-/**
+
 export type CodecStateCallback = (codec: string) => void;
 
-/**
+
 export type ResolutionChangedCallback = (width: number, height: number) => void;
 
-// =============================================================================
-// =============================================================================
 
 interface NativeModule {
   init(callbacks: StreamCallbacks): void;
@@ -200,19 +196,16 @@ interface ControllerState {
   rightStickY: number;
 }
 
-// =============================================================================
-// =============================================================================
 
-/**
 const nativeModuleRef = nativeLib as NativeModule;
 
-/**
+
 const VIDEO_FORMAT_MASK_10BIT = 0xAA00;
 const VIDEO_FORMAT_MASK_H264 = 0x000F;
 const VIDEO_FORMAT_MASK_H265 = 0x0F00;
 const VIDEO_FORMAT_MASK_AV1 = 0xF000;
 
-/**
+
 const STAGE_NAMES: Record<number, string> = {
   1: '正在初始化平台...',
   2: '正在解析服务器地址...',
@@ -227,7 +220,7 @@ const STAGE_NAMES: Record<number, string> = {
   11: '正在启动输入流...'
 };
 
-/**
+
 const STANDARD_BUTTON_FLAGS =
   MoonlightButton.A | MoonlightButton.B | MoonlightButton.X | MoonlightButton.Y |
   MoonlightButton.UP | MoonlightButton.DOWN | MoonlightButton.LEFT | MoonlightButton.RIGHT |
@@ -235,13 +228,10 @@ const STANDARD_BUTTON_FLAGS =
   MoonlightButton.LS | MoonlightButton.RS |
   MoonlightButton.START | MoonlightButton.BACK | MoonlightButton.SPECIAL;
 
-// =============================================================================
-// StreamingSession
-// =============================================================================
 
-/**
- *
- */
+// StreamingSession
+
+
 export class StreamingSession {
 
   // ---------------------------------------------------------------------------
@@ -251,7 +241,7 @@ export class StreamingSession {
     return nativeModuleRef.getDecoderCapabilities();
   }
 
-  /**
+  /*
    * @returns [minBrightness, maxBrightness, maxAverageBrightness] (nits)
    */
   private static getBrightnessRange(): number[] {
@@ -285,7 +275,6 @@ export class StreamingSession {
   private config: StreamConfig | null = null;
   private surfaceId: string = '';
   private isRunning: boolean = false;
-  /**
   private userInitiatedStop: boolean = false;
   private computer: ComputerInfo | null = null;
   private nvHttp: NvHttp | null = null;
@@ -530,7 +519,7 @@ export class StreamingSession {
   // ---------------------------------------------------------------------------
   // ---------------------------------------------------------------------------
 
-  /**
+  /*
    * @param keyAction 0x03=KEY_DOWN, 0x04=KEY_UP
    * @param modifiers SHIFT=0x01, CTRL=0x02, ALT=0x04, META=0x08
    */
@@ -561,9 +550,7 @@ export class StreamingSession {
     this.nativeModule.sendUtf8Text(text);
   }
 
-  /**
-   *
-   */
+
   sendVirtualControllerInput(
     buttonFlags: number, leftTrigger: number, rightTrigger: number,
     leftStickX: number, leftStickY: number,
