@@ -8,8 +8,7 @@
  * (at your option) any later version.
  */
 
-
-export { MicrophoneConfig, MicrophoneState, MicrophoneStateListener } from './MicrophoneConfig';
-export { MicrophoneCapturer, MicrophoneDataCallback } from './MicrophoneCapturer';
-export { MicrophoneStream } from './MicrophoneStream';
-export { MicrophoneManager } from './MicrophoneManager';
+export { MicrophoneConfig, MicrophoneState, MicrophoneStateListener } from "./MicrophoneConfig";
+export { MicrophoneCapturer, MicrophoneDataCallback } from "./MicrophoneCapturer";
+export { MicrophoneStream } from "./MicrophoneStream";
+export { MicrophoneManager } from "./MicrophoneManager";

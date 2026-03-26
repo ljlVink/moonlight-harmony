@@ -9,10 +9,10 @@
  */
 
 /**
- * 
+ *
  */
 
-import nativeLib from 'libmoonlight_nativelib.so';
+import nativeLib from "libmoonlight_nativelib.so";
 
 export interface GameControllerDeviceInfo {
   deviceId: string;
@@ -23,7 +23,11 @@ export interface GameControllerDeviceInfo {
   physicalAddress?: string;
 }
 
-export type DeviceCallback = (deviceId: string, isConnected: boolean, info: GameControllerDeviceInfo) => void;
+export type DeviceCallback = (
+  deviceId: string,
+  isConnected: boolean,
+  info: GameControllerDeviceInfo,
+) => void;
 
 export type ButtonCallback = (deviceId: string, buttonCode: number, isPressed: boolean) => void;
 
@@ -44,13 +48,13 @@ interface NativeGameController {
   getDeviceInfo(index: number): GameControllerDeviceInfo | null;
   heartbeatCheck(): number;
   refreshDevices(): number;
-  
+
   AXIS_LEFT_THUMBSTICK: number;
   AXIS_RIGHT_THUMBSTICK: number;
   AXIS_DPAD: number;
   AXIS_LEFT_TRIGGER: number;
   AXIS_RIGHT_TRIGGER: number;
-  
+
   KEYCODE_BUTTON_A: number;
   KEYCODE_BUTTON_B: number;
   KEYCODE_BUTTON_X: number;
@@ -92,138 +96,138 @@ export class ButtonCode {
 }
 
 /**
- * 
+ *
  */
 export class GameControllerService {
   private static instance: GameControllerService;
   private initialized: boolean = false;
   private monitoring: boolean = false;
-  
+
   private deviceCallback: DeviceCallback | null = null;
   private buttonCallback: ButtonCallback | null = null;
   private axisCallback: AxisCallback | null = null;
-  
+
   private constructor() {}
-  
+
   static getInstance(): GameControllerService {
     if (!GameControllerService.instance) {
       GameControllerService.instance = new GameControllerService();
     }
     return GameControllerService.instance;
   }
-  
+
   isAvailable(): boolean {
     if (!native) {
-      console.warn('[GameController] Native 模块不可用');
+      console.warn("[GameController] Native 模块不可用");
       return false;
     }
     return native.isAvailable();
   }
-  
+
   init(): boolean {
     if (!native) {
-      console.error('[GameController] Native 模块不可用');
+      console.error("[GameController] Native 模块不可用");
       return false;
     }
-    
+
     if (this.initialized) {
-      console.warn('[GameController] 已初始化');
+      console.warn("[GameController] 已初始化");
       return true;
     }
-    
+
     const result = native.init();
     if (result === 0) {
       this.initialized = true;
-      console.info('[GameController] 初始化成功');
+      console.info("[GameController] 初始化成功");
       return true;
     } else {
       console.error(`[GameController] 初始化失败: ${result}`);
       return false;
     }
   }
-  
+
   uninit(): void {
     if (!native || !this.initialized) return;
-    
+
     this.stopMonitor();
     native.uninit();
     this.initialized = false;
-    console.info('[GameController] 已反初始化');
+    console.info("[GameController] 已反初始化");
   }
-  
+
   setDeviceCallback(callback: DeviceCallback | null): void {
     this.deviceCallback = callback;
     if (native) {
       native.setDeviceCallback(callback);
     }
   }
-  
+
   setButtonCallback(callback: ButtonCallback | null): void {
     this.buttonCallback = callback;
     if (native) {
       native.setButtonCallback(callback);
     }
   }
-  
+
   setAxisCallback(callback: AxisCallback | null): void {
     this.axisCallback = callback;
     if (native) {
       native.setAxisCallback(callback);
     }
   }
-  
+
   startMonitor(): boolean {
     if (!native || !this.initialized) {
-      console.error('[GameController] 未初始化');
+      console.error("[GameController] 未初始化");
       return false;
     }
-    
+
     if (this.monitoring) {
       native.startMonitor();
       return true;
     }
-    
+
     const result = native.startMonitor();
     if (result === 0) {
       this.monitoring = true;
-      console.info('[GameController] 开始监听');
+      console.info("[GameController] 开始监听");
       return true;
     } else {
       console.error(`[GameController] 开始监听失败: ${result}`);
       return false;
     }
   }
-  
+
   stopMonitor(): void {
     if (!native || !this.monitoring) return;
-    
+
     native.stopMonitor();
     this.monitoring = false;
-    console.info('[GameController] 停止监听');
+    console.info("[GameController] 停止监听");
   }
 
   pauseInputMonitor(): void {
     if (!native || !this.monitoring) return;
     native.pauseInputMonitor();
-    console.info('[GameController] 暂停输入监听（设备监听保持活跃）');
+    console.info("[GameController] 暂停输入监听（设备监听保持活跃）");
   }
 
   resumeInputMonitor(): void {
     if (!native || !this.monitoring) return;
     native.resumeInputMonitor();
-    console.info('[GameController] 恢复输入监听');
+    console.info("[GameController] 恢复输入监听");
   }
 
   getDeviceCount(): number {
     if (!native) return 0;
     return native.getDeviceCount();
   }
-  
+
   getDeviceInfo(index: number): GameControllerDeviceInfo | null {
     if (!native) return null;
     return native.getDeviceInfo(index);
   }
-  
+
   getAllDevices(): GameControllerDeviceInfo[] {
     const devices: GameControllerDeviceInfo[] = [];
     const count = this.getDeviceCount();
@@ -237,13 +241,13 @@ export class GameControllerService {
   }
 
   /**
-   * 
-   * 
-   * 
+   *
+   *
+   *
    */
   refreshDeviceCache(): number {
     if (!native || !this.initialized) {
-      console.warn('[GameController] refreshDeviceCache: 未初始化');
+      console.warn("[GameController] refreshDeviceCache: 未初始化");
       return -1;
     }
     const result = native.refreshDevices();
@@ -252,8 +256,8 @@ export class GameControllerService {
   }
 
   /**
-   * 
-   * 
+   *
+   *
    */
   heartbeatCheck(): number {
     if (!native || !this.initialized || !this.monitoring) {

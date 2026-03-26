@@ -8,16 +8,16 @@
  * (at your option) any later version.
  */
 
-import { common } from '@kit.AbilityKit';
-import { fileIo } from '@kit.CoreFileKit';
-import { util } from '@kit.ArkTS';
-import { http } from '@kit.NetworkKit';
-import { deviceInfo } from '@kit.BasicServicesKit';
-import { HttpClient } from '../utils/HttpClient';
-import { XmlUtil } from '../utils/XmlUtil';
-import { StringUtil } from '../utils/StringUtil';
-import { CryptoUtil } from '../utils/CryptoUtil';
-import { DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT } from '../common/NetworkConstants';
+import { common } from "@kit.AbilityKit";
+import { fileIo } from "@kit.CoreFileKit";
+import { util } from "@kit.ArkTS";
+import { http } from "@kit.NetworkKit";
+import { deviceInfo } from "@kit.BasicServicesKit";
+import { HttpClient } from "../utils/HttpClient";
+import { XmlUtil } from "../utils/XmlUtil";
+import { StringUtil } from "../utils/StringUtil";
+import { CryptoUtil } from "../utils/CryptoUtil";
+import { DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT } from "../common/NetworkConstants";
 
 /**
  *
@@ -70,8 +70,8 @@ export class NvHttp {
   private uniqueId: string;
   private clientName: string;
   private context: common.UIAbilityContext | null = null;
-  private certFilePath: string = '';
-  private keyFilePath: string = '';
+  private certFilePath: string = "";
+  private keyFilePath: string = "";
 
   static readonly DEFAULT_HTTPS_PORT = DEFAULT_HTTPS_PORT;
   static readonly DEFAULT_HTTP_PORT = DEFAULT_HTTP_PORT;
@@ -85,7 +85,12 @@ export class NvHttp {
   private static cachedUniqueId: string | null = null;
   private static cachedClientName: string | null = null;
 
-  constructor(address: string, serverCert: string | null, context?: common.UIAbilityContext, httpPort?: number) {
+  constructor(
+    address: string,
+    serverCert: string | null,
+    context?: common.UIAbilityContext,
+    httpPort?: number,
+  ) {
     const parsedHost = this.parseAddressHost(address);
     const parsedPort = this.parseAddressPort(address);
     this.address = parsedHost;
@@ -93,37 +98,41 @@ export class NvHttp {
     this.httpPort = httpPort || parsedPort || NvHttp.DEFAULT_HTTP_PORT;
     if (context) {
       this.context = context;
-      this.certFilePath = context.filesDir + '/client_cert.pem';
-      this.keyFilePath = context.filesDir + '/client_key.pem';
+      this.certFilePath = context.filesDir + "/client_cert.pem";
+      this.keyFilePath = context.filesDir + "/client_key.pem";
     }
     this.uniqueId = this.getOrCreateUniqueId(context);
     this.clientName = this.getClientName();
   }
-  
+
   private parseAddressHost(addressInput: string): string {
     const trimmed = addressInput.trim();
-    
-    if (trimmed.startsWith('[')) {
-      const closeBracket = trimmed.indexOf(']');
+
+    if (trimmed.startsWith("[")) {
+      const closeBracket = trimmed.indexOf("]");
       if (closeBracket > 0) {
         return trimmed.substring(1, closeBracket);
       }
     }
-    
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex > 0 && trimmed.indexOf(':', colonIndex + 1) === -1) {
+
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex > 0 && trimmed.indexOf(":", colonIndex + 1) === -1) {
       return trimmed.substring(0, colonIndex);
     }
-    
+
     return trimmed;
   }
-  
+
   private parseAddressPort(addressInput: string): number | undefined {
     const trimmed = addressInput.trim();
-    
-    if (trimmed.startsWith('[')) {
-      const closeBracket = trimmed.indexOf(']');
-      if (closeBracket > 0 && closeBracket < trimmed.length - 1 && trimmed.charAt(closeBracket + 1) === ':') {
+
+    if (trimmed.startsWith("[")) {
+      const closeBracket = trimmed.indexOf("]");
+      if (
+        closeBracket > 0 &&
+        closeBracket < trimmed.length - 1 &&
+        trimmed.charAt(closeBracket + 1) === ":"
+      ) {
         const portStr = trimmed.substring(closeBracket + 2);
         const port = parseInt(portStr);
         if (port > 0 && port <= 65535) {
@@ -132,16 +141,16 @@ export class NvHttp {
       }
       return undefined;
     }
-    
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex > 0 && trimmed.indexOf(':', colonIndex + 1) === -1) {
+
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex > 0 && trimmed.indexOf(":", colonIndex + 1) === -1) {
       const portStr = trimmed.substring(colonIndex + 1);
       const port = parseInt(portStr);
       if (port > 0 && port <= 65535) {
         return port;
       }
     }
-    
+
     return undefined;
   }
 
@@ -162,7 +171,7 @@ export class NvHttp {
     }
 
     if (context) {
-      const uniqueIdPath = context.filesDir + '/unique_id.txt';
+      const uniqueIdPath = context.filesDir + "/unique_id.txt";
       try {
         if (fileIo.accessSync(uniqueIdPath)) {
           const file = fileIo.openSync(uniqueIdPath, fileIo.OpenMode.READ_ONLY);
@@ -170,7 +179,7 @@ export class NvHttp {
           const buffer = new ArrayBuffer(stat.size);
           fileIo.readSync(file.fd, buffer);
           fileIo.closeSync(file);
-          const textDecoder = util.TextDecoder.create('utf-8');
+          const textDecoder = util.TextDecoder.create("utf-8");
           const savedId = textDecoder.decodeToString(new Uint8Array(buffer)).trim();
           if (savedId.length === 16) {
             NvHttp.cachedUniqueId = savedId;
@@ -189,9 +198,12 @@ export class NvHttp {
     console.info(`NvHttp: 生成新 uniqueId: ${result}`);
 
     if (context) {
-      const uniqueIdPath = context.filesDir + '/unique_id.txt';
+      const uniqueIdPath = context.filesDir + "/unique_id.txt";
       try {
-        const file = fileIo.openSync(uniqueIdPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+        const file = fileIo.openSync(
+          uniqueIdPath,
+          fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC,
+        );
         const textEncoder = new util.TextEncoder();
         const encoded = textEncoder.encodeInto(result);
         fileIo.writeSync(file.fd, encoded.buffer);
@@ -211,19 +223,19 @@ export class NvHttp {
     }
 
     try {
-      const name = deviceInfo.marketName || deviceInfo.productModel || 'Moonlight-HarmonyOS';
+      const name = deviceInfo.marketName || deviceInfo.productModel || "Moonlight-HarmonyOS";
       NvHttp.cachedClientName = name;
       console.info(`NvHttp: 客户端名称: ${name}`);
       return name;
     } catch (err) {
       console.warn(`NvHttp: 无法获取设备名称: ${err}`);
-      NvHttp.cachedClientName = 'Moonlight-HarmonyOS';
-      return 'Moonlight-HarmonyOS';
+      NvHttp.cachedClientName = "Moonlight-HarmonyOS";
+      return "Moonlight-HarmonyOS";
     }
   }
 
   private getFormattedAddress(): string {
-    if (this.address.includes(':') && !this.address.startsWith('[')) {
+    if (this.address.includes(":") && !this.address.startsWith("[")) {
       return `[${this.address}]`;
     }
     return this.address;
@@ -236,9 +248,9 @@ export class NvHttp {
   private async getHttpsBaseUrl(): Promise<string> {
     if (this.httpsPort <= 0) {
       try {
-        const url = this.buildUrl(this.getHttpBaseUrl(), 'serverinfo');
+        const url = this.buildUrl(this.getHttpBaseUrl(), "serverinfo");
         const response = await this.doRequest(url);
-        const port = XmlUtil.getIntValue(response, 'HttpsPort', 0);
+        const port = XmlUtil.getIntValue(response, "HttpsPort", 0);
         if (port > 0) {
           this.httpsPort = port;
           console.info(`NvHttp: 自动解析 HTTPS 端口: ${port}`);
@@ -272,18 +284,22 @@ export class NvHttp {
     return StringUtil.generateUUID();
   }
 
-  private async doRequest(url: string, timeout: number = NvHttp.READ_TIMEOUT, useClientCert: boolean = false): Promise<string> {
+  private async doRequest(
+    url: string,
+    timeout: number = NvHttp.READ_TIMEOUT,
+    useClientCert: boolean = false,
+  ): Promise<string> {
     console.debug(`NvHttp: 请求 ${url}`);
 
     if (useClientCert && this.certFilePath && this.keyFilePath) {
       return HttpClient.getWithClientCert(url, this.certFilePath, this.keyFilePath, {
         connectTimeout: NvHttp.CONNECTION_TIMEOUT,
-        transferTimeout: timeout
+        transferTimeout: timeout,
       });
     } else {
       return HttpClient.get(url, {
         connectTimeout: NvHttp.CONNECTION_TIMEOUT,
-        transferTimeout: timeout
+        transferTimeout: timeout,
       });
     }
   }
@@ -295,18 +311,19 @@ export class NvHttp {
       if (this.serverCert && this.hasCertificateFiles()) {
         try {
           console.debug(`NvHttp: getServerInfo 尝试 HTTPS + 客户端证书`);
-          const url = this.buildUrl(await this.getHttpsBaseUrl(), 'serverinfo');
+          const url = this.buildUrl(await this.getHttpsBaseUrl(), "serverinfo");
           response = await this.doRequest(url, NvHttp.READ_TIMEOUT, true);
         } catch (err) {
           const errMsg = String(err).toLowerCase();
-          const isCertError = errMsg.includes('401') ||
-            errMsg.includes('certificate') ||
-            errMsg.includes('handshake') ||
-            errMsg.includes('ssl') ||
-            errMsg.includes('tls');
+          const isCertError =
+            errMsg.includes("401") ||
+            errMsg.includes("certificate") ||
+            errMsg.includes("handshake") ||
+            errMsg.includes("ssl") ||
+            errMsg.includes("tls");
           if (isCertError) {
             console.warn(`NvHttp: HTTPS serverinfo 证书错误: ${err}, 降级到 HTTP`);
-            const url = this.buildUrl(this.getHttpBaseUrl(), 'serverinfo');
+            const url = this.buildUrl(this.getHttpBaseUrl(), "serverinfo");
             response = await this.doRequest(url);
           } else {
             console.warn(`NvHttp: HTTPS serverinfo 失败 (非证书错误，不降级): ${err}`);
@@ -314,8 +331,10 @@ export class NvHttp {
           }
         }
       } else {
-        console.debug(`NvHttp: getServerInfo 使用 HTTP (serverCert=${!!this.serverCert}, hasCertFiles=${this.hasCertificateFiles()})`);
-        const url = this.buildUrl(this.getHttpBaseUrl(), 'serverinfo');
+        console.debug(
+          `NvHttp: getServerInfo 使用 HTTP (serverCert=${!!this.serverCert}, hasCertFiles=${this.hasCertificateFiles()})`,
+        );
+        const url = this.buildUrl(this.getHttpBaseUrl(), "serverinfo");
         response = await this.doRequest(url);
       }
     } catch (err) {
@@ -323,7 +342,9 @@ export class NvHttp {
     }
 
     const serverInfo = this.parseServerInfo(response);
-    console.debug(`NvHttp: serverInfo - hostname=${serverInfo.hostname}, paired=${serverInfo.paired}, mac=${serverInfo.macAddress}`);
+    console.debug(
+      `NvHttp: serverInfo - hostname=${serverInfo.hostname}, paired=${serverInfo.paired}, mac=${serverInfo.macAddress}`,
+    );
 
     if (serverInfo.httpsPort > 0) {
       this.httpsPort = serverInfo.httpsPort;
@@ -333,8 +354,10 @@ export class NvHttp {
   }
 
   async getAppList(): Promise<AppEntry[]> {
-    const url = this.buildUrl(await this.getHttpsBaseUrl(), 'applist');
-    console.info(`NvHttp.getAppList: url=${url}, serverCert=${this.serverCert ? '有(长度' + this.serverCert.length + ')' : '无'}, hasCertFiles=${this.hasCertificateFiles()}`);
+    const url = this.buildUrl(await this.getHttpsBaseUrl(), "applist");
+    console.info(
+      `NvHttp.getAppList: url=${url}, serverCert=${this.serverCert ? "有(长度" + this.serverCert.length + ")" : "无"}, hasCertFiles=${this.hasCertificateFiles()}`,
+    );
 
     const response = await this.doRequest(url, NvHttp.READ_TIMEOUT, true);
     console.info(`NvHttp.getAppList: HTTPS 请求成功`);
@@ -342,58 +365,58 @@ export class NvHttp {
   }
 
   async unpair(): Promise<void> {
-    const url = this.buildUrl(this.getHttpBaseUrl(), 'unpair');
+    const url = this.buildUrl(this.getHttpBaseUrl(), "unpair");
     await this.doRequest(url);
   }
 
   async launchApp(appId: number, config: LaunchConfig): Promise<string> {
     const effectiveAppId = config.appId || appId;
-    const query = this.buildLaunchQuery(effectiveAppId, config, 'launch');
-    const url = this.buildUrl(await this.getHttpsBaseUrl(), 'launch', query);
+    const query = this.buildLaunchQuery(effectiveAppId, config, "launch");
+    const url = this.buildUrl(await this.getHttpsBaseUrl(), "launch", query);
 
     const response = await this.doRequest(url, 60000, true);
     console.info(`NvHttp: launchApp 响应: ${response}`);
 
-    const gamesession = XmlUtil.getValue(response, 'gamesession');
-    if (gamesession === '0') {
-      throw new Error('启动应用失败');
+    const gamesession = XmlUtil.getValue(response, "gamesession");
+    if (gamesession === "0") {
+      throw new Error("启动应用失败");
     }
 
-    const sessionUrl = XmlUtil.getValue(response, 'sessionUrl0') || '';
+    const sessionUrl = XmlUtil.getValue(response, "sessionUrl0") || "";
     console.info(`NvHttp: launchApp gamesession=${gamesession}, sessionUrl0=${sessionUrl}`);
     return sessionUrl;
   }
 
   async resumeApp(config: LaunchConfig): Promise<string> {
-    const query = this.buildLaunchQuery(config.appId, config, 'resume');
-    const url = this.buildUrl(await this.getHttpsBaseUrl(), 'resume', query);
+    const query = this.buildLaunchQuery(config.appId, config, "resume");
+    const url = this.buildUrl(await this.getHttpsBaseUrl(), "resume", query);
 
     console.info(`NvHttp: resumeApp URL: ${url}`);
 
     const response = await this.doRequest(url, 60000, true);
 
-    const resume = XmlUtil.getValue(response, 'resume');
-    if (resume === '0') {
-      throw new Error('恢复会话失败');
+    const resume = XmlUtil.getValue(response, "resume");
+    if (resume === "0") {
+      throw new Error("恢复会话失败");
     }
 
-    return XmlUtil.getValue(response, 'sessionUrl0') || '';
+    return XmlUtil.getValue(response, "sessionUrl0") || "";
   }
 
   async quitApp(): Promise<boolean> {
-    const url = this.buildUrl(await this.getHttpsBaseUrl(), 'cancel');
+    const url = this.buildUrl(await this.getHttpsBaseUrl(), "cancel");
     const response = await this.doRequest(url, 60000, true);
 
-    const cancel = XmlUtil.getValue(response, 'cancel');
-    return cancel !== '0';
+    const cancel = XmlUtil.getValue(response, "cancel");
+    return cancel !== "0";
   }
 
   async setBitrate(bitrateKbps: number): Promise<boolean> {
     try {
-      const url = this.buildUrl(await this.getHttpsBaseUrl(), 'bitrate', `bitrate=${bitrateKbps}`);
+      const url = this.buildUrl(await this.getHttpsBaseUrl(), "bitrate", `bitrate=${bitrateKbps}`);
       const response = await this.doRequest(url, NvHttp.READ_TIMEOUT, true);
-      const result = XmlUtil.getValue(response, 'bitrate');
-      return result !== '0';
+      const result = XmlUtil.getValue(response, "bitrate");
+      return result !== "0";
     } catch (err) {
       return false;
     }
@@ -401,10 +424,10 @@ export class NvHttp {
 
   async sendSuperCmd(cmdId: string): Promise<boolean> {
     try {
-      const url = this.buildUrl(await this.getHttpsBaseUrl(), 'supercmd', `cmdId=${cmdId}`);
+      const url = this.buildUrl(await this.getHttpsBaseUrl(), "supercmd", `cmdId=${cmdId}`);
       const response = await this.doRequest(url, NvHttp.READ_TIMEOUT, true);
-      const result = XmlUtil.getValue(response, 'supercmd');
-      return result !== '0';
+      const result = XmlUtil.getValue(response, "supercmd");
+      return result !== "0";
     } catch (err) {
       return false;
     }
@@ -412,19 +435,19 @@ export class NvHttp {
 
   async pcSleep(): Promise<boolean> {
     try {
-      const url = this.buildUrl(await this.getHttpsBaseUrl(), 'pcsleep');
+      const url = this.buildUrl(await this.getHttpsBaseUrl(), "pcsleep");
       const response = await this.doRequest(url, NvHttp.READ_TIMEOUT, true);
-      const result = XmlUtil.getValue(response, 'pcsleep');
-      return result !== '0';
+      const result = XmlUtil.getValue(response, "pcsleep");
+      return result !== "0";
     } catch (err) {
-      console.warn('NvHttp: 休眠主机失败', err);
+      console.warn("NvHttp: 休眠主机失败", err);
       return false;
     }
   }
 
   /**
-   * 
-   * 
+   *
+   *
    */
   async rotateDisplay(angle: number, displayName?: string): Promise<boolean> {
     try {
@@ -432,21 +455,21 @@ export class NvHttp {
       if (displayName) {
         query += `&display_name=${encodeURIComponent(displayName)}`;
       }
-      
-      const url = this.buildUrl(await this.getHttpsBaseUrl(), 'rotate-display', query);
+
+      const url = this.buildUrl(await this.getHttpsBaseUrl(), "rotate-display", query);
       const response = await this.doRequest(url, NvHttp.READ_TIMEOUT, true);
-      
+
       const json = JSON.parse(response) as RotateDisplayResponse;
-      
+
       const statusCode = json.status_code ?? 0;
       const success = json.success ?? false;
-      
+
       if (statusCode !== 200 || !success) {
-        const errorMsg = json.status_message ?? '未知错误';
+        const errorMsg = json.status_message ?? "未知错误";
         console.warn(`NvHttp: 旋转显示失败: ${errorMsg}`);
         return false;
       }
-      
+
       console.info(`NvHttp: 显示旋转成功，角度=${angle}`);
       return true;
     } catch (err) {
@@ -456,52 +479,51 @@ export class NvHttp {
   }
 
   async getDisplays(): Promise<DisplayInfo[]> {
-    const url = this.buildUrl(await this.getHttpsBaseUrl(), 'displays');
+    const url = this.buildUrl(await this.getHttpsBaseUrl(), "displays");
     const response = await this.doRequest(url, NvHttp.LONG_CONNECTION_TIMEOUT, true);
-    
+
     const json = JSON.parse(response) as DisplaysResponse;
-    
+
     if (json.status_code !== 200) {
-      throw new Error(`获取显示器列表失败: ${json.status_message || '未知错误'}`);
+      throw new Error(`获取显示器列表失败: ${json.status_message || "未知错误"}`);
     }
-    
+
     const displays: DisplayInfo[] = [];
     if (json.displays && Array.isArray(json.displays)) {
       for (let i = 0; i < json.displays.length; i++) {
         const displayObj = json.displays[i];
-        const friendlyName = displayObj.friendly_name || displayObj.display_name || `显示器 ${i + 1}`;
-        const guid = displayObj.device_id || '';
+        const friendlyName =
+          displayObj.friendly_name || displayObj.display_name || `显示器 ${i + 1}`;
+        const guid = displayObj.device_id || "";
         displays.push({ index: i, name: friendlyName, guid: guid });
       }
     }
-    
+
     console.info(`NvHttp: 获取到 ${displays.length} 个显示器`);
     return displays;
   }
 
   async getAppAsset(appId: number): Promise<ArrayBuffer | null> {
-    const url = this.buildUrl(await this.getHttpsBaseUrl(), 'appasset',
-      `appid=${appId}&AssetType=2&AssetIdx=0`);
+    const url = this.buildUrl(
+      await this.getHttpsBaseUrl(),
+      "appasset",
+      `appid=${appId}&AssetType=2&AssetIdx=0`,
+    );
 
     try {
       console.info(`NvHttp: 获取应用图标 appId=${appId}, url=${url}`);
       let data: ArrayBuffer;
 
       if (this.hasCertificateFiles()) {
-        data = await HttpClient.getBinaryWithClientCert(
-          url,
-          this.certFilePath,
-          this.keyFilePath,
-          {
-            connectTimeout: NvHttp.CONNECTION_TIMEOUT,
-            transferTimeout: NvHttp.READ_TIMEOUT
-          }
-        );
+        data = await HttpClient.getBinaryWithClientCert(url, this.certFilePath, this.keyFilePath, {
+          connectTimeout: NvHttp.CONNECTION_TIMEOUT,
+          transferTimeout: NvHttp.READ_TIMEOUT,
+        });
       } else {
         data = await HttpClient.getBinary(url, {
           skipServerValidation: true,
           connectTimeout: NvHttp.CONNECTION_TIMEOUT,
-          transferTimeout: NvHttp.READ_TIMEOUT
+          transferTimeout: NvHttp.READ_TIMEOUT,
         });
       }
 
@@ -515,12 +537,12 @@ export class NvHttp {
 
   async getAppAssetCached(appId: number): Promise<string | null> {
     if (!this.context) {
-      console.warn('NvHttp: 无法缓存图标，context 未设置');
+      console.warn("NvHttp: 无法缓存图标，context 未设置");
       return null;
     }
 
-    const cacheDir = this.context.cacheDir + '/app_icons';
-    const safeAddress = this.address.replace(/[:\[\]\/\\]/g, '_');
+    const cacheDir = this.context.cacheDir + "/app_icons";
+    const safeAddress = this.address.replace(/[:\[\]\/\\]/g, "_");
     const cachedPath = `${cacheDir}/${safeAddress}_${appId}.png`;
 
     try {
@@ -528,8 +550,7 @@ export class NvHttp {
         console.info(`NvHttp: 使用缓存的图标 ${cachedPath}`);
         return cachedPath;
       }
-    } catch (err) {
-    }
+    } catch (err) {}
 
     const data = await this.getAppAsset(appId);
     if (!data || data.byteLength < 100) {
@@ -550,8 +571,10 @@ export class NvHttp {
     }
 
     try {
-      const file = fileIo.openSync(cachedPath,
-        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      const file = fileIo.openSync(
+        cachedPath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC,
+      );
       fileIo.writeSync(file.fd, data);
       fileIo.closeSync(file);
       console.info(`NvHttp: 图标已缓存到 ${cachedPath}`);
@@ -563,8 +586,11 @@ export class NvHttp {
   }
 
   getBoxArtUrl(appId: number): string {
-    return this.buildUrl(this.getHttpBaseUrl(), 'appasset',
-      `appid=${appId}&AssetType=2&AssetIdx=0`);
+    return this.buildUrl(
+      this.getHttpBaseUrl(),
+      "appasset",
+      `appid=${appId}&AssetType=2&AssetIdx=0`,
+    );
   }
 
   private buildLaunchQuery(appId: number, config: LaunchConfig, verb: string): string {
@@ -594,10 +620,10 @@ export class NvHttp {
       // hdrMode: 0=SDR, 1=HDR10(PQ), 2=HLG
       const hdrModeValue = config.hdrMode ?? 1;
       params.push(`hdrMode=${hdrModeValue}`);
-      params.push('clientHdrCapVersion=0');
-      params.push('clientHdrCapSupportedFlagsInUint32=0');
-      params.push('clientHdrCapMetaDataId=NV_STATIC_METADATA_TYPE_1');
-      params.push('clientHdrCapDisplayData=0x0x0x0x0x0x0x0x0x0x0');
+      params.push("clientHdrCapVersion=0");
+      params.push("clientHdrCapSupportedFlagsInUint32=0");
+      params.push("clientHdrCapMetaDataId=NV_STATIC_METADATA_TYPE_1");
+      params.push("clientHdrCapDisplayData=0x0x0x0x0x0x0x0x0x0x0");
     }
 
     const minBrightness = config.minBrightness ?? 2;
@@ -611,31 +637,31 @@ export class NvHttp {
       params.push(`customScreenMode=${config.screenCombinationMode}`);
     }
 
-    console.info(`NvHttp: buildLaunchQuery: ${params.join('&')}`);
-    return params.join('&');
+    console.info(`NvHttp: buildLaunchQuery: ${params.join("&")}`);
+    return params.join("&");
   }
 
   getServerCert(): string {
-    return this.serverCert || '';
+    return this.serverCert || "";
   }
 
   private parseServerInfo(xml: string): ServerInfo {
     return {
-      hostname: XmlUtil.getValue(xml, 'hostname') || 'UNKNOWN',
-      uniqueId: XmlUtil.getValue(xml, 'uniqueid'),
-      macAddress: XmlUtil.getValue(xml, 'mac'),
-      paired: XmlUtil.getValue(xml, 'PairStatus') === '1',
-      currentGame: XmlUtil.getIntValue(xml, 'currentgame', 0),
-      serverCodecModeSupport: XmlUtil.getIntValue(xml, 'ServerCodecModeSupport', 0),
-      gpuType: XmlUtil.getValue(xml, 'gputype'),
-      gfeVersion: XmlUtil.getValue(xml, 'GfeVersion'),
-      appVersion: XmlUtil.getValue(xml, 'appversion'),
-      maxLumaPixelsHEVC: XmlUtil.getIntValue(xml, 'MaxLumaPixelsHEVC', 0),
-      serverCapabilities: XmlUtil.getValue(xml, 'ServerCapabilities'),
-      httpsPort: XmlUtil.getIntValue(xml, 'HttpsPort', NvHttp.DEFAULT_HTTPS_PORT),
-      externalPort: XmlUtil.getIntValue(xml, 'ExternalPort', NvHttp.DEFAULT_HTTP_PORT),
-      localAddress: XmlUtil.getValue(xml, 'LocalIP'),
-      externalAddress: XmlUtil.getValue(xml, 'ExternalIP')
+      hostname: XmlUtil.getValue(xml, "hostname") || "UNKNOWN",
+      uniqueId: XmlUtil.getValue(xml, "uniqueid"),
+      macAddress: XmlUtil.getValue(xml, "mac"),
+      paired: XmlUtil.getValue(xml, "PairStatus") === "1",
+      currentGame: XmlUtil.getIntValue(xml, "currentgame", 0),
+      serverCodecModeSupport: XmlUtil.getIntValue(xml, "ServerCodecModeSupport", 0),
+      gpuType: XmlUtil.getValue(xml, "gputype"),
+      gfeVersion: XmlUtil.getValue(xml, "GfeVersion"),
+      appVersion: XmlUtil.getValue(xml, "appversion"),
+      maxLumaPixelsHEVC: XmlUtil.getIntValue(xml, "MaxLumaPixelsHEVC", 0),
+      serverCapabilities: XmlUtil.getValue(xml, "ServerCapabilities"),
+      httpsPort: XmlUtil.getIntValue(xml, "HttpsPort", NvHttp.DEFAULT_HTTPS_PORT),
+      externalPort: XmlUtil.getIntValue(xml, "ExternalPort", NvHttp.DEFAULT_HTTP_PORT),
+      localAddress: XmlUtil.getValue(xml, "LocalIP"),
+      externalAddress: XmlUtil.getValue(xml, "ExternalIP"),
     };
   }
 
@@ -647,20 +673,19 @@ export class NvHttp {
     while ((match = appRegex.exec(xml)) !== null) {
       const appXml: string = match[1];
 
-      const id = XmlUtil.getIntValue(appXml, 'ID', 0);
-      const name = XmlUtil.getValue(appXml, 'AppTitle');
-      const isRunningStr = XmlUtil.getValue(appXml, 'IsRunning');
-      const isRunning = isRunningStr === '1';
-      const isHdrSupported = XmlUtil.getValue(appXml, 'IsHdrSupported') === '1';
+      const id = XmlUtil.getIntValue(appXml, "ID", 0);
+      const name = XmlUtil.getValue(appXml, "AppTitle");
+      const isRunningStr = XmlUtil.getValue(appXml, "IsRunning");
+      const isRunning = isRunningStr === "1";
+      const isHdrSupported = XmlUtil.getValue(appXml, "IsHdrSupported") === "1";
 
-      let superCmdsStr = XmlUtil.getValue(appXml, 'SuperCmds');
+      let superCmdsStr = XmlUtil.getValue(appXml, "SuperCmds");
       let cmdList: SuperCmd[] | undefined = undefined;
-      if (superCmdsStr && superCmdsStr !== 'null') {
+      if (superCmdsStr && superCmdsStr !== "null") {
         try {
           superCmdsStr = NvHttp.decodeHtmlEntities(superCmdsStr);
           cmdList = JSON.parse(superCmdsStr) as SuperCmd[];
-        } catch {
-        }
+        } catch {}
       }
 
       const entry: AppEntry = {
@@ -668,7 +693,7 @@ export class NvHttp {
         name: name,
         isRunning: isRunning,
         isHdrSupported: isHdrSupported,
-        cmdList: cmdList
+        cmdList: cmdList,
       };
       apps.push(entry);
     }
@@ -679,21 +704,20 @@ export class NvHttp {
   private static decodeHtmlEntities(text: string): string {
     let result = text
       .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
       .replace(/&apos;/g, "'");
-    
+
     const numericEntityRegex = /&#(\d+);/g;
     let match: RegExpExecArray | null = null;
     while ((match = numericEntityRegex.exec(text)) !== null) {
       const code = parseInt(match[1]);
       result = result.replace(match[0], String.fromCharCode(code));
     }
-    
+
     return result;
   }
-
 }
 
 export interface AppEntry {
@@ -721,7 +745,7 @@ export interface LaunchConfig {
   riKeyId: number;
   audioConfig: string;
   enableHdr?: boolean;
-  hdrMode?: number;  // 0=SDR, 1=HDR10(PQ), 2=HLG
+  hdrMode?: number; // 0=SDR, 1=HDR10(PQ), 2=HLG
   displayGuid?: string;
   minBrightness?: number;
   maxBrightness?: number;

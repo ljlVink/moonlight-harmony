@@ -8,11 +8,11 @@
  * (at your option) any later version.
  */
 
-import { preferences } from '@kit.ArkData';
-import { Context } from '@kit.AbilityKit';
+import { preferences } from "@kit.ArkData";
+import { Context } from "@kit.AbilityKit";
 
 export class PreferencesUtil {
-  private static readonly PREFERENCES_NAME = 'moonlight_settings';
+  private static readonly PREFERENCES_NAME = "moonlight_settings";
   private static preferencesInstance: preferences.Preferences | null = null;
   private static contextRef: Context | null = null;
 
@@ -23,13 +23,13 @@ export class PreferencesUtil {
   static async getPreferences(context?: Context): Promise<preferences.Preferences> {
     const ctx = context || PreferencesUtil.contextRef;
     if (!ctx) {
-      throw new Error('PreferencesUtil: context not initialized');
+      throw new Error("PreferencesUtil: context not initialized");
     }
     if (!PreferencesUtil.preferencesInstance) {
       try {
         PreferencesUtil.preferencesInstance = await preferences.getPreferences(
           ctx,
-          PreferencesUtil.PREFERENCES_NAME
+          PreferencesUtil.PREFERENCES_NAME,
         );
       } catch (e) {
         throw new Error(`PreferencesUtil: failed to get preferences - ${e}`);
@@ -41,14 +41,14 @@ export class PreferencesUtil {
   static async get<T>(key: string, defaultValue: T): Promise<T> {
     const prefs = await PreferencesUtil.getPreferences();
     const value = await prefs.get(key, defaultValue as preferences.ValueType);
-    
-    if (typeof defaultValue === 'number' && typeof value === 'string') {
+
+    if (typeof defaultValue === "number" && typeof value === "string") {
       const parsed = Number(value);
       if (!isNaN(parsed)) {
         return parsed as T;
       }
     }
-    
+
     return value as T;
   }
 
@@ -58,9 +58,13 @@ export class PreferencesUtil {
     await prefs.flush();
   }
 
-  static async getString(context: Context, key: string, defaultValue: string = ''): Promise<string> {
+  static async getString(
+    context: Context,
+    key: string,
+    defaultValue: string = "",
+  ): Promise<string> {
     const prefs = await PreferencesUtil.getPreferences(context);
-    return await prefs.get(key, defaultValue) as string;
+    return (await prefs.get(key, defaultValue)) as string;
   }
 
   static async setString(context: Context, key: string, value: string): Promise<void> {
@@ -71,7 +75,7 @@ export class PreferencesUtil {
 
   static async getNumber(context: Context, key: string, defaultValue: number = 0): Promise<number> {
     const prefs = await PreferencesUtil.getPreferences(context);
-    return await prefs.get(key, defaultValue) as number;
+    return (await prefs.get(key, defaultValue)) as number;
   }
 
   static async setNumber(context: Context, key: string, value: number): Promise<void> {
@@ -80,9 +84,13 @@ export class PreferencesUtil {
     await prefs.flush();
   }
 
-  static async getBoolean(context: Context, key: string, defaultValue: boolean = false): Promise<boolean> {
+  static async getBoolean(
+    context: Context,
+    key: string,
+    defaultValue: boolean = false,
+  ): Promise<boolean> {
     const prefs = await PreferencesUtil.getPreferences(context);
-    return await prefs.get(key, defaultValue) as boolean;
+    return (await prefs.get(key, defaultValue)) as boolean;
   }
 
   static async setBoolean(context: Context, key: string, value: boolean): Promise<void> {

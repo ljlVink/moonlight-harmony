@@ -14,14 +14,14 @@
  * Reference: Android moonlight-android AbstractController
  */
 
-import { UsbDriverListener } from './UsbDriverListener';
-import { ControllerType, ControllerCapabilities, ButtonFlags } from './ControllerConstants';
+import { UsbDriverListener } from "./UsbDriverListener";
+import { ControllerType, ControllerCapabilities, ButtonFlags } from "./ControllerConstants";
 
 export enum ControllerState {
   Created,
   Initializing,
   Ready,
-  Stopped
+  Stopped,
 }
 
 export abstract class AbstractController {
@@ -29,21 +29,21 @@ export abstract class AbstractController {
   protected vendorId: number;
   protected productId: number;
   protected listener: UsbDriverListener;
-  protected deviceName: string = 'Unknown Controller';
-  
+  protected deviceName: string = "Unknown Controller";
+
   // Device unique identifier (to distinguish multiple devices of the same model)
   protected busNum: number = 0;
   protected devAddress: number = 0;
-  protected serial: string = '';
-  
+  protected serial: string = "";
+
   // Configuration options
   protected ignoreDisconnect: boolean = false;
   protected ddkActive: boolean = false;
   protected ddkPollingEnabled: boolean = false;
-  
+
   // Lifecycle state
   private controllerState: ControllerState = ControllerState.Created;
-  
+
   // Input state
   protected buttonFlags: number = 0;
   protected supportedButtonFlags: number = 0;
@@ -58,24 +58,24 @@ export abstract class AbstractController {
   protected touchpadActive: boolean = false;
   protected touchpadX: number = 0;
   protected touchpadY: number = 0;
-  
+
   // Controller properties
   protected capabilities: number = 0;
   protected type: number = ControllerType.UNKNOWN;
-  
+
   constructor(deviceId: number, listener: UsbDriverListener, vendorId: number, productId: number) {
     this.deviceId = deviceId;
     this.listener = listener;
     this.vendorId = vendorId;
     this.productId = productId;
   }
-  
+
   setDeviceLocation(busNum: number, devAddress: number, serial: string): void {
     this.busNum = busNum;
     this.devAddress = devAddress;
     this.serial = serial;
   }
-  
+
   setIgnoreDisconnect(ignore: boolean): void {
     this.ignoreDisconnect = ignore;
   }
@@ -83,7 +83,7 @@ export abstract class AbstractController {
   setDdkPollingEnabled(enabled: boolean): void {
     this.ddkPollingEnabled = enabled;
   }
-  
+
   getIgnoreDisconnect(): boolean {
     return this.ignoreDisconnect;
   }
@@ -91,47 +91,47 @@ export abstract class AbstractController {
   isDdkPolling(): boolean {
     return this.ddkActive;
   }
-  
+
   getDeviceKey(): string {
     return `${this.vendorId}:${this.productId}:${this.busNum}:${this.devAddress}`;
   }
-  
+
   getName(): string {
     return this.deviceName;
   }
-  
+
   getDeviceId(): number {
     return this.deviceId;
   }
-  
+
   getControllerId(): number {
     return this.deviceId;
   }
-  
+
   getVendorId(): number {
     return this.vendorId;
   }
-  
+
   getProductId(): number {
     return this.productId;
   }
-  
+
   getSupportedButtonFlags(): number {
     return this.supportedButtonFlags;
   }
-  
+
   getCapabilities(): number {
     return this.capabilities;
   }
-  
+
   getType(): number {
     return this.type;
   }
-  
+
   getControllerType(): number {
     return this.type;
   }
-  
+
   protected setButtonFlag(buttonFlag: number, data: number): void {
     if (data !== 0) {
       this.buttonFlags |= buttonFlag;
@@ -139,7 +139,7 @@ export abstract class AbstractController {
       this.buttonFlags &= ~buttonFlag;
     }
   }
-  
+
   protected reportInput(): void {
     if (this.listener) {
       this.listener.reportControllerState(
@@ -150,19 +150,23 @@ export abstract class AbstractController {
         this.rightStickX,
         this.rightStickY,
         this.leftTrigger,
-        this.rightTrigger
+        this.rightTrigger,
       );
     }
   }
-  
+
   protected notifyDeviceRemoved(): void {
     if (this.listener) {
       this.listener.deviceRemoved(this);
     }
   }
-  
+
   protected notifyDeviceAdded(): void {
-    if (this.controllerState === ControllerState.Ready || this.controllerState === ControllerState.Stopped) return;
+    if (
+      this.controllerState === ControllerState.Ready ||
+      this.controllerState === ControllerState.Stopped
+    )
+      return;
     this.controllerState = ControllerState.Ready;
     if (this.listener) {
       this.listener.deviceAdded(this);
@@ -184,7 +188,7 @@ export abstract class AbstractController {
   protected markStopped(): void {
     this.controllerState = ControllerState.Stopped;
   }
-  
+
   protected notifyControllerMotion(motionType: number, x: number, y: number, z: number): void {
     if (this.listener) {
       this.listener.reportControllerMotion(this.deviceId, motionType, x, y, z);
@@ -196,22 +200,22 @@ export abstract class AbstractController {
       this.listener.reportTouchpadInput(this.deviceId, active, x, y);
     }
   }
-  
+
   abstract start(): boolean;
-  
+
   abstract stop(): void;
-  
+
   abstract isConnected(): boolean;
-  
+
   getLastActivityTime(): number {
     return 0;
   }
-  
+
   mayBeSilentlyDisconnected(inactivityThresholdMs: number = 30000): boolean {
     return false;
   }
-  
+
   abstract rumble(lowFreqMotor: number, highFreqMotor: number): void;
-  
+
   abstract rumbleTriggers(leftTrigger: number, rightTrigger: number): void;
 }

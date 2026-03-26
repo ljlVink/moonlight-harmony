@@ -16,13 +16,12 @@ export const DPAD_DOWN: number = 0x0002;
 export type DPadDirectionCallback = (direction: number) => void;
 
 export type DPadEditModeGetter = () => boolean;
-
 @Component
 export struct VirtualDPad {
   @Prop dpadSize: number = 120;
-  @Prop normalColor: string = '#6050C080';
-  @Prop pressedColor: string = '#C070E090';
-  @Prop bgColor: string = '#3050C080';
+  @Prop normalColor: string = "#6050C080";
+  @Prop pressedColor: string = "#C070E090";
+  @Prop bgColor: string = "#3050C080";
   @Prop opacity_: number = 80;
 
   onDirectionChange: DPadDirectionCallback = (_dir: number): void => {};
@@ -48,71 +47,72 @@ export struct VirtualDPad {
       Rect()
         .width(this.padSize)
         .height(this.padSize)
-        .fill('#01000000')
+        .fill("#01000000")
         .borderRadius(8)
 
       if (this.currentDir === 0) {
         Rect()
           .width(this.bandWidth)
           .height(this.bandWidth)
-          .fill('transparent')
+          .fill("transparent")
           .stroke(this.normalColor)
           .strokeWidth(1.5)
-          .borderRadius(4)
+          .borderRadius(4);
       }
-
       Rect()
         .width(this.bandWidth)
         .height(this.threshold33)
-        .fill('transparent')
+        .fill("transparent")
         .stroke((this.currentDir & DPAD_UP) > 0 ? this.pressedColor : this.normalColor)
         .strokeWidth(1.5)
         .borderRadius(4)
         .position({ x: this.threshold33, y: 0 })
-
       Rect()
         .width(this.bandWidth)
         .height(this.threshold33)
-        .fill('transparent')
+        .fill("transparent")
         .stroke((this.currentDir & DPAD_DOWN) > 0 ? this.pressedColor : this.normalColor)
         .strokeWidth(1.5)
         .borderRadius(4)
         .position({ x: this.threshold33, y: this.threshold66 })
-
       Rect()
         .width(this.threshold33)
         .height(this.bandWidth)
-        .fill('transparent')
+        .fill("transparent")
         .stroke((this.currentDir & DPAD_LEFT) > 0 ? this.pressedColor : this.normalColor)
         .strokeWidth(1.5)
         .borderRadius(4)
         .position({ x: 0, y: this.threshold33 })
-
       Rect()
         .width(this.threshold33)
         .height(this.bandWidth)
-        .fill('transparent')
+        .fill("transparent")
         .stroke((this.currentDir & DPAD_RIGHT) > 0 ? this.pressedColor : this.normalColor)
         .strokeWidth(1.5)
         .borderRadius(4)
         .position({ x: this.threshold66, y: this.threshold33 })
-
-      Text('▲')
+      Text("▲")
         .fontSize(this.padSize * 0.12)
         .fontColor((this.currentDir & DPAD_UP) > 0 ? this.pressedColor : this.normalColor)
         .position({ x: this.padSize / 2 - this.padSize * 0.06, y: this.threshold33 * 0.25 })
-      Text('▼')
+      Text("▼")
         .fontSize(this.padSize * 0.12)
         .fontColor((this.currentDir & DPAD_DOWN) > 0 ? this.pressedColor : this.normalColor)
-        .position({ x: this.padSize / 2 - this.padSize * 0.06, y: this.threshold66 + this.threshold33 * 0.25 })
-      Text('◀')
+        .position({
+          x: this.padSize / 2 - this.padSize * 0.06,
+          y: this.threshold66 + this.threshold33 * 0.25,
+        })
+      Text("◀")
         .fontSize(this.padSize * 0.12)
         .fontColor((this.currentDir & DPAD_LEFT) > 0 ? this.pressedColor : this.normalColor)
         .position({ x: this.threshold33 * 0.2, y: this.padSize / 2 - this.padSize * 0.07 })
-      Text('▶')
+      Text("▶")
         .fontSize(this.padSize * 0.12)
         .fontColor((this.currentDir & DPAD_RIGHT) > 0 ? this.pressedColor : this.normalColor)
-        .position({ x: this.threshold66 + this.threshold33 * 0.2, y: this.padSize / 2 - this.padSize * 0.07 })
+        .position({
+          x: this.threshold66 + this.threshold33 * 0.2,
+          y: this.padSize / 2 - this.padSize * 0.07,
+        })
     }
     .width(this.padSize)
     .height(this.padSize)
@@ -122,7 +122,7 @@ export struct VirtualDPad {
       if (this.isEditMode()) return;
       event.stopPropagation();
       this.handleTouch(event);
-    })
+    });
   }
 
   private handleTouch(event: TouchEvent): void {

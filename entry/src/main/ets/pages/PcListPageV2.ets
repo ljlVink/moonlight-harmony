@@ -8,24 +8,37 @@
  * (at your option) any later version.
  */
 
-import { promptAction, router } from '@kit.ArkUI';
-import { ComputerInfo, PairState, selectBestAddress } from '../model/ComputerInfo';
-import { ComputerManager } from '../service/ComputerManager';
-import { ComputerCard } from '../components/ComputerCard';
-import { ComputerDataSource, ComputerListViewModel, ObservableComputer } from '../viewmodel/ComputerViewModel';
-import { AppColors, AppSizes, AppSpacing } from '../common/Theme';
-import { common } from '@kit.AbilityKit';
-import { buffer } from '@kit.ArkTS';
-import { sensor } from '@kit.SensorServiceKit';
-import { OptionItem, OptionPickerDialog, OptionPickerDialogConfig } from '../components/OptionPickerDialog';
-import { ConfirmDialog, ConfirmDialogConfig, InfoDialog, InfoDialogConfig } from '../components/ConfirmDialog';
-import { ComputerMenuCallbacks, ComputerMenuHelper } from '../viewmodel/ComputerMenuHelper';
-import { PcListActions, PcListUICallbacks } from '../viewmodel/PcListActions';
-import { PairingManager, PairState as PMPairState } from '../service/PairingManager';
-import { QrShareService } from '../service/QrShareService';
-import { CustomKeyStore } from '../service/CustomKeyStore';
-import { PcListTitleBar, TitleBarConfig } from '../components/PcListTitleBar';
-import { AboutDialogView, PinDialogView } from '../components/PcListDialogs';
+import { promptAction, router } from "@kit.ArkUI";
+import { ComputerInfo, PairState, selectBestAddress } from "../model/ComputerInfo";
+import { ComputerManager } from "../service/ComputerManager";
+import { ComputerCard } from "../components/ComputerCard";
+import {
+  ComputerDataSource,
+  ComputerListViewModel,
+  ObservableComputer,
+} from "../viewmodel/ComputerViewModel";
+import { AppColors, AppSizes, AppSpacing } from "../common/Theme";
+import { common } from "@kit.AbilityKit";
+import { buffer } from "@kit.ArkTS";
+import { sensor } from "@kit.SensorServiceKit";
+import {
+  OptionItem,
+  OptionPickerDialog,
+  OptionPickerDialogConfig,
+} from "../components/OptionPickerDialog";
+import {
+  ConfirmDialog,
+  ConfirmDialogConfig,
+  InfoDialog,
+  InfoDialogConfig,
+} from "../components/ConfirmDialog";
+import { ComputerMenuCallbacks, ComputerMenuHelper } from "../viewmodel/ComputerMenuHelper";
+import { PcListActions, PcListUICallbacks } from "../viewmodel/PcListActions";
+import { PairingManager, PairState as PMPairState } from "../service/PairingManager";
+import { QrShareService } from "../service/QrShareService";
+import { CustomKeyStore } from "../service/CustomKeyStore";
+import { PcListTitleBar, TitleBarConfig } from "../components/PcListTitleBar";
+import { AboutDialogView, PinDialogView } from "../components/PcListDialogs";
 
 /**
  * Computer list page (modern version)
@@ -38,37 +51,37 @@ struct PcListPageV2 {
   @State isScanning: boolean = false;
   @State isInitializing: boolean = true;
   @State showPinDialog: boolean = false;
-  @State currentPin: string = '';
-  @State pairingComputerName: string = '';
+  @State currentPin: string = "";
+  @State pairingComputerName: string = "";
   @State showAboutDialog: boolean = false;
   @State isLandscape: boolean = false;
   @State screenWidth: number = 0;
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
-  
+  @StorageProp("topSafeHeight") topSafeHeight: number = 56;
+
   private computerDataSource: ComputerDataSource = new ComputerDataSource();
-  
+
   private computerManager: ComputerManager = ComputerManager.getInstance();
   private actions: PcListActions | null = null;
-  
+
   private lastShakeTime: number = 0;
   private shakeThreshold: number = 15;
   private shakeCooldown: number = 2000;
-  
+
   private optionPickerDialogConfig: OptionPickerDialogConfig = {
-    title: '',
+    title: "",
     options: [],
-    onSelect: () => {}
+    onSelect: () => {},
   };
   private confirmDialogConfig: ConfirmDialogConfig = {
-    title: '',
-    message: '',
-    confirmButton: { text: '', onClick: () => {} }
+    title: "",
+    message: "",
+    confirmButton: { text: "", onClick: () => {} },
   };
   private infoDialogConfig: InfoDialogConfig = {
-    title: '',
-    content: ''
+    title: "",
+    content: "",
   };
-  
+
   private optionPickerDialogController: CustomDialogController | null = null;
   private confirmDialogController: CustomDialogController | null = null;
   private infoDialogController: CustomDialogController | null = null;
@@ -80,15 +93,15 @@ struct PcListPageV2 {
     this.confirmDialogConfig = config;
     this.confirmDialogController = new CustomDialogController({
       builder: ConfirmDialog({
-        config: this.confirmDialogConfig
+        config: this.confirmDialogConfig,
       }),
       alignment: DialogAlignment.Center,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.confirmDialogController.open();
   }
-  
+
   /**
    * Show info dialog
    */
@@ -96,11 +109,11 @@ struct PcListPageV2 {
     this.infoDialogConfig = config;
     this.infoDialogController = new CustomDialogController({
       builder: InfoDialog({
-        config: this.infoDialogConfig
+        config: this.infoDialogConfig,
       }),
       alignment: DialogAlignment.Center,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.infoDialogController.open();
   }
@@ -109,19 +122,23 @@ struct PcListPageV2 {
     this.actions = new PcListActions({
       showConfirmDialog: (config: ConfirmDialogConfig) => this.showConfirmDialog(config),
       showInfoDialog: (config: InfoDialogConfig) => this.showInfoDialog(config),
-      syncViewModel: () => { this.syncViewModelFromManager(); },
+      syncViewModel: () => {
+        this.syncViewModelFromManager();
+      },
       showPinDialog: (pin: string, computerName: string) => {
         this.currentPin = pin;
         this.pairingComputerName = computerName;
         this.showPinDialog = true;
       },
-      hidePinDialog: () => { this.showPinDialog = false; }
+      hidePinDialog: () => {
+        this.showPinDialog = false;
+      },
     } as PcListUICallbacks);
-    
+
     this.initializeAsync();
     this.startShakeDetection();
   }
-  
+
   private async initializeAsync(): Promise<void> {
     try {
       const context = getContext(this) as common.UIAbilityContext;
@@ -133,38 +150,41 @@ struct PcListPageV2 {
 
       this.syncViewModelFromManager();
       this.computerManager.startBackgroundScan();
-      
+
       this.isInitializing = false;
-      
-      this.computerManager.refreshAllComputers().then(() => {
-        this.syncViewModelFromManager();
-        this.computerManager.startPolling();
-      }).catch((err: Error) => {
-        console.error('[MOONLIGHT] PcListPage: Refresh failed', err);
-        this.computerManager.startPolling();
-      });
+
+      this.computerManager
+        .refreshAllComputers()
+        .then(() => {
+          this.syncViewModelFromManager();
+          this.computerManager.startPolling();
+        })
+        .catch((err: Error) => {
+          console.error("[MOONLIGHT] PcListPage: Refresh failed", err);
+          this.computerManager.startPolling();
+        });
     } catch (err) {
-      console.error('PcListPage: Initialization failed', err);
+      console.error("PcListPage: Initialization failed", err);
       this.isInitializing = false;
     }
   }
-  
+
   private async syncViewModelFromManager(): Promise<void> {
     const computers = await this.computerManager.getComputers();
-    
+
     const computerMap = new Map<string, ComputerInfo>();
     for (const c of computers) {
       computerMap.set(c.uuid, c);
     }
-    
+
     const existingMap = new Map<string, ObservableComputer>();
     for (const oc of this.viewModel.computers) {
       existingMap.set(oc.uuid, oc);
     }
-    
+
     const newList: ObservableComputer[] = [];
     let hasChanges = false;
-    
+
     for (const c of computers) {
       const existing = existingMap.get(c.uuid);
       if (existing) {
@@ -176,11 +196,11 @@ struct PcListPageV2 {
         hasChanges = true;
       }
     }
-    
+
     if (existingMap.size > 0) {
       hasChanges = true;
     }
-    
+
     if (hasChanges || this.viewModel.computers.length !== newList.length) {
       newList.sort((a, b) => {
         const getPriority = (c: ObservableComputer): number => {
@@ -198,9 +218,9 @@ struct PcListPageV2 {
       this.viewModel.computers = newList;
       this.computerDataSource.reloadData(newList);
     }
-    
+
     this.viewModel.computerCount = newList.length;
-    this.viewModel.onlineCount = newList.filter(c => c.isOnline).length;
+    this.viewModel.onlineCount = newList.filter((c) => c.isOnline).length;
   }
 
   aboutToDisappear(): void {
@@ -213,44 +233,43 @@ struct PcListPageV2 {
     this.computerManager.startPolling();
     if (!this.isInitializing) {
       this.syncViewModelFromManager();
-      this.computerManager.refreshAllComputers().then(() => {
-        this.syncViewModelFromManager();
-      }).catch((err: Error) => {
-        console.warn('[MOONLIGHT] PcListPage: Refresh failed', err);
-      });
+      this.computerManager
+        .refreshAllComputers()
+        .then(() => {
+          this.syncViewModelFromManager();
+        })
+        .catch((err: Error) => {
+          console.warn("[MOONLIGHT] PcListPage: Refresh failed", err);
+        });
     }
     this.startShakeDetection();
   }
-  
+
   onPageHide(): void {
     this.computerManager.stopPolling();
     this.stopShakeDetection();
   }
-  
+
   @Builder
   BottomBar() {
     Row() {
       Button({ type: ButtonType.Circle }) {
         if (this.isScanning) {
-          LoadingProgress()
-            .width(22)
-            .height(22)
-            .color(AppColors.TextSecondary)
+          LoadingProgress().width(22).height(22).color(AppColors.TextSecondary);
         } else {
-          Image($r('app.media.ic_search_network'))
+          Image($r("app.media.ic_search_network"))
             .width(22)
             .height(22)
-            .fillColor(AppColors.TextSecondary)
+            .fillColor(AppColors.TextSecondary);
         }
       }
       .width(44)
       .height(44)
-      .backgroundColor(0x1A000000)
+      .backgroundColor(0x1a000000)
       .enabled(!this.isScanning)
       .onClick(() => this.scanNetwork())
-
       Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ic_add'))
+        Image($r("app.media.ic_add"))
           .width(28)
           .height(28)
           .fillColor(Color.White)
@@ -262,31 +281,29 @@ struct PcListPageV2 {
         radius: 12,
         color: AppColors.PrimaryGlow,
         offsetX: 0,
-        offsetY: 4
+        offsetY: 4,
       })
       .margin({ left: AppSpacing.XLarge })
-      .onClick(() => router.pushUrl({ url: 'pages/AddPcPageV2' }))
-
+      .onClick(() => router.pushUrl({ url: "pages/AddPcPageV2" }))
       Blank()
         .width(44)
         .height(44)
     }
-    .width('100%')
+    .width("100%")
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
     .padding({
       left: AppSpacing.Large,
       right: AppSpacing.Large,
       top: AppSpacing.Small,
-      bottom: AppSpacing.Medium
-    })
+      bottom: AppSpacing.Medium,
+    });
   }
-  
+
   private stopShakeDetection(): void {
     try {
       sensor.off(sensor.SensorId.ACCELEROMETER);
-    } catch (err) {
-    }
+    } catch (err) {}
   }
 
   build() {
@@ -296,50 +313,60 @@ struct PcListPageV2 {
           config: {
             onlineCount: this.viewModel.onlineCount,
             totalCount: this.viewModel.computerCount,
-            onAboutClick: () => { this.showAboutDialog = true; },
-            onScanImport: () => { this.scanAndImportKeys(); },
-            onSettingsClick: () => { router.pushUrl({ url: 'pages/SettingsPageV2' }); }
-          } as TitleBarConfig
+            onAboutClick: () => {
+              this.showAboutDialog = true;
+            },
+            onScanImport: () => {
+              this.scanAndImportKeys();
+            },
+            onSettingsClick: () => {
+              router.pushUrl({ url: "pages/SettingsPageV2" });
+            },
+          } as TitleBarConfig,
         })
-        
+
         if (this.isInitializing) {
-          this.LoadingState()
+          this.LoadingState();
         } else if (this.viewModel.computers.length === 0) {
-          this.EmptyState()
+          this.EmptyState();
         } else {
-          this.ComputerList()
+          this.ComputerList();
         }
-        
+
         if (!this.isInitializing && this.viewModel.computers.length > 0) {
-          this.BottomBar()
+          this.BottomBar();
         }
       }
-      .width('100%')
-      .height('100%')
+      .width("100%")
+      .height("100%")
       .defaultFocus(true)
-      
+
       if (this.showPinDialog) {
         PinDialogView({
           pin: this.currentPin,
           computerName: this.pairingComputerName,
-          onClose: () => { this.showPinDialog = false; }
-        })
+          onClose: () => {
+            this.showPinDialog = false;
+          },
+        });
       }
-      
+
       if (this.showAboutDialog) {
         AboutDialogView({
-          onClose: () => { this.showAboutDialog = false; }
-        })
+          onClose: () => {
+            this.showAboutDialog = false;
+          },
+        });
       }
     }
-    .width('100%')
-    .height('100%')
+    .width("100%")
+    .height("100%")
     .onAreaChange((oldValue: Area, newValue: Area) => {
       const width = newValue.width as number;
       const height = newValue.height as number;
       this.screenWidth = width;
       this.isLandscape = width > height;
-    })
+    });
   }
 
   @Builder
@@ -349,22 +376,21 @@ struct PcListPageV2 {
         .width(48)
         .height(48)
         .color(AppColors.Primary)
-      Text('正在加载...')
+      Text("正在加载...")
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
         .margin({ top: AppSpacing.Large })
     }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
+    .width("100%")
+    .height("100%")
+    .justifyContent(FlexAlign.Center);
   }
 
   @Builder
   EmptyState() {
     Column() {
       Column() {
-        Text('🖥️')
-          .fontSize(48)
+        Text("🖥️").fontSize(48)
       }
       .width(120)
       .height(120)
@@ -374,33 +400,29 @@ struct PcListPageV2 {
       .borderColor(AppColors.Primary)
       .justifyContent(FlexAlign.Center)
       .margin({ bottom: AppSpacing.XLarge })
-
-      Text('开始连接')
+      Text("开始连接")
         .fontSize(AppSizes.FontTitle)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.Primary)
         .margin({ bottom: AppSpacing.Small })
-
-      Text('扫描网络发现运行 Foundation Sunshine 的电脑')
+      Text("扫描网络发现运行 Foundation Sunshine 的电脑")
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
         .textAlign(TextAlign.Center)
         .padding({ left: AppSpacing.XXLarge, right: AppSpacing.XXLarge })
-
-      Text('或手动输入 IP 地址添加')
+      Text("或手动输入 IP 地址添加")
         .fontSize(AppSizes.FontCaption)
         .fontColor(AppColors.TextTertiary)
         .margin({ top: AppSpacing.Small })
-      
       Row() {
         Button({ type: ButtonType.Normal }) {
           Row() {
-            Image($r('app.media.ic_scan'))
+            Image($r("app.media.ic_scan"))
               .width(20)
               .height(20)
               .fillColor(AppColors.TextOnPrimary)
               .margin({ right: 8 })
-            Text('扫描网络')
+            Text("扫描网络")
               .fontSize(AppSizes.FontBody)
               .fontWeight(FontWeight.Medium)
               .fontColor(AppColors.TextOnPrimary)
@@ -411,15 +433,14 @@ struct PcListPageV2 {
         .borderRadius(AppSizes.RadiusLarge)
         .backgroundColor(AppColors.Primary)
         .onClick(() => this.scanNetwork())
-
         Button({ type: ButtonType.Normal }) {
           Row() {
-            Image($r('app.media.ic_add'))
+            Image($r("app.media.ic_add"))
               .width(20)
               .height(20)
               .fillColor(AppColors.Primary)
               .margin({ right: 8 })
-            Text('手动添加')
+            Text("手动添加")
               .fontSize(AppSizes.FontBody)
               .fontWeight(FontWeight.Medium)
               .fontColor(AppColors.Primary)
@@ -432,13 +453,13 @@ struct PcListPageV2 {
         .borderWidth(1.5)
         .borderColor(AppColors.Primary)
         .margin({ left: AppSpacing.Medium })
-        .onClick(() => router.pushUrl({ url: 'pages/AddPcPageV2' }))
+        .onClick(() => router.pushUrl({ url: "pages/AddPcPageV2" }))
       }
       .margin({ top: AppSpacing.XXLarge })
     }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
+    .width("100%")
+    .height("100%")
+    .justifyContent(FlexAlign.Center);
   }
 
   /**
@@ -455,93 +476,104 @@ struct PcListPageV2 {
     Refresh({ refreshing: $$this.isRefreshing }) {
       if (this.getGridColumns() > 1) {
         Grid() {
-          ForEach(this.viewModel.computers, (computer: ObservableComputer, index: number) => {
-            GridItem() {
-              ComputerCard({
-                computer: computer,
-                onTap: () => {
-                  if (!computer.isOnline) {
-                    this.showComputerMenu(computer);
-                  } else {
-                    this.actions!.handleComputerTap(computer);
-                  }
-                },
-                onLongPress: () => this.showComputerMenu(computer),
-                onQuickStream: () => this.actions!.handleQuickStream(computer)
-              })
-            }
-          }, (computer: ObservableComputer) => computer.uuid)
+          ForEach(
+            this.viewModel.computers,
+            (computer: ObservableComputer, index: number) => {
+              GridItem() {
+                ComputerCard({
+                  computer: computer,
+                  onTap: () => {
+                    if (!computer.isOnline) {
+                      this.showComputerMenu(computer);
+                    } else {
+                      this.actions!.handleComputerTap(computer);
+                    }
+                  },
+                  onLongPress: () => this.showComputerMenu(computer),
+                  onQuickStream: () => this.actions!.handleQuickStream(computer),
+                })
+              };
+            },
+            (computer: ObservableComputer) => computer.uuid,
+          )
         }
-        .columnsTemplate(this.getGridColumns() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
+        .columnsTemplate(this.getGridColumns() === 3 ? "1fr 1fr 1fr" : "1fr 1fr")
         .columnsGap(AppSpacing.Medium)
         .rowsGap(AppSpacing.Medium)
-        .width('100%')
+        .width("100%")
         .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
         .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring)
+        .edgeEffect(EdgeEffect.Spring);
       } else {
         List({ space: AppSpacing.Medium }) {
-          LazyForEach(this.computerDataSource, (computer: ObservableComputer, index: number) => {
-            ListItem() {
-              ComputerCard({
-                computer: computer,
-                onTap: () => {
-                  if (!computer.isOnline) {
-                    this.showComputerMenu(computer);
-                  } else {
-                    this.actions!.handleComputerTap(computer);
-                  }
-                },
-                onLongPress: () => this.showComputerMenu(computer),
-                onQuickStream: () => this.actions!.handleQuickStream(computer)
-              })
-            }
-          }, (computer: ObservableComputer) => computer.uuid)
+          LazyForEach(
+            this.computerDataSource,
+            (computer: ObservableComputer, index: number) => {
+              ListItem() {
+                ComputerCard({
+                  computer: computer,
+                  onTap: () => {
+                    if (!computer.isOnline) {
+                      this.showComputerMenu(computer);
+                    } else {
+                      this.actions!.handleComputerTap(computer);
+                    }
+                  },
+                  onLongPress: () => this.showComputerMenu(computer),
+                  onQuickStream: () => this.actions!.handleQuickStream(computer),
+                })
+              };
+            },
+            (computer: ObservableComputer) => computer.uuid,
+          )
         }
-        .width('100%')
+        .width("100%")
         .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
-        .cachedCount(5)
+        .cachedCount(5);
       }
     }
     .layoutWeight(1)
     .onRefreshing(() => {
       this.refreshComputers();
-    })
+    });
   }
 
   private startShakeDetection(): void {
     try {
-      sensor.on(sensor.SensorId.ACCELEROMETER, (data) => {
-        const x = data.x;
-        const y = data.y;
-        const z = data.z;
-        const acceleration = Math.sqrt(x * x + y * y + z * z);
+      sensor.on(
+        sensor.SensorId.ACCELEROMETER,
+        (data) => {
+          const x = data.x;
+          const y = data.y;
+          const z = data.z;
+          const acceleration = Math.sqrt(x * x + y * y + z * z);
 
-        const shakeForce = Math.abs(acceleration - 9.8);
+          const shakeForce = Math.abs(acceleration - 9.8);
 
-        if (shakeForce > this.shakeThreshold) {
-          const now = Date.now();
-          if (now - this.lastShakeTime > this.shakeCooldown) {
-            this.lastShakeTime = now;
-            this.refreshComputers();
+          if (shakeForce > this.shakeThreshold) {
+            const now = Date.now();
+            if (now - this.lastShakeTime > this.shakeCooldown) {
+              this.lastShakeTime = now;
+              this.refreshComputers();
+            }
           }
-        }
-      }, { interval: 100000000 });
-    } catch (err) {
-    }
+        },
+        { interval: 100000000 },
+      );
+    } catch (err) {}
   }
-  
+
   // ==================== Business Logic ====================
-  
+
   private async refreshComputers(): Promise<void> {
     this.isRefreshing = true;
     try {
       await this.computerManager.refreshAllComputers();
       this.syncViewModelFromManager();
     } catch (err) {
-      console.error('Refresh failed', err);
+      console.error("Refresh failed", err);
     } finally {
       this.isRefreshing = false;
     }
@@ -553,20 +585,20 @@ struct PcListPageV2 {
   private async scanAndImportKeys(): Promise<void> {
     const result = await QrShareService.scanQrCode();
     if (!result) {
-      promptAction.showToast({ message: '扫码取消或失败', duration: 1500 });
+      promptAction.showToast({ message: "扫码取消或失败", duration: 1500 });
       return;
     }
 
     const trimmed = result.trim();
     console.info(`[Scan] Scan result (${trimmed.length} chars): ${trimmed.substring(0, 100)}`);
-    if (trimmed.startsWith('moonlight://pair')) {
+    if (trimmed.startsWith("moonlight://pair")) {
       await this.handleQrPairing(trimmed);
       return;
     }
 
     const parsed = QrShareService.deserialize(trimmed);
     if (!parsed) {
-      promptAction.showToast({ message: '无法识别的二维码内容', duration: 2000 });
+      promptAction.showToast({ message: "无法识别的二维码内容", duration: 2000 });
       return;
     }
     const name = parsed[0];
@@ -575,28 +607,31 @@ struct PcListPageV2 {
       title: `导入配置: ${name}`,
       subtitle: `包含 ${keys.length} 个按键`,
       options: [
-        { title: '替换导入', value: 'replace' } as OptionItem,
-        { title: '合并导入', value: 'merge' } as OptionItem,
+        { title: "替换导入", value: "replace" } as OptionItem,
+        { title: "合并导入", value: "merge" } as OptionItem,
       ],
-      selectedValue: '',
+      selectedValue: "",
       onSelect: async (option: OptionItem) => {
-        if (option.value === 'replace') {
+        if (option.value === "replace") {
           await CustomKeyStore.saveKeys(keys);
-          promptAction.showToast({ message: `已导入 "${name}" (${keys.length} 个按键)`, duration: 2000 });
+          promptAction.showToast({
+            message: `已导入 "${name}" (${keys.length} 个按键)`,
+            duration: 2000,
+          });
         } else {
           const existing = await CustomKeyStore.getKeys();
           await CustomKeyStore.saveKeys(existing.concat(keys));
           promptAction.showToast({ message: `已合并 ${keys.length} 个按键`, duration: 2000 });
         }
-      }
+      },
     };
     this.optionPickerDialogController = new CustomDialogController({
       builder: OptionPickerDialog({
-        config: this.optionPickerDialogConfig
+        config: this.optionPickerDialogConfig,
       }),
       alignment: DialogAlignment.Bottom,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.optionPickerDialogController.open();
   }
@@ -605,22 +640,22 @@ struct PcListPageV2 {
    * Handle Sunshine QR pairing URL
    */
   private async handleQrPairing(url: string): Promise<void> {
-    const paramStr = url.substring(url.indexOf('?') + 1);
+    const paramStr = url.substring(url.indexOf("?") + 1);
     const params = new Map<string, string>();
-    for (const part of paramStr.split('&')) {
-      const eq = part.indexOf('=');
+    for (const part of paramStr.split("&")) {
+      const eq = part.indexOf("=");
       if (eq > 0) {
         params.set(part.substring(0, eq), decodeURIComponent(part.substring(eq + 1)));
       }
     }
 
-    const host = params.get('host') ?? '';
-    const portStr = params.get('port') ?? '';
-    const pin = params.get('pin') ?? '';
-    const serverName = params.get('name') ?? host;
+    const host = params.get("host") ?? "";
+    const portStr = params.get("port") ?? "";
+    const pin = params.get("pin") ?? "";
+    const serverName = params.get("name") ?? host;
 
     if (!host || !pin) {
-      promptAction.showToast({ message: '二维码缺少必要信息', duration: 2000 });
+      promptAction.showToast({ message: "二维码缺少必要信息", duration: 2000 });
       return;
     }
 
@@ -639,27 +674,30 @@ struct PcListPageV2 {
       promptAction.showToast({ message: `Pairing with ${serverName}...`, duration: 2000 });
       const context = getContext() as common.UIAbilityContext;
       const pairingManager = new PairingManager(
-        selectBestAddress(computer), computer.uuid, context, computer.httpPort
+        selectBestAddress(computer),
+        computer.uuid,
+        context,
+        computer.httpPort,
       );
       const result = await pairingManager.pair(pin);
 
       if (result.state === PMPairState.PAIRED) {
-        let serverCertBase64 = '';
+        let serverCertBase64 = "";
         if (result.serverCert) {
-          serverCertBase64 = buffer.from(result.serverCert).toString('base64');
+          serverCertBase64 = buffer.from(result.serverCert).toString("base64");
         }
         await this.computerManager.updateComputer(computer.uuid, {
           pairState: PairState.PAIRED,
           serverCert: serverCertBase64,
-          pairName: result.pairName || ''
+          pairName: result.pairName || "",
         });
         this.syncViewModelFromManager();
         promptAction.showToast({ message: `已成功配对 ${serverName}！` });
-        router.pushUrl({ url: 'pages/AppListPageV2', params: { computerId: computer.uuid } });
+        router.pushUrl({ url: "pages/AppListPageV2", params: { computerId: computer.uuid } });
       } else if (result.state === PMPairState.PIN_WRONG) {
-        promptAction.showToast({ message: '二维码已过期，请在 Sunshine 重新生成', duration: 3000 });
+        promptAction.showToast({ message: "二维码已过期，请在 Sunshine 重新生成", duration: 3000 });
       } else if (result.state === PMPairState.ALREADY_IN_PROGRESS) {
-        promptAction.showToast({ message: '另一个设备正在配对中', duration: 2000 });
+        promptAction.showToast({ message: "另一个设备正在配对中", duration: 2000 });
       } else {
         promptAction.showToast({ message: `配对失败: ${result.state}`, duration: 2000 });
       }
@@ -673,10 +711,10 @@ struct PcListPageV2 {
     try {
       await this.computerManager.scanNetwork();
       this.syncViewModelFromManager();
-      promptAction.showToast({ message: '扫描完成' });
+      promptAction.showToast({ message: "扫描完成" });
     } catch (err) {
-      console.error('Scan failed', err);
-      promptAction.showToast({ message: 'Scan failed' });
+      console.error("Scan failed", err);
+      promptAction.showToast({ message: "Scan failed" });
     } finally {
       this.isScanning = false;
     }
@@ -688,39 +726,40 @@ struct PcListPageV2 {
       onPair: (c) => this.actions!.pairWithComputer(c),
       onResumeGame: (c) => this.actions!.resumeGame(c),
       onQuitGame: (c) => this.actions!.quitGame(c),
-      onAppList: (c) => router.pushUrl({
-        url: 'pages/AppListPageV2',
-        params: { computerId: c.uuid }
-      }),
+      onAppList: (c) =>
+        router.pushUrl({
+          url: "pages/AppListPageV2",
+          params: { computerId: c.uuid },
+        }),
       onUnpair: (c) => this.actions!.unpairComputer(c),
       onSleep: (c) => this.actions!.sleepComputer(c),
       onTestNetwork: (c) => this.actions!.testNetwork(c),
       onShowDetails: (c) => this.actions!.showComputerDetails(c),
-      onDelete: (c) => this.actions!.deleteComputer(c)
+      onDelete: (c) => this.actions!.deleteComputer(c),
     };
-    
+
     const menuResult = ComputerMenuHelper.generateMenu(computer, callbacks);
 
     this.optionPickerDialogConfig = {
       title: computer.name,
       subtitle: computer.statusText,
       options: menuResult.options,
-      selectedValue: '',
+      selectedValue: "",
       onSelect: (option: OptionItem) => {
         const action = menuResult.actionMap.get(option.value as string);
         if (action) {
           action();
         }
-      }
+      },
     };
-    
+
     this.optionPickerDialogController = new CustomDialogController({
       builder: OptionPickerDialog({
-        config: this.optionPickerDialogConfig
+        config: this.optionPickerDialogConfig,
       }),
       alignment: DialogAlignment.Bottom,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.optionPickerDialogController.open();
   }

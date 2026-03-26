@@ -8,9 +8,8 @@
  * (at your option) any later version.
  */
 
-
-import nativeLib from 'libmoonlight_nativelib.so';
-import { PointXY } from './PanZoomHandler';
+import nativeLib from "libmoonlight_nativelib.so";
+import { PointXY } from "./PanZoomHandler";
 import {
   BUTTON_ACTION_PRESS,
   BUTTON_ACTION_RELEASE,
@@ -21,13 +20,13 @@ import {
   TOUCH_EVENT_CANCEL,
   TOUCH_EVENT_DOWN,
   TOUCH_EVENT_MOVE,
-  TOUCH_EVENT_UP
-} from './MoonBridge';
+  TOUCH_EVENT_UP,
+} from "./MoonBridge";
 
 export enum TouchInputMode {
-  TRACKPAD = 'trackpad',
-  DIRECT = 'direct',
-  MOUSE = 'mouse'
+  TRACKPAD = "trackpad",
+  DIRECT = "direct",
+  MOUSE = "mouse",
 }
 
 interface NativeInputModule {
@@ -35,13 +34,28 @@ interface NativeInputModule {
   sendMousePosition(x: number, y: number, refWidth: number, refHeight: number): void;
   sendMouseButton(buttonEvent: number, mouseButton: number): void;
   sendMouseHighResScroll(scrollAmount: number): void;
-  sendTouchEvent(eventType: number, pointerId: number, x: number, y: number,
-    pressureOrDistance: number, contactAreaMajor: number, contactAreaMinor: number,
-    rotation: number): void;
-  sendPenEvent(eventType: number, toolType: number, penButtons: number,
-    x: number, y: number, pressureOrDistance: number,
-    contactAreaMajor: number, contactAreaMinor: number,
-    rotation: number, tilt: number): number;
+  sendTouchEvent(
+    eventType: number,
+    pointerId: number,
+    x: number,
+    y: number,
+    pressureOrDistance: number,
+    contactAreaMajor: number,
+    contactAreaMinor: number,
+    rotation: number,
+  ): void;
+  sendPenEvent(
+    eventType: number,
+    toolType: number,
+    penButtons: number,
+    x: number,
+    y: number,
+    pressureOrDistance: number,
+    contactAreaMajor: number,
+    contactAreaMinor: number,
+    rotation: number,
+    tilt: number,
+  ): number;
 }
 
 interface TouchState {
@@ -53,7 +67,6 @@ interface TouchState {
 }
 
 export interface TouchInputConfig {
-
   sensitivity?: number;
   clickThreshold?: number;
   clickTimeThreshold?: number;
@@ -113,13 +126,14 @@ export class TouchInputHandler {
   private static readonly DEFAULT_SENSITIVITY = 1.5;
   private static readonly DEFAULT_CLICK_THRESHOLD = 20;
   private static readonly DEFAULT_CLICK_TIME_THRESHOLD = 300;
-  
+
   constructor(config?: TouchInputConfig) {
     this.nativeInput = nativeLib as NativeInputModule;
     this.config = {
       sensitivity: config?.sensitivity ?? TouchInputHandler.DEFAULT_SENSITIVITY,
       clickThreshold: config?.clickThreshold ?? TouchInputHandler.DEFAULT_CLICK_THRESHOLD,
-      clickTimeThreshold: config?.clickTimeThreshold ?? TouchInputHandler.DEFAULT_CLICK_TIME_THRESHOLD,
+      clickTimeThreshold:
+        config?.clickTimeThreshold ?? TouchInputHandler.DEFAULT_CLICK_TIME_THRESHOLD,
     };
   }
 
@@ -131,7 +145,7 @@ export class TouchInputHandler {
   setCoordinateTransform(transform: ((x: number, y: number) => PointXY) | null): void {
     this.coordinateTransform = transform;
   }
-  
+
   private normalizeForce(force: number): number {
     if (force <= 0) {
       return 0;
@@ -141,60 +155,64 @@ export class TouchInputHandler {
     }
     return force;
   }
-  
+
   private getTrackedForce(pointerId: number, defaultForce: number = 1.0): number {
     const force = this.lastForce.get(pointerId);
     return force !== undefined ? force : defaultForce;
   }
-  
+
   private getTrackedSize(pointerId: number, defaultSize: number = 0.05): number {
     const size = this.lastSize.get(pointerId);
     return size !== undefined ? size : defaultSize;
   }
-  
+
   setMode(mode: TouchInputMode): void {
     this.mode = mode;
     console.info(`TouchInputHandler: 模式切换为 ${mode}`);
   }
-  
+
   getMode(): TouchInputMode {
     return this.mode;
   }
-  
+
   setSensitivity(sensitivity: number): void {
     this.config.sensitivity = sensitivity;
   }
-  
+
   handleTouchEvent(event: TouchEvent): void {
     const touches = event.touches;
     if (touches.length === 0) {
       return;
     }
 
-    if (event.sourceTool === SourceTool.Pen && this.mode === TouchInputMode.DIRECT && !this.penUnsupported) {
+    if (
+      event.sourceTool === SourceTool.Pen &&
+      this.mode === TouchInputMode.DIRECT &&
+      !this.penUnsupported
+    ) {
       this.handlePenEvent(event);
       return;
     }
-    
+
     if (this.mode === TouchInputMode.DIRECT) {
       this.handleMultiTouchEvent(event);
       return;
     }
-    
+
     if (this.mode === TouchInputMode.TRACKPAD) {
       this.handleTrackpadEvent(event);
       return;
     }
-    
+
     this.handleMouseEvent(event);
   }
-  
+
   private handleMultiTouchEvent(event: TouchEvent): void {
     const touches = event.touches;
     const changedTouches = event.changedTouches;
     const areaWidth = event.target.area.width as number;
     const areaHeight = event.target.area.height as number;
-    
+
     switch (event.type) {
       case TouchType.Down:
         for (let i = 0; i < changedTouches.length; i++) {
@@ -204,38 +222,40 @@ export class TouchInputHandler {
             startY: touch.y,
             lastX: touch.x,
             lastY: touch.y,
-            startTime: Date.now()
+            startTime: Date.now(),
           });
           this.lastForce.set(touch.id, 1.0);
           this.lastSize.set(touch.id, 0.05);
           this.sendNormalizedTouch(TOUCH_EVENT_DOWN, touch, event);
         }
         break;
-        
+
       case TouchType.Move:
         try {
           const historicalPoints = event.getHistoricalPoints();
           if (historicalPoints && historicalPoints.length > 0) {
             const now = Date.now();
             const maxAge = 100;
-            
+
             for (let i = 0; i < historicalPoints.length; i++) {
               const histPoint = historicalPoints[i];
-              
-              if (histPoint.timestamp && (now - histPoint.timestamp) > maxAge) {
+
+              if (histPoint.timestamp && now - histPoint.timestamp > maxAge) {
                 continue;
               }
-              
+
               const histTouch = histPoint.touchObject;
               const state = this.touchStates.get(histTouch.id);
               if (state) {
-                const normalizedForce = histPoint.force > 0
-                  ? this.normalizeForce(histPoint.force) : this.getTrackedForce(histTouch.id);
+                const normalizedForce =
+                  histPoint.force > 0
+                    ? this.normalizeForce(histPoint.force)
+                    : this.getTrackedForce(histTouch.id);
                 const contactSize = histPoint.size || this.getTrackedSize(histTouch.id);
-                
+
                 this.lastForce.set(histTouch.id, normalizedForce);
                 this.lastSize.set(histTouch.id, contactSize);
-                
+
                 this.sendNormalizedTouchDirect(
                   TOUCH_EVENT_MOVE,
                   histTouch.id,
@@ -244,14 +264,13 @@ export class TouchInputHandler {
                   areaWidth,
                   areaHeight,
                   normalizedForce,
-                  contactSize
+                  contactSize,
                 );
               }
             }
           }
-        } catch (e) {
-        }
-        
+        } catch (e) {}
+
         for (let i = 0; i < touches.length; i++) {
           const touch = touches[i];
           const state = this.touchStates.get(touch.id);
@@ -262,7 +281,7 @@ export class TouchInputHandler {
           }
         }
         break;
-        
+
       case TouchType.Up:
       case TouchType.Cancel:
         for (let i = 0; i < changedTouches.length; i++) {
@@ -276,11 +295,10 @@ export class TouchInputHandler {
     }
   }
 
-
   private handleTrackpadEvent(event: TouchEvent): void {
     const touches = event.touches;
     const changedTouches = event.changedTouches;
-    
+
     switch (event.type) {
       case TouchType.Down:
         this.handleTrackpadDown(touches, changedTouches, event);
@@ -295,7 +313,11 @@ export class TouchInputHandler {
     }
   }
 
-  private handleTrackpadDown(touches: TouchObject[], changedTouches: TouchObject[], event: TouchEvent): void {
+  private handleTrackpadDown(
+    touches: TouchObject[],
+    changedTouches: TouchObject[],
+    event: TouchEvent,
+  ): void {
     this.activePointerCount = touches.length;
     if (this.activePointerCount > this.maxPointerCountInGesture) {
       this.maxPointerCountInGesture = this.activePointerCount;
@@ -307,7 +329,7 @@ export class TouchInputHandler {
         startY: touch.y,
         lastX: touch.x,
         lastY: touch.y,
-        startTime: Date.now()
+        startTime: Date.now(),
       });
     }
 
@@ -336,7 +358,7 @@ export class TouchInputHandler {
       const sensitivity = this.config.sensitivity!;
       this.nativeInput.sendMouseMove(
         Math.floor(deltaX * sensitivity),
-        Math.floor(deltaY * sensitivity)
+        Math.floor(deltaY * sensitivity),
       );
     } else if (touches.length === 2) {
       if (!this.twoFingerMoved) {
@@ -371,7 +393,11 @@ export class TouchInputHandler {
     }
   }
 
-  private handleTrackpadUp(touches: TouchObject[], changedTouches: TouchObject[], event: TouchEvent): void {
+  private handleTrackpadUp(
+    touches: TouchObject[],
+    changedTouches: TouchObject[],
+    event: TouchEvent,
+  ): void {
     const now = Date.now();
     const remainingPointers = Math.max(0, this.activePointerCount - changedTouches.length);
 
@@ -447,8 +473,10 @@ export class TouchInputHandler {
     const x = Math.min(Math.max(posX, 0), this.mouseAreaWidth);
     const y = Math.min(Math.max(posY, 0), this.mouseAreaHeight);
     this.nativeInput.sendMousePosition(
-      Math.floor(x), Math.floor(y),
-      Math.floor(this.mouseAreaWidth), Math.floor(this.mouseAreaHeight)
+      Math.floor(x),
+      Math.floor(y),
+      Math.floor(this.mouseAreaWidth),
+      Math.floor(this.mouseAreaHeight),
     );
   }
 
@@ -459,11 +487,14 @@ export class TouchInputHandler {
     this.mouseConfirmedTap = true;
     this.cancelMouseTapDownTimer();
 
-    if (this.mouseDownTime - this.mouseLastUpTime > this.mouseDoubleTapTime ||
-        this.mouseDistanceExceeds(
-          this.mouseDownX - this.mouseLastUpX,
-          this.mouseDownY - this.mouseLastUpY,
-          TouchInputHandler.MOUSE_DOUBLE_TAP_DISTANCE)) {
+    if (
+      this.mouseDownTime - this.mouseLastUpTime > this.mouseDoubleTapTime ||
+      this.mouseDistanceExceeds(
+        this.mouseDownX - this.mouseLastUpX,
+        this.mouseDownY - this.mouseLastUpY,
+        TouchInputHandler.MOUSE_DOUBLE_TAP_DISTANCE,
+      )
+    ) {
       this.mouseUpdatePosition(this.mouseDownX, this.mouseDownY);
     }
     this.nativeInput.sendMouseButton(BUTTON_ACTION_PRESS, BUTTON_LEFT);
@@ -546,16 +577,24 @@ export class TouchInputHandler {
       case TouchType.Move: {
         for (const touch of changedTouches) {
           if (touch.id === this.mousePrimaryFingerId && !this.mouseCancelled) {
-            if (this.mouseDistanceExceeds(
-              touch.x - this.mouseDownX, touch.y - this.mouseDownY,
-              TouchInputHandler.MOUSE_LONG_PRESS_DISTANCE)) {
+            if (
+              this.mouseDistanceExceeds(
+                touch.x - this.mouseDownX,
+                touch.y - this.mouseDownY,
+                TouchInputHandler.MOUSE_LONG_PRESS_DISTANCE,
+              )
+            ) {
               this.cancelMouseLongPressTimer();
             }
 
-            if (this.mouseConfirmedTap ||
-                this.mouseDistanceExceeds(
-                  touch.x - this.mouseDownX, touch.y - this.mouseDownY,
-                  TouchInputHandler.MOUSE_DEADZONE_DISTANCE)) {
+            if (
+              this.mouseConfirmedTap ||
+              this.mouseDistanceExceeds(
+                touch.x - this.mouseDownX,
+                touch.y - this.mouseDownY,
+                TouchInputHandler.MOUSE_DEADZONE_DISTANCE,
+              )
+            ) {
               this.mouseTapConfirmed();
               this.mouseUpdatePosition(touch.x, touch.y);
             }
@@ -565,7 +604,7 @@ export class TouchInputHandler {
           } else if (touch.id === this.mouseSecondFingerId) {
             const deltaY = touch.y - this.mouseSecondFingerLastY;
             this.nativeInput.sendMouseHighResScroll(
-              Math.floor(deltaY * TouchInputHandler.MOUSE_SCROLL_SPEED_FACTOR)
+              Math.floor(deltaY * TouchInputHandler.MOUSE_SCROLL_SPEED_FACTOR),
             );
             this.mouseSecondFingerLastY = touch.y;
           }
@@ -610,11 +649,11 @@ export class TouchInputHandler {
       }
     }
   }
-  
+
   private sendNormalizedTouch(eventType: number, touch: TouchObject, event: TouchEvent): void {
     const areaWidth = event.target.area.width as number;
     const areaHeight = event.target.area.height as number;
-    
+
     let touchX = touch.x;
     let touchY = touch.y;
     if (this.coordinateTransform) {
@@ -622,10 +661,10 @@ export class TouchInputHandler {
       touchX = transformed.x;
       touchY = transformed.y;
     }
-    
+
     const normalizedX = Math.max(0, Math.min(1, touchX / areaWidth));
     const normalizedY = Math.max(0, Math.min(1, touchY / areaHeight));
-    
+
     let pressure: number;
     let contactArea: number;
     if (eventType === TOUCH_EVENT_UP) {
@@ -635,7 +674,7 @@ export class TouchInputHandler {
       pressure = this.getTrackedForce(touch.id);
       contactArea = this.getTrackedSize(touch.id);
     }
-    
+
     this.nativeInput.sendTouchEvent(
       eventType,
       touch.id,
@@ -644,10 +683,10 @@ export class TouchInputHandler {
       pressure,
       contactArea,
       contactArea,
-      0  // rotation
+      0, // rotation
     );
   }
-  
+
   private sendNormalizedTouchDirect(
     eventType: number,
     pointerId: number,
@@ -656,7 +695,7 @@ export class TouchInputHandler {
     areaWidth: number,
     areaHeight: number,
     pressure: number,
-    size: number
+    size: number,
   ): void {
     let touchX = x;
     let touchY = y;
@@ -665,10 +704,10 @@ export class TouchInputHandler {
       touchX = transformed.x;
       touchY = transformed.y;
     }
-    
+
     const normalizedX = Math.max(0, Math.min(1, touchX / areaWidth));
     const normalizedY = Math.max(0, Math.min(1, touchY / areaHeight));
-    
+
     this.nativeInput.sendTouchEvent(
       eventType,
       pointerId,
@@ -677,7 +716,7 @@ export class TouchInputHandler {
       pressure,
       size,
       size,
-      0
+      0,
     );
   }
 
@@ -685,17 +724,16 @@ export class TouchInputHandler {
     return LI_TOOL_TYPE_PEN;
   }
 
-
   private computePenTilt(tiltX: number, tiltY: number): number {
     if (tiltX === 0 && tiltY === 0) {
       return 0;
     }
-    const tiltXRad = tiltX * Math.PI / 180;
-    const tiltYRad = tiltY * Math.PI / 180;
+    const tiltXRad = (tiltX * Math.PI) / 180;
+    const tiltYRad = (tiltY * Math.PI) / 180;
     const tanTiltX = Math.tan(tiltXRad);
     const tanTiltY = Math.tan(tiltYRad);
     const tiltRad = Math.atan(Math.sqrt(tanTiltX * tanTiltX + tanTiltY * tanTiltY));
-    return Math.min(90, Math.round(tiltRad * 180 / Math.PI));
+    return Math.min(90, Math.round((tiltRad * 180) / Math.PI));
   }
 
   private computePenRotation(event: TouchEvent): number {
@@ -725,9 +763,11 @@ export class TouchInputHandler {
 
     if (!this.penFirstEventLogged) {
       this.penFirstEventLogged = true;
-      console.info(`手写笔首次事件: sourceTool=${event.sourceTool}, pressure=${eventPressure}, ` +
-        `tiltX=${tiltX}, tiltY=${tiltY}, computedTilt=${tilt}, rotation=${rotation}, ` +
-        `type=${event.type}, pointers=${touches.length}`);
+      console.info(
+        `手写笔首次事件: sourceTool=${event.sourceTool}, pressure=${eventPressure}, ` +
+          `tiltX=${tiltX}, tiltY=${tiltY}, computedTilt=${tilt}, rotation=${rotation}, ` +
+          `type=${event.type}, pointers=${touches.length}`,
+      );
     }
 
     switch (event.type) {
@@ -735,9 +775,11 @@ export class TouchInputHandler {
         for (let i = 0; i < changedTouches.length; i++) {
           const touch = changedTouches[i];
           this.touchStates.set(touch.id, {
-            startX: touch.x, startY: touch.y,
-            lastX: touch.x, lastY: touch.y,
-            startTime: Date.now()
+            startX: touch.x,
+            startY: touch.y,
+            lastX: touch.x,
+            lastY: touch.y,
+            startTime: Date.now(),
           });
 
           const normalizedX = Math.max(0, Math.min(1, touch.x / areaWidth));
@@ -749,12 +791,20 @@ export class TouchInputHandler {
           const areaMinor = areaHeight > 0 ? Math.min(contactH, areaHeight) / areaHeight : 0;
 
           const ret = this.nativeInput.sendPenEvent(
-            TOUCH_EVENT_DOWN, toolType, 0,
-            normalizedX, normalizedY, pressure,
-            areaMajor, areaMinor, rotation, tilt
+            TOUCH_EVENT_DOWN,
+            toolType,
+            0,
+            normalizedX,
+            normalizedY,
+            pressure,
+            areaMajor,
+            areaMinor,
+            rotation,
+            tilt,
           );
-          if (ret === -7) { // LI_ERR_UNSUPPORTED = -7
-            console.warn('手写笔: 主机不支持 Pen 事件，回退到 Touch 事件');
+          if (ret === -7) {
+            // LI_ERR_UNSUPPORTED = -7
+            console.warn("手写笔: 主机不支持 Pen 事件，回退到 Touch 事件");
             this.penUnsupported = true;
             this.sendNormalizedTouch(TOUCH_EVENT_DOWN, touch, event);
             return;
@@ -769,7 +819,7 @@ export class TouchInputHandler {
             const now = Date.now();
             for (let i = 0; i < historicalPoints.length; i++) {
               const histPoint = historicalPoints[i];
-              if (histPoint.timestamp && (now - histPoint.timestamp) > 100) {
+              if (histPoint.timestamp && now - histPoint.timestamp > 100) {
                 continue;
               }
               const histTouch = histPoint.touchObject;
@@ -777,20 +827,26 @@ export class TouchInputHandler {
               if (state) {
                 const normalizedX = Math.max(0, Math.min(1, histTouch.x / areaWidth));
                 const normalizedY = Math.max(0, Math.min(1, histTouch.y / areaHeight));
-                const histPressure = histPoint.force > 0
-                  ? this.normalizeForce(histPoint.force) : eventPressure;
+                const histPressure =
+                  histPoint.force > 0 ? this.normalizeForce(histPoint.force) : eventPressure;
                 const histSize = histPoint.size || 0;
 
                 this.nativeInput.sendPenEvent(
-                  TOUCH_EVENT_MOVE, toolType, 0,
-                  normalizedX, normalizedY, histPressure,
-                  histSize, histSize, rotation, tilt
+                  TOUCH_EVENT_MOVE,
+                  toolType,
+                  0,
+                  normalizedX,
+                  normalizedY,
+                  histPressure,
+                  histSize,
+                  histSize,
+                  rotation,
+                  tilt,
                 );
               }
             }
           }
-        } catch (_e) {
-        }
+        } catch (_e) {}
 
         for (let i = 0; i < touches.length; i++) {
           const touch = touches[i];
@@ -808,9 +864,16 @@ export class TouchInputHandler {
             const areaMinor = areaHeight > 0 ? Math.min(contactH, areaHeight) / areaHeight : 0;
 
             this.nativeInput.sendPenEvent(
-              TOUCH_EVENT_MOVE, toolType, 0,
-              normalizedX, normalizedY, pressure,
-              areaMajor, areaMinor, rotation, tilt
+              TOUCH_EVENT_MOVE,
+              toolType,
+              0,
+              normalizedX,
+              normalizedY,
+              pressure,
+              areaMajor,
+              areaMinor,
+              rotation,
+              tilt,
             );
           }
         }
@@ -826,43 +889,53 @@ export class TouchInputHandler {
           const upEventType = event.type === TouchType.Cancel ? TOUCH_EVENT_CANCEL : TOUCH_EVENT_UP;
 
           this.nativeInput.sendPenEvent(
-            upEventType, toolType, 0,
-            normalizedX, normalizedY, 0, // pressure = 0 on up
-            0, 0, rotation, tilt
+            upEventType,
+            toolType,
+            0,
+            normalizedX,
+            normalizedY,
+            0, // pressure = 0 on up
+            0,
+            0,
+            rotation,
+            tilt,
           );
           this.touchStates.delete(touch.id);
         }
         break;
     }
   }
-  
+
   private checkForClick(touch: TouchObject, state: TouchState): void {
     const moveDistance = Math.abs(touch.x - state.startX) + Math.abs(touch.y - state.startY);
-    
+
     const touchDuration = Date.now() - state.startTime;
-    
-    if (moveDistance < this.config.clickThreshold! && touchDuration < this.config.clickTimeThreshold!) {
+
+    if (
+      moveDistance < this.config.clickThreshold! &&
+      touchDuration < this.config.clickTimeThreshold!
+    ) {
       this.nativeInput.sendMouseButton(BUTTON_ACTION_PRESS, BUTTON_LEFT);
       setTimeout(() => {
         this.nativeInput.sendMouseButton(BUTTON_ACTION_RELEASE, BUTTON_LEFT);
       }, 50);
     }
   }
-  
+
   sendRightClick(): void {
     this.nativeInput.sendMouseButton(BUTTON_ACTION_PRESS, BUTTON_RIGHT);
     setTimeout(() => {
       this.nativeInput.sendMouseButton(BUTTON_ACTION_RELEASE, BUTTON_RIGHT);
     }, 50);
   }
-  
+
   sendLeftClick(): void {
     this.nativeInput.sendMouseButton(BUTTON_ACTION_PRESS, BUTTON_LEFT);
     setTimeout(() => {
       this.nativeInput.sendMouseButton(BUTTON_ACTION_RELEASE, BUTTON_LEFT);
     }, 50);
   }
-  
+
   dispose(): void {
     this.touchStates.clear();
     this.lastForce.clear();

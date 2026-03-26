@@ -14,15 +14,15 @@ import {
   ControllerButton,
   ControllerButtonEvent,
   InputEvent,
-  InputType
-} from '../model/InputEvent';
-import { AnalogStick, AnalogStickConfig } from './AnalogStick';
-import { vibrator } from '@kit.SensorServiceKit';
-import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { display } from '@kit.ArkUI';
+  InputType,
+} from "../model/InputEvent";
+import { AnalogStick, AnalogStickConfig } from "./AnalogStick";
+import { vibrator } from "@kit.SensorServiceKit";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { display } from "@kit.ArkUI";
 
-const SCALE_KEY = 'virtual_controller_scale';
-const OPACITY_KEY = 'virtual_controller_opacity';
+const SCALE_KEY = "virtual_controller_scale";
+const OPACITY_KEY = "virtual_controller_opacity";
 
 export interface VirtualControllerConfig {
   opacity?: number;
@@ -38,7 +38,6 @@ export interface VirtualControllerConfig {
   enableVibration?: boolean;
   deadzone?: number;
 }
-
 @Component
 export struct VirtualController {
   config: VirtualControllerConfig = {};
@@ -60,8 +59,10 @@ export struct VirtualController {
   }
 
   private withAlpha(color: string, alpha: number): string {
-    const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
-    return '#' + hex + color.substring(1);
+    const hex = Math.round(alpha * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return "#" + hex + color.substring(1);
   }
 
   build() {
@@ -71,9 +72,9 @@ export struct VirtualController {
           Column({ space: 6 }) {
             // LT
             Column() {
-              Text('LT')
+              Text("LT")
                 .fontSize(12 * this.controllerScale)
-                .fontColor(this.withAlpha('#FFFFFF', 0.5))
+                .fontColor(this.withAlpha("#FFFFFF", 0.5))
                 .fontWeight(FontWeight.Bold)
             }
             .width(60 * this.controllerScale)
@@ -81,15 +82,15 @@ export struct VirtualController {
             .justifyContent(FlexAlign.Center)
             .backgroundColor(Color.Transparent)
             .borderRadius(12)
-            .border({ width: 1, color: this.withAlpha('#FFFFFF', 0.15) })
+            .border({ width: 1, color: this.withAlpha("#FFFFFF", 0.15) })
             .hitTestBehavior(HitTestMode.Block)
             .onTouch((event: TouchEvent) => this.handleTriggerTouch(true, event))
 
             // LB
             Column() {
-              Text('LB')
+              Text("LB")
                 .fontSize(12 * this.controllerScale)
-                .fontColor(this.withAlpha('#FFFFFF', 0.5))
+                .fontColor(this.withAlpha("#FFFFFF", 0.5))
                 .fontWeight(FontWeight.Medium)
             }
             .width(64 * this.controllerScale)
@@ -97,20 +98,17 @@ export struct VirtualController {
             .justifyContent(FlexAlign.Center)
             .backgroundColor(Color.Transparent)
             .borderRadius(17 * this.controllerScale)
-            .border({ width: 1, color: this.withAlpha('#FFFFFF', 0.15) })
+            .border({ width: 1, color: this.withAlpha("#FFFFFF", 0.15) })
             .hitTestBehavior(HitTestMode.Block)
             .onTouch((event: TouchEvent) => this.handleButtonTouch(ControllerButton.LB, event))
-          }
-          .alignItems(HorizontalAlign.Start)
-
+          }.alignItems(HorizontalAlign.Start)
           Blank()
-
           Column({ space: 6 }) {
             // RT
             Column() {
-              Text('RT')
+              Text("RT")
                 .fontSize(12 * this.controllerScale)
-                .fontColor(this.withAlpha('#FFFFFF', 0.5))
+                .fontColor(this.withAlpha("#FFFFFF", 0.5))
                 .fontWeight(FontWeight.Bold)
             }
             .width(60 * this.controllerScale)
@@ -118,15 +116,15 @@ export struct VirtualController {
             .justifyContent(FlexAlign.Center)
             .backgroundColor(Color.Transparent)
             .borderRadius(12)
-            .border({ width: 1, color: this.withAlpha('#FFFFFF', 0.15) })
+            .border({ width: 1, color: this.withAlpha("#FFFFFF", 0.15) })
             .hitTestBehavior(HitTestMode.Block)
             .onTouch((event: TouchEvent) => this.handleTriggerTouch(false, event))
 
             // RB
             Column() {
-              Text('RB')
+              Text("RB")
                 .fontSize(12 * this.controllerScale)
-                .fontColor(this.withAlpha('#FFFFFF', 0.5))
+                .fontColor(this.withAlpha("#FFFFFF", 0.5))
                 .fontWeight(FontWeight.Medium)
             }
             .width(64 * this.controllerScale)
@@ -134,16 +132,14 @@ export struct VirtualController {
             .justifyContent(FlexAlign.Center)
             .backgroundColor(Color.Transparent)
             .borderRadius(17 * this.controllerScale)
-            .border({ width: 1, color: this.withAlpha('#FFFFFF', 0.15) })
+            .border({ width: 1, color: this.withAlpha("#FFFFFF", 0.15) })
             .hitTestBehavior(HitTestMode.Block)
             .onTouch((event: TouchEvent) => this.handleButtonTouch(ControllerButton.RB, event))
-          }
-          .alignItems(HorizontalAlign.End)
+          }.alignItems(HorizontalAlign.End)
         }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 16 })
+        .width("100%")
+        .padding({ left: 16, right: 16, top: 16 });
       }
-
       Row() {
         Column() {
           if (this.config.showLeftStick !== false) {
@@ -155,45 +151,42 @@ export struct VirtualController {
                   innerRadius: 24 * this.controllerScale,
                   deadzone: this.controllerDeadzone,
                   opacity: this.controllerOpacity,
-                  enableClick: true
+                  enableClick: true,
                 } as AnalogStickConfig,
-                onInput: (event: InputEvent) => this.onInput(event)
+                onInput: (event: InputEvent) => this.onInput(event),
               })
             }
-            .margin({ bottom: 16 })
+            .margin({ bottom: 16 });
           }
 
           if (this.config.showDpad !== false) {
-            this.buildCrossDpad()
+            this.buildCrossDpad();
           }
         }
         .alignItems(HorizontalAlign.Center)
         .justifyContent(FlexAlign.Center)
         .padding({ left: 24 })
-
         Blank()
-
         Column() {
           if (this.config.showButtons !== false) {
             Column() {
               // Y
-              this.buildActionButton('Y', ControllerButton.Y, '#FFB900')
-
+              this.buildActionButton("Y", ControllerButton.Y, "#FFB900")
               Row({ space: 8 }) {
                 // X
-                this.buildActionButton('X', ControllerButton.X, '#4BA3E3')
+                this.buildActionButton("X", ControllerButton.X, "#4BA3E3")
                 // B
-                this.buildActionButton('B', ControllerButton.B, '#E87070')
+                this.buildActionButton("B", ControllerButton.B, "#E87070")
               }
               .margin({ top: 8 })
 
               // A
               Column() {
-                this.buildActionButton('A', ControllerButton.A, '#50C878')
+                this.buildActionButton("A", ControllerButton.A, "#50C878")
               }
               .margin({ top: 8 })
             }
-            .margin({ bottom: 16 })
+            .margin({ bottom: 16 });
           }
 
           if (this.config.showRightStick !== false) {
@@ -204,59 +197,60 @@ export struct VirtualController {
                 innerRadius: 24 * this.controllerScale,
                 deadzone: this.controllerDeadzone,
                 opacity: this.controllerOpacity,
-                enableClick: true
+                enableClick: true,
               } as AnalogStickConfig,
-              onInput: (event: InputEvent) => this.onInput(event)
-            })
+              onInput: (event: InputEvent) => this.onInput(event),
+            });
           }
         }
         .alignItems(HorizontalAlign.Center)
         .justifyContent(FlexAlign.Center)
         .padding({ right: 24 })
-      }
-      .width('100%')
+      }.width("100%")
 
       if (this.config.showCenter !== false) {
         Row({ space: 12 }) {
           // Back
-          this.buildCenterButton('◂', 'BACK', ControllerButton.BACK)
+          this.buildCenterButton("◂", "BACK", ControllerButton.BACK)
 
           if (this.config.showGuideButton !== false) {
             Column() {
-              Text('◉')
+              Text("◉")
                 .fontSize(18 * this.controllerScale)
-                .fontColor(this.withAlpha('#7EB8E0', 0.6))
+                .fontColor(this.withAlpha("#7EB8E0", 0.6))
             }
             .width(42 * this.controllerScale)
             .height(42 * this.controllerScale)
             .justifyContent(FlexAlign.Center)
             .backgroundColor(Color.Transparent)
             .borderRadius(21 * this.controllerScale)
-            .border({ width: 1.5, color: this.withAlpha('#7EB8E0', 0.25) })
+            .border({ width: 1.5, color: this.withAlpha("#7EB8E0", 0.25) })
             .hitTestBehavior(HitTestMode.Block)
-            .onTouch((event: TouchEvent) => this.handleButtonTouch(ControllerButton.SPECIAL, event))
+            .onTouch((event: TouchEvent) =>
+              this.handleButtonTouch(ControllerButton.SPECIAL, event),
+            );
           }
 
           // Start
-          this.buildCenterButton('▸', 'START', ControllerButton.START)
+          this.buildCenterButton("▸", "START", ControllerButton.START)
         }
         .justifyContent(FlexAlign.Center)
-        .margin({ bottom: 20 })
+        .margin({ bottom: 20 });
       }
 
       if (this.config.showL3R3 === true) {
         Row() {
-          this.buildSmallButton('L3', ControllerButton.LS)
+          this.buildSmallButton("L3", ControllerButton.LS)
           Blank()
-          this.buildSmallButton('R3', ControllerButton.RS)
+          this.buildSmallButton("R3", ControllerButton.RS)
         }
-        .width('100%')
+        .width("100%")
         .padding({ left: 100, right: 100 })
-        .margin({ bottom: 16 })
+        .margin({ bottom: 16 });
       }
     }
-    .width('100%')
-    .justifyContent(FlexAlign.End)
+    .width("100%")
+    .justifyContent(FlexAlign.End);
   }
 
   @Builder
@@ -274,7 +268,7 @@ export struct VirtualController {
     .borderRadius(24 * this.controllerScale)
     .border({ width: 1.5, color: this.withAlpha(color, 0.35) })
     .hitTestBehavior(HitTestMode.Block)
-    .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event))
+    .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event));
   }
 
   private dpadDirection: number = 0;
@@ -284,12 +278,14 @@ export struct VirtualController {
     Stack() {
       Column() {
         Row() {
-          Column().width(36 * this.controllerScale).height(36 * this.controllerScale)
+          Column()
+            .width(36 * this.controllerScale)
+            .height(36 * this.controllerScale)
             .borderRadius({ topLeft: 14, topRight: 0, bottomLeft: 0, bottomRight: 0 })
           Column() {
-            Text('▴')
+            Text("▴")
               .fontSize(14 * this.controllerScale)
-              .fontColor(this.withAlpha('#FFFFFF', 0.5))
+              .fontColor(this.withAlpha("#FFFFFF", 0.5))
               .fontWeight(FontWeight.Bold)
           }
           .width(36 * this.controllerScale)
@@ -298,17 +294,18 @@ export struct VirtualController {
           .borderRadius({ topLeft: 14, topRight: 14, bottomLeft: 0, bottomRight: 0 })
           .border({
             width: { top: 1, left: 1, right: 1, bottom: 0 },
-            color: this.withAlpha('#FFFFFF', 0.18)
+            color: this.withAlpha("#FFFFFF", 0.18),
           })
-          Column().width(36 * this.controllerScale).height(36 * this.controllerScale)
+          Column()
+            .width(36 * this.controllerScale)
+            .height(36 * this.controllerScale)
             .borderRadius({ topLeft: 0, topRight: 14, bottomLeft: 0, bottomRight: 0 })
         }
-
         Row() {
           Column() {
-            Text('◂')
+            Text("◂")
               .fontSize(14 * this.controllerScale)
-              .fontColor(this.withAlpha('#FFFFFF', 0.5))
+              .fontColor(this.withAlpha("#FFFFFF", 0.5))
               .fontWeight(FontWeight.Bold)
           }
           .width(36 * this.controllerScale)
@@ -317,24 +314,22 @@ export struct VirtualController {
           .borderRadius({ topLeft: 14, topRight: 0, bottomLeft: 14, bottomRight: 0 })
           .border({
             width: { top: 1, left: 1, right: 0, bottom: 1 },
-            color: this.withAlpha('#FFFFFF', 0.18)
+            color: this.withAlpha("#FFFFFF", 0.18),
           })
-
           Column() {
             Circle()
               .width(8 * this.controllerScale)
               .height(8 * this.controllerScale)
-              .fill('#FFFFFF')
+              .fill("#FFFFFF")
               .fillOpacity(0.12)
           }
           .width(36 * this.controllerScale)
           .height(36 * this.controllerScale)
           .justifyContent(FlexAlign.Center)
-
           Column() {
-            Text('▸')
+            Text("▸")
               .fontSize(14 * this.controllerScale)
-              .fontColor(this.withAlpha('#FFFFFF', 0.5))
+              .fontColor(this.withAlpha("#FFFFFF", 0.5))
               .fontWeight(FontWeight.Bold)
           }
           .width(36 * this.controllerScale)
@@ -343,17 +338,18 @@ export struct VirtualController {
           .borderRadius({ topLeft: 0, topRight: 14, bottomLeft: 0, bottomRight: 14 })
           .border({
             width: { top: 1, left: 0, right: 1, bottom: 1 },
-            color: this.withAlpha('#FFFFFF', 0.18)
+            color: this.withAlpha("#FFFFFF", 0.18),
           })
         }
-
         Row() {
-          Column().width(36 * this.controllerScale).height(36 * this.controllerScale)
+          Column()
+            .width(36 * this.controllerScale)
+            .height(36 * this.controllerScale)
             .borderRadius({ topLeft: 0, topRight: 0, bottomLeft: 14, bottomRight: 0 })
           Column() {
-            Text('▾')
+            Text("▾")
               .fontSize(14 * this.controllerScale)
-              .fontColor(this.withAlpha('#FFFFFF', 0.5))
+              .fontColor(this.withAlpha("#FFFFFF", 0.5))
               .fontWeight(FontWeight.Bold)
           }
           .width(36 * this.controllerScale)
@@ -362,14 +358,14 @@ export struct VirtualController {
           .borderRadius({ topLeft: 0, topRight: 0, bottomLeft: 14, bottomRight: 14 })
           .border({
             width: { top: 0, left: 1, right: 1, bottom: 1 },
-            color: this.withAlpha('#FFFFFF', 0.18)
+            color: this.withAlpha("#FFFFFF", 0.18),
           })
-          Column().width(36 * this.controllerScale).height(36 * this.controllerScale)
+          Column()
+            .width(36 * this.controllerScale)
+            .height(36 * this.controllerScale)
             .borderRadius({ topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 14 })
         }
-      }
-      .hitTestBehavior(HitTestMode.None)
-
+      }.hitTestBehavior(HitTestMode.None)
       Column()
         .width(108 * this.controllerScale)
         .height(108 * this.controllerScale)
@@ -378,7 +374,7 @@ export struct VirtualController {
         .onTouch((event: TouchEvent) => this.handleDpadTouch(event))
     }
     .width(108 * this.controllerScale)
-    .height(108 * this.controllerScale)
+    .height(108 * this.controllerScale);
   }
 
   @Builder
@@ -387,10 +383,10 @@ export struct VirtualController {
       Row({ space: 4 }) {
         Text(icon)
           .fontSize(13 * this.controllerScale)
-          .fontColor(this.withAlpha('#FFFFFF', 0.4))
+          .fontColor(this.withAlpha("#FFFFFF", 0.4))
         Text(label)
           .fontSize(8 * this.controllerScale)
-          .fontColor(this.withAlpha('#FFFFFF', 0.4))
+          .fontColor(this.withAlpha("#FFFFFF", 0.4))
           .fontWeight(FontWeight.Medium)
       }
     }
@@ -399,9 +395,9 @@ export struct VirtualController {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(Color.Transparent)
     .borderRadius(17 * this.controllerScale)
-    .border({ width: 1, color: this.withAlpha('#FFFFFF', 0.12) })
+    .border({ width: 1, color: this.withAlpha("#FFFFFF", 0.12) })
     .hitTestBehavior(HitTestMode.Block)
-    .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event))
+    .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event));
   }
 
   @Builder
@@ -409,7 +405,7 @@ export struct VirtualController {
     Column() {
       Text(label)
         .fontSize(11 * this.controllerScale)
-        .fontColor(this.withAlpha('#FFFFFF', 0.4))
+        .fontColor(this.withAlpha("#FFFFFF", 0.4))
         .fontWeight(FontWeight.Medium)
     }
     .width(44 * this.controllerScale)
@@ -417,9 +413,9 @@ export struct VirtualController {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(Color.Transparent)
     .borderRadius(15 * this.controllerScale)
-    .border({ width: 1, color: this.withAlpha('#FFFFFF', 0.12) })
+    .border({ width: 1, color: this.withAlpha("#FFFFFF", 0.12) })
     .hitTestBehavior(HitTestMode.Block)
-    .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event))
+    .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event));
   }
 
   private handleDpadTouch(event: TouchEvent): void {
@@ -430,7 +426,7 @@ export struct VirtualController {
         ControllerButton.UP as number,
         ControllerButton.DOWN as number,
         ControllerButton.LEFT as number,
-        ControllerButton.RIGHT as number
+        ControllerButton.RIGHT as number,
       ];
       for (const dir of allDirs) {
         if (this.dpadDirection & dir) {
@@ -439,7 +435,7 @@ export struct VirtualController {
             timestamp: Date.now(),
             controllerIndex: 0,
             button: dir as ControllerButton,
-            isPressed: false
+            isPressed: false,
           } as ControllerButtonEvent);
         }
       }
@@ -456,9 +452,9 @@ export struct VirtualController {
       const twoThirds = oneThird * 2;
 
       let newDirection = 0;
-      if (touch.x < oneThird)  newDirection |= ControllerButton.LEFT as number;
+      if (touch.x < oneThird) newDirection |= ControllerButton.LEFT as number;
       if (touch.x > twoThirds) newDirection |= ControllerButton.RIGHT as number;
-      if (touch.y < oneThird)  newDirection |= ControllerButton.UP as number;
+      if (touch.y < oneThird) newDirection |= ControllerButton.UP as number;
       if (touch.y > twoThirds) newDirection |= ControllerButton.DOWN as number;
 
       if (newDirection !== this.dpadDirection) {
@@ -469,7 +465,7 @@ export struct VirtualController {
           ControllerButton.UP as number,
           ControllerButton.DOWN as number,
           ControllerButton.LEFT as number,
-          ControllerButton.RIGHT as number
+          ControllerButton.RIGHT as number,
         ];
 
         for (const dir of allDirs) {
@@ -479,7 +475,7 @@ export struct VirtualController {
               timestamp: Date.now(),
               controllerIndex: 0,
               button: dir as ControllerButton,
-              isPressed: false
+              isPressed: false,
             } as ControllerButtonEvent);
           }
         }
@@ -490,7 +486,7 @@ export struct VirtualController {
               timestamp: Date.now(),
               controllerIndex: 0,
               button: dir as ControllerButton,
-              isPressed: true
+              isPressed: true,
             } as ControllerButtonEvent);
           }
         }
@@ -508,71 +504,69 @@ export struct VirtualController {
     event.stopPropagation();
     const isPressed = event.type === TouchType.Down;
     const isReleased = event.type === TouchType.Up || event.type === TouchType.Cancel;
-    
+
     if (!isPressed && !isReleased) {
       return;
     }
-    
+
     const inputEvent: ControllerButtonEvent = {
       type: InputType.CONTROLLER_BUTTON,
       timestamp: Date.now(),
       controllerIndex: 0,
       button: button,
-      isPressed: isPressed
+      isPressed: isPressed,
     };
     this.onInput(inputEvent);
-    
+
     if (isPressed && this.config.enableVibration !== false) {
       this.triggerVibration();
     }
   }
-  
+
   private handleTriggerTouch(isLeft: boolean, event: TouchEvent): void {
     event.stopPropagation();
     const isPressed = event.type === TouchType.Down;
     const isReleased = event.type === TouchType.Up || event.type === TouchType.Cancel;
-    
+
     if (!isPressed && !isReleased) {
       return;
     }
-    
+
     const axis = isLeft ? ControllerAxis.LEFT_TRIGGER : ControllerAxis.RIGHT_TRIGGER;
     const value = isPressed ? 255 : 0;
-    
+
     const axisEvent: ControllerAxisEvent = {
       type: InputType.CONTROLLER_AXIS,
       timestamp: Date.now(),
       controllerIndex: 0,
       axis: axis,
-      value: value
+      value: value,
     };
     this.onInput(axisEvent);
-    
+
     if (isPressed && this.config.enableVibration !== false) {
       this.triggerVibration();
     }
   }
-  
+
   private triggerVibration(): void {
     try {
-      vibrator.startVibration({
-        type: 'time',
-        duration: 30
-      }, {
-        id: 0,
-        usage: 'touch'
-      });
-    } catch (e) {
-    }
+      vibrator.startVibration(
+        {
+          type: "time",
+          duration: 30,
+        },
+        {
+          id: 0,
+          usage: "touch",
+        },
+      );
+    } catch (e) {}
   }
-
 }
-
-
 @Component
 export struct VirtualControllerOverlay {
-  onInput: (input: InputEvent) => void = () => {
-  };
+  onInput: (input: InputEvent) => void = () => {};
   @Link touchPassthrough: boolean;
   @Link controllerScale: number;
   @Link controllerOpacity: number;
@@ -611,22 +605,22 @@ export struct VirtualControllerOverlay {
             showCenter: !this.onlyL3R3,
             showGuideButton: this.showGuideButton,
             showL3R3: this.onlyL3R3,
-            enableVibration: this.vibrateOsc
+            enableVibration: this.vibrateOsc,
           } as VirtualControllerConfig,
           onInput: (input: InputEvent) => {
             this.onInput(input);
-          }
+          },
         })
       }
-      .width('100%')
-      .height(this.halfHeightPortrait && this.isPortrait ? '50%' : '100%')
+      .width("100%")
+      .height(this.halfHeightPortrait && this.isPortrait ? "50%" : "100%")
       .justifyContent(FlexAlign.End)
       .opacity(this.controllerOpacity)
     }
-    .width('100%')
-    .height('100%')
+    .width("100%")
+    .height("100%")
     .hitTestBehavior(this.touchPassthrough ? HitTestMode.Transparent : HitTestMode.Default)
-    .opacity(this.hitTestReady > 0 ? 1 : 0.99)
+    .opacity(this.hitTestReady > 0 ? 1 : 0.99);
   }
 
   static async loadScale(): Promise<number> {

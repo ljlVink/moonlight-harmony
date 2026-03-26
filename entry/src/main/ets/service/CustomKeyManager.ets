@@ -8,13 +8,11 @@
  * (at your option) any later version.
  */
 
-
-
-import { promptAction } from '@kit.ArkUI';
-import { fileIo, picker } from '@kit.CoreFileKit';
-import { util } from '@kit.ArkTS';
-import { BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE, MoonBridge } from './MoonBridge';
-import { CustomKeyStore } from './CustomKeyStore';
+import { promptAction } from "@kit.ArkUI";
+import { fileIo, picker } from "@kit.CoreFileKit";
+import { util } from "@kit.ArkTS";
+import { BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE, MoonBridge } from "./MoonBridge";
+import { CustomKeyStore } from "./CustomKeyStore";
 import {
   ComboAction,
   GamepadButton,
@@ -27,12 +25,10 @@ import {
   MouseScrollAction,
   sendShortcutKeys,
   ShortcutAction,
-  SpecialAction
-} from './CustomKeyTypes';
-
+  SpecialAction,
+} from "./CustomKeyTypes";
 
 export interface CustomKeyManagerHost {
-
   getSession(): SessionLike | null;
 
   toggleVirtualKeyboard(): void;
@@ -52,7 +48,6 @@ export interface CustomKeyManagerHost {
   onCustomKeysImported(): void;
 }
 
-
 export interface SessionLike {
   sendKeyboardInput(vk: number, flags: number): void;
 
@@ -69,9 +64,7 @@ export interface SessionLike {
   ): void;
 }
 
-
 // Manager
-
 
 export class CustomKeyManager {
   private host: CustomKeyManagerHost;
@@ -93,8 +86,15 @@ export class CustomKeyManager {
   }
 
   reset(): void {
-    if (this.gamepadInputMap !== 0 || this.gamepadLeftTrigger !== 0 || this.gamepadRightTrigger !== 0 ||
-        this.leftStickX !== 0 || this.leftStickY !== 0 || this.rightStickX !== 0 || this.rightStickY !== 0) {
+    if (
+      this.gamepadInputMap !== 0 ||
+      this.gamepadLeftTrigger !== 0 ||
+      this.gamepadRightTrigger !== 0 ||
+      this.leftStickX !== 0 ||
+      this.leftStickY !== 0 ||
+      this.rightStickX !== 0 ||
+      this.rightStickY !== 0
+    ) {
       this.gamepadInputMap = 0;
       this.gamepadLeftTrigger = 0;
       this.gamepadRightTrigger = 0;
@@ -111,27 +111,27 @@ export class CustomKeyManager {
     if (!session) return;
 
     switch (action.type) {
-      case 'keyboard': {
+      case "keyboard": {
         const kbAction = action as KeyboardAction;
         session.sendKeyboardInput(kbAction.vk, isDown ? 0x03 : 0x04);
         break;
       }
-      case 'mouse': {
+      case "mouse": {
         const mouseAction = action as MouseButtonAction;
         MoonBridge.sendMouseButton(
           isDown ? BUTTON_ACTION_PRESS : BUTTON_ACTION_RELEASE,
-          mouseAction.button
+          mouseAction.button,
         );
         break;
       }
-      case 'mouseScroll': {
+      case "mouseScroll": {
         const scrollAction = action as MouseScrollAction;
         if (isDown) {
           MoonBridge.sendMouseHighResScroll(scrollAction.direction > 0 ? 120 : -120);
         }
         break;
       }
-      case 'gamepadButton': {
+      case "gamepadButton": {
         const gpAction = action as GamepadButtonAction;
         const mask: number = gpAction.mask;
         if (isDown) {
@@ -142,49 +142,49 @@ export class CustomKeyManager {
         this.sendGamepadState();
         break;
       }
-      case 'gamepadTrigger': {
+      case "gamepadTrigger": {
         const trigAction = action as GamepadTriggerAction;
-        if (trigAction.trigger === 'left') {
-          this.gamepadLeftTrigger = isDown ? 0xFF : 0;
+        if (trigAction.trigger === "left") {
+          this.gamepadLeftTrigger = isDown ? 0xff : 0;
         } else {
-          this.gamepadRightTrigger = isDown ? 0xFF : 0;
+          this.gamepadRightTrigger = isDown ? 0xff : 0;
         }
         this.sendGamepadState();
         break;
       }
-      case 'gamepadStick': {
+      case "gamepadStick": {
         const stickAction = action as GamepadStickAction;
         const posMax: number = CustomKeyManager.STICK_MAX;
         const negMax: number = 0 - posMax;
-        if (stickAction.stick === 'left') {
-          if (stickAction.direction === 'up') this.leftStickY = isDown ? negMax : 0;
-          else if (stickAction.direction === 'down') this.leftStickY = isDown ? posMax : 0;
-          else if (stickAction.direction === 'left') this.leftStickX = isDown ? negMax : 0;
-          else if (stickAction.direction === 'right') this.leftStickX = isDown ? posMax : 0;
+        if (stickAction.stick === "left") {
+          if (stickAction.direction === "up") this.leftStickY = isDown ? negMax : 0;
+          else if (stickAction.direction === "down") this.leftStickY = isDown ? posMax : 0;
+          else if (stickAction.direction === "left") this.leftStickX = isDown ? negMax : 0;
+          else if (stickAction.direction === "right") this.leftStickX = isDown ? posMax : 0;
         } else {
-          if (stickAction.direction === 'up') this.rightStickY = isDown ? negMax : 0;
-          else if (stickAction.direction === 'down') this.rightStickY = isDown ? posMax : 0;
-          else if (stickAction.direction === 'left') this.rightStickX = isDown ? negMax : 0;
-          else if (stickAction.direction === 'right') this.rightStickX = isDown ? posMax : 0;
+          if (stickAction.direction === "up") this.rightStickY = isDown ? negMax : 0;
+          else if (stickAction.direction === "down") this.rightStickY = isDown ? posMax : 0;
+          else if (stickAction.direction === "left") this.rightStickX = isDown ? negMax : 0;
+          else if (stickAction.direction === "right") this.rightStickX = isDown ? posMax : 0;
         }
         this.sendGamepadState();
         break;
       }
-      case 'combo': {
+      case "combo": {
         const comboAction = action as ComboAction;
         for (const subAction of comboAction.actions) {
           this.handleAction(subAction, isDown);
         }
         break;
       }
-      case 'shortcut': {
+      case "shortcut": {
         if (isDown) {
           const scAction = action as ShortcutAction;
           this.executeShortcut(scAction, session);
         }
         break;
       }
-      case 'special': {
+      case "special": {
         const specialAction = action as SpecialAction;
         if (isDown) {
           this.handleSpecialAction(specialAction.id);
@@ -204,15 +204,15 @@ export class CustomKeyManager {
       this.leftStickX,
       this.leftStickY,
       this.rightStickX,
-      this.rightStickY
+      this.rightStickY,
     );
   }
 
   handleAnalogStickMovement(stick: string, x: number, y: number): void {
-    const axisX = Math.round(x * 0x7FFE);
+    const axisX = Math.round(x * 0x7ffe);
     const negY: number = 0 - y;
-    const axisY = Math.round(negY * 0x7FFE);
-    if (stick === 'left') {
+    const axisY = Math.round(negY * 0x7ffe);
+    if (stick === "left") {
       this.leftStickX = axisX;
       this.leftStickY = axisY;
     } else {
@@ -222,9 +222,8 @@ export class CustomKeyManager {
     this.sendGamepadState();
   }
 
-
   handleAnalogStickClick(stick: string): void {
-    const mask: number = stick === 'left' ? GamepadButton.LS : GamepadButton.RS;
+    const mask: number = stick === "left" ? GamepadButton.LS : GamepadButton.RS;
     this.gamepadInputMap |= mask;
     this.sendGamepadState();
     setTimeout(() => {
@@ -235,7 +234,7 @@ export class CustomKeyManager {
 
   handleDPadDirectionChange(direction: number): void {
     const dpadMask: number = GamepadButton.DPAD_MASK;
-    this.gamepadInputMap = (this.gamepadInputMap & (~dpadMask)) | (direction & dpadMask);
+    this.gamepadInputMap = (this.gamepadInputMap & ~dpadMask) | (direction & dpadMask);
     this.sendGamepadState();
   }
 
@@ -245,28 +244,28 @@ export class CustomKeyManager {
 
   handleSpecialAction(actionId: string): void {
     switch (actionId) {
-      case 'toggleKeyboard':
+      case "toggleKeyboard":
         this.host.toggleVirtualKeyboard();
         break;
-      case 'toggleIME':
+      case "toggleIME":
         this.host.showIME();
         break;
-      case 'toggleMouseMode':
+      case "toggleMouseMode":
         this.host.toggleMouseMode();
         break;
-      case 'switchProfile':
+      case "switchProfile":
         this.host.switchProfile();
         break;
-      case 'openGameMenu':
+      case "openGameMenu":
         this.host.openGameMenu();
         break;
-      case 'editMode':
+      case "editMode":
         this.host.toggleEditMode();
         break;
-      case 'hideCustomKeys':
+      case "hideCustomKeys":
         this.host.hideCustomKeys();
         break;
-      case 'none':
+      case "none":
       default:
         break;
     }
@@ -280,7 +279,7 @@ export class CustomKeyManager {
       const documentPicker = new picker.DocumentViewPicker();
       const saveOptions = new picker.DocumentSaveOptions();
       saveOptions.newFileNames = [`moonlight-keys-${profileName}.json`];
-      saveOptions.fileSuffixChoices = ['.json'];
+      saveOptions.fileSuffixChoices = [".json"];
       const uris = await documentPicker.save(saveOptions);
 
       if (uris && uris.length > 0) {
@@ -290,8 +289,8 @@ export class CustomKeyManager {
         promptAction.showToast({ message: `配置 "${profileName}" 已导出`, duration: 2000 });
       }
     } catch (e) {
-      console.error('[CustomKeyManager] 导出失败:', JSON.stringify(e));
-      promptAction.showToast({ message: '导出失败', duration: 2000 });
+      console.error("[CustomKeyManager] 导出失败:", JSON.stringify(e));
+      promptAction.showToast({ message: "导出失败", duration: 2000 });
     }
   }
 
@@ -300,7 +299,7 @@ export class CustomKeyManager {
       const documentPicker = new picker.DocumentViewPicker();
       const selectOptions = new picker.DocumentSelectOptions();
       selectOptions.maxSelectNumber = 1;
-      selectOptions.fileSuffixFilters = ['.json'];
+      selectOptions.fileSuffixFilters = [".json"];
       const uris = await documentPicker.select(selectOptions);
 
       if (uris && uris.length > 0) {
@@ -310,7 +309,7 @@ export class CustomKeyManager {
         fileIo.readSync(file.fd, buf);
         fileIo.closeSync(file);
 
-        const json = new util.TextDecoder('utf-8').decodeToString(new Uint8Array(buf));
+        const json = new util.TextDecoder("utf-8").decodeToString(new Uint8Array(buf));
         const success = await CustomKeyStore.importProfile(json);
 
         if (success) {
@@ -319,12 +318,12 @@ export class CustomKeyManager {
           this.host.onCustomKeysImported();
           return true;
         } else {
-          promptAction.showToast({ message: '导入失败：配置文件格式无效', duration: 2000 });
+          promptAction.showToast({ message: "导入失败：配置文件格式无效", duration: 2000 });
         }
       }
     } catch (e) {
-      console.error('[CustomKeyManager] 导入失败:', JSON.stringify(e));
-      promptAction.showToast({ message: '导入失败', duration: 2000 });
+      console.error("[CustomKeyManager] 导入失败:", JSON.stringify(e));
+      promptAction.showToast({ message: "导入失败", duration: 2000 });
     }
     return false;
   }

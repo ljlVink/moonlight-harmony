@@ -8,9 +8,7 @@
  * (at your option) any later version.
  */
 
-
 export interface ColorTheme {
-
   name: string;
   preview: string;
   bgColor: string;
@@ -19,25 +17,107 @@ export interface ColorTheme {
   normalColor: string;
 }
 
-
 export const COLOR_THEMES: ColorTheme[] = [
-  { name: '冰蓝', preview: '#A8D8EA', bgColor: '#301A3050', textColor: '#E0A8D8EA', pressedColor: '#80A8D8EA', normalColor: '#60A8D8EA' },
-  { name: '暗夜', preview: '#808080', bgColor: '#301A1A2E', textColor: '#C0FFFFFF', pressedColor: '#60808090', normalColor: '#40FFFFFF' },
-  { name: '翠绿', preview: '#50C080', bgColor: '#30204030', textColor: '#E050C080', pressedColor: '#8050C080', normalColor: '#6050C080' },
-  { name: '烈焰', preview: '#FF6B6B', bgColor: '#30401A1A', textColor: '#E0FF6B6B', pressedColor: '#80FF6B6B', normalColor: '#60FF6B6B' },
-  { name: '金辉', preview: '#FFD700', bgColor: '#30403010', textColor: '#E0FFD700', pressedColor: '#80FFD700', normalColor: '#60FFD700' },
-  { name: '紫韵', preview: '#B070E0', bgColor: '#302A1A40', textColor: '#E0B070E0', pressedColor: '#80B070E0', normalColor: '#60B070E0' },
-  { name: '暖橙', preview: '#FF8C00', bgColor: '#30402A10', textColor: '#E0FF8C00', pressedColor: '#80FF8C00', normalColor: '#60FF8C00' },
-  { name: '樱粉', preview: '#FFB7C5', bgColor: '#30401A28', textColor: '#E0FFB7C5', pressedColor: '#80FFB7C5', normalColor: '#60FFB7C5' },
-  { name: '青碧', preview: '#00CED1', bgColor: '#30103030', textColor: '#E000CED1', pressedColor: '#8000CED1', normalColor: '#6000CED1' },
-  { name: '赤金', preview: '#CD7F32', bgColor: '#30302010', textColor: '#E0CD7F32', pressedColor: '#80CD7F32', normalColor: '#60CD7F32' },
-  { name: '纯白', preview: '#FFFFFF', bgColor: '#25FFFFFF', textColor: '#E0FFFFFF', pressedColor: '#60FFFFFF', normalColor: '#40FFFFFF' },
-  { name: '隐形', preview: '#404040', bgColor: '#10FFFFFF', textColor: '#40FFFFFF', pressedColor: '#30FFFFFF', normalColor: '#20FFFFFF' },
+  {
+    name: "冰蓝",
+    preview: "#A8D8EA",
+    bgColor: "#301A3050",
+    textColor: "#E0A8D8EA",
+    pressedColor: "#80A8D8EA",
+    normalColor: "#60A8D8EA",
+  },
+  {
+    name: "暗夜",
+    preview: "#808080",
+    bgColor: "#301A1A2E",
+    textColor: "#C0FFFFFF",
+    pressedColor: "#60808090",
+    normalColor: "#40FFFFFF",
+  },
+  {
+    name: "翠绿",
+    preview: "#50C080",
+    bgColor: "#30204030",
+    textColor: "#E050C080",
+    pressedColor: "#8050C080",
+    normalColor: "#6050C080",
+  },
+  {
+    name: "烈焰",
+    preview: "#FF6B6B",
+    bgColor: "#30401A1A",
+    textColor: "#E0FF6B6B",
+    pressedColor: "#80FF6B6B",
+    normalColor: "#60FF6B6B",
+  },
+  {
+    name: "金辉",
+    preview: "#FFD700",
+    bgColor: "#30403010",
+    textColor: "#E0FFD700",
+    pressedColor: "#80FFD700",
+    normalColor: "#60FFD700",
+  },
+  {
+    name: "紫韵",
+    preview: "#B070E0",
+    bgColor: "#302A1A40",
+    textColor: "#E0B070E0",
+    pressedColor: "#80B070E0",
+    normalColor: "#60B070E0",
+  },
+  {
+    name: "暖橙",
+    preview: "#FF8C00",
+    bgColor: "#30402A10",
+    textColor: "#E0FF8C00",
+    pressedColor: "#80FF8C00",
+    normalColor: "#60FF8C00",
+  },
+  {
+    name: "樱粉",
+    preview: "#FFB7C5",
+    bgColor: "#30401A28",
+    textColor: "#E0FFB7C5",
+    pressedColor: "#80FFB7C5",
+    normalColor: "#60FFB7C5",
+  },
+  {
+    name: "青碧",
+    preview: "#00CED1",
+    bgColor: "#30103030",
+    textColor: "#E000CED1",
+    pressedColor: "#8000CED1",
+    normalColor: "#6000CED1",
+  },
+  {
+    name: "赤金",
+    preview: "#CD7F32",
+    bgColor: "#30302010",
+    textColor: "#E0CD7F32",
+    pressedColor: "#80CD7F32",
+    normalColor: "#60CD7F32",
+  },
+  {
+    name: "纯白",
+    preview: "#FFFFFF",
+    bgColor: "#25FFFFFF",
+    textColor: "#E0FFFFFF",
+    pressedColor: "#60FFFFFF",
+    normalColor: "#40FFFFFF",
+  },
+  {
+    name: "隐形",
+    preview: "#404040",
+    bgColor: "#10FFFFFF",
+    textColor: "#40FFFFFF",
+    pressedColor: "#30FFFFFF",
+    normalColor: "#20FFFFFF",
+  },
 ];
 
-
 export function parseHexRGB(hex: string): [number, number, number] {
-  const clean = hex.replace('#', '');
+  const clean = hex.replace("#", "");
   let r: number, g: number, b: number;
   if (clean.length === 8) {
     r = parseInt(clean.substring(2, 4), 16);
@@ -53,14 +133,16 @@ export function parseHexRGB(hex: string): [number, number, number] {
 
 export function toHexARGB(a: number, r: number, g: number, b: number): string {
   const clamp = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
-  const toHex = (v: number): string => clamp(v).toString(16).padStart(2, '0').toUpperCase();
+  const toHex = (v: number): string => clamp(v).toString(16).padStart(2, "0").toUpperCase();
   return `#${toHex(a)}${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 export function generateThemeFromAccent(r: number, g: number, b: number): ColorTheme {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-  let textR = r, textG = g, textB = b;
+  let textR = r,
+    textG = g,
+    textB = b;
   if (luminance < 0.4) {
     const boost = 1.4;
     textR = Math.min(255, r * boost + 40);
@@ -69,15 +151,14 @@ export function generateThemeFromAccent(r: number, g: number, b: number): ColorT
   }
 
   return {
-    name: '智能',
+    name: "智能",
     preview: toHexARGB(255, r, g, b),
     bgColor: toHexARGB(0x30, r, g, b),
-    textColor: toHexARGB(0xE0, textR, textG, textB),
+    textColor: toHexARGB(0xe0, textR, textG, textB),
     pressedColor: toHexARGB(0x80, r, g, b),
     normalColor: toHexARGB(0x60, r, g, b),
   };
 }
-
 
 export interface RGBPixel {
   r: number;
@@ -85,14 +166,16 @@ export interface RGBPixel {
   b: number;
 }
 
-
 export interface KMeansCluster {
   center: RGBPixel;
   count: number;
 }
 
-
-export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number = 20): KMeansCluster[] {
+export function kMeansPlusPlus(
+  samples: RGBPixel[],
+  k: number,
+  maxIter: number = 20,
+): KMeansCluster[] {
   if (samples.length === 0) return [];
   const n = samples.length;
   const actualK = Math.min(k, n);
@@ -142,17 +225,25 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
         const dg = samples[i].g - centers[c].g;
         const db = samples[i].b - centers[c].b;
         const d = dr * dr + dg * dg + db * db;
-        if (d < minD) { minD = d; bestC = c; }
+        if (d < minD) {
+          minD = d;
+          bestC = c;
+        }
       }
       assignments[i] = bestC;
     }
 
     let changed = false;
     for (let c = 0; c < actualK; c++) {
-      let sumR = 0, sumG = 0, sumB = 0, cnt = 0;
+      let sumR = 0,
+        sumG = 0,
+        sumB = 0,
+        cnt = 0;
       for (let i = 0; i < n; i++) {
         if (assignments[i] === c) {
-          sumR += samples[i].r; sumG += samples[i].g; sumB += samples[i].b;
+          sumR += samples[i].r;
+          sumG += samples[i].g;
+          sumB += samples[i].b;
           cnt++;
         }
       }
@@ -182,9 +273,8 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
   return result;
 }
 
-
 export function pickAccentFromClusters(clusters: KMeansCluster[], totalSamples: number): RGBPixel {
-  const viable = clusters.filter(c => {
+  const viable = clusters.filter((c) => {
     const ratio = c.count / totalSamples;
     const brightness = c.center.r + c.center.g + c.center.b;
     return ratio >= 0.05 && brightness > 30;

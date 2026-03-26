@@ -8,22 +8,22 @@
  * (at your option) any later version.
  */
 
-import { cryptoFramework } from '@kit.CryptoArchitectureKit';
-import { fileIo } from '@kit.CoreFileKit';
-import { util } from '@kit.ArkTS';
-import { deviceInfo } from '@kit.BasicServicesKit';
-import { CryptoUtil } from '../utils/CryptoUtil';
-import { common } from '@kit.AbilityKit';
-import { HttpClient } from '../utils/HttpClient';
-import { XmlUtil } from '../utils/XmlUtil';
-import { NvHttp } from './NvHttp';
+import { cryptoFramework } from "@kit.CryptoArchitectureKit";
+import { fileIo } from "@kit.CoreFileKit";
+import { util } from "@kit.ArkTS";
+import { deviceInfo } from "@kit.BasicServicesKit";
+import { CryptoUtil } from "../utils/CryptoUtil";
+import { common } from "@kit.AbilityKit";
+import { HttpClient } from "../utils/HttpClient";
+import { XmlUtil } from "../utils/XmlUtil";
+import { NvHttp } from "./NvHttp";
 
 export enum PairState {
-  NOT_PAIRED = 'NOT_PAIRED',
-  PAIRED = 'PAIRED',
-  PIN_WRONG = 'PIN_WRONG',
-  FAILED = 'FAILED',
-  ALREADY_IN_PROGRESS = 'ALREADY_IN_PROGRESS'
+  NOT_PAIRED = "NOT_PAIRED",
+  PAIRED = "PAIRED",
+  PIN_WRONG = "PIN_WRONG",
+  FAILED = "FAILED",
+  ALREADY_IN_PROGRESS = "ALREADY_IN_PROGRESS",
 }
 
 export interface PairResult {
@@ -48,8 +48,8 @@ export class PairingManager {
 
   private serverCertDer: Uint8Array | null = null;
 
-  private certFilePath: string = '';
-  private keyFilePath: string = '';
+  private certFilePath: string = "";
+  private keyFilePath: string = "";
   private context: common.Context | null = null;
 
   static readonly DEFAULT_HTTP_PORT = NvHttp.DEFAULT_HTTP_PORT;
@@ -81,40 +81,44 @@ export class PairingManager {
     }
 
     try {
-      const name = deviceInfo.marketName || deviceInfo.productModel || 'Moonlight-HarmonyOS';
+      const name = deviceInfo.marketName || deviceInfo.productModel || "Moonlight-HarmonyOS";
       PairingManager.cachedClientName = name;
       return name;
     } catch (err) {
       console.warn(`PairingManager: 无法获取设备名称: ${err}`);
-      PairingManager.cachedClientName = 'Moonlight-HarmonyOS';
-      return 'Moonlight-HarmonyOS';
+      PairingManager.cachedClientName = "Moonlight-HarmonyOS";
+      return "Moonlight-HarmonyOS";
     }
   }
-  
+
   private parseAddressHost(addressInput: string): string {
     const trimmed = addressInput.trim();
-    
-    if (trimmed.startsWith('[')) {
-      const closeBracket = trimmed.indexOf(']');
+
+    if (trimmed.startsWith("[")) {
+      const closeBracket = trimmed.indexOf("]");
       if (closeBracket > 0) {
         return trimmed.substring(1, closeBracket);
       }
     }
-    
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex > 0 && trimmed.indexOf(':', colonIndex + 1) === -1) {
+
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex > 0 && trimmed.indexOf(":", colonIndex + 1) === -1) {
       return trimmed.substring(0, colonIndex);
     }
-    
+
     return trimmed;
   }
-  
+
   private parseAddressPort(addressInput: string): number | undefined {
     const trimmed = addressInput.trim();
-    
-    if (trimmed.startsWith('[')) {
-      const closeBracket = trimmed.indexOf(']');
-      if (closeBracket > 0 && closeBracket < trimmed.length - 1 && trimmed.charAt(closeBracket + 1) === ':') {
+
+    if (trimmed.startsWith("[")) {
+      const closeBracket = trimmed.indexOf("]");
+      if (
+        closeBracket > 0 &&
+        closeBracket < trimmed.length - 1 &&
+        trimmed.charAt(closeBracket + 1) === ":"
+      ) {
         const portStr = trimmed.substring(closeBracket + 2);
         const port = parseInt(portStr);
         if (port > 0 && port <= 65535) {
@@ -123,16 +127,16 @@ export class PairingManager {
       }
       return undefined;
     }
-    
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex > 0 && trimmed.indexOf(':', colonIndex + 1) === -1) {
+
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex > 0 && trimmed.indexOf(":", colonIndex + 1) === -1) {
       const portStr = trimmed.substring(colonIndex + 1);
       const port = parseInt(portStr);
       if (port > 0 && port <= 65535) {
         return port;
       }
     }
-    
+
     return undefined;
   }
 
@@ -140,7 +144,7 @@ export class PairingManager {
    * e.g. "fe80::1" → "[fe80::1]", "192.168.1.1" → "192.168.1.1"
    */
   private formatAddressForUrl(addr: string): string {
-    if (addr.includes(':') && !addr.startsWith('[')) {
+    if (addr.includes(":") && !addr.startsWith("[")) {
       return `[${addr}]`;
     }
     return addr;
@@ -155,42 +159,44 @@ export class PairingManager {
       try {
         const certExists = fileIo.accessSync(this.certFilePath);
         const keyExists = fileIo.accessSync(this.keyFilePath);
-        
+
         if (certExists && keyExists) {
-          console.info('PairingManager: 发现已存在的证书文件，尝试加载...');
-          
+          console.info("PairingManager: 发现已存在的证书文件，尝试加载...");
+
           const keyFile = await fileIo.open(this.keyFilePath, fileIo.OpenMode.READ_ONLY);
           const keyStats = await fileIo.stat(this.keyFilePath);
           const keyBuffer = new ArrayBuffer(keyStats.size);
           await fileIo.read(keyFile.fd, keyBuffer);
           await fileIo.close(keyFile);
-          
+
           const keyContent = new Uint8Array(keyBuffer);
-          const textDecoder = util.TextDecoder.create('utf-8');
+          const textDecoder = util.TextDecoder.create("utf-8");
           const keyPem = textDecoder.decodeToString(keyContent);
-          
-          const generator = cryptoFramework.createAsyKeyGenerator('RSA2048');
+
+          const generator = cryptoFramework.createAsyKeyGenerator("RSA2048");
           const keyPairResult = await generator.convertPemKey(null, keyPem);
           this.keyPair = keyPairResult;
-          
+
           const certFile = await fileIo.open(this.certFilePath, fileIo.OpenMode.READ_ONLY);
           const certStats = await fileIo.stat(this.certFilePath);
           const certBuffer = new ArrayBuffer(certStats.size);
           await fileIo.read(certFile.fd, certBuffer);
           await fileIo.close(certFile);
-          
+
           this.clientCertPem = new Uint8Array(certBuffer);
-          
+
           const certPemStr = textDecoder.decodeToString(this.clientCertPem);
           const certBase64 = certPemStr
-            .replace('-----BEGIN CERTIFICATE-----', '')
-            .replace('-----END CERTIFICATE-----', '')
-            .replace(/\s/g, '');
+            .replace("-----BEGIN CERTIFICATE-----", "")
+            .replace("-----END CERTIFICATE-----", "")
+            .replace(/\s/g, "");
           const textEncoder = new util.TextEncoder();
           const base64Helper = new util.Base64Helper();
           this.clientCertDer = base64Helper.decodeSync(certBase64);
-          
-          console.info(`PairingManager: 成功加载已存在的证书，PEM长度=${this.clientCertPem.length}, DER长度=${this.clientCertDer.length}`);
+
+          console.info(
+            `PairingManager: 成功加载已存在的证书，PEM长度=${this.clientCertPem.length}, DER长度=${this.clientCertDer.length}`,
+          );
           return;
         }
       } catch (err) {
@@ -198,37 +204,43 @@ export class PairingManager {
       }
     }
 
-    console.info('PairingManager: 生成新的 RSA 密钥对...');
+    console.info("PairingManager: 生成新的 RSA 密钥对...");
     this.keyPair = await CryptoUtil.generateRsaKeyPair();
-    console.info('PairingManager: RSA 密钥对生成完成');
-    
+    console.info("PairingManager: RSA 密钥对生成完成");
+
     this.clientCertDer = await CryptoUtil.generateSelfSignedCert(this.keyPair);
     console.info(`PairingManager: 证书 DER 生成完成，长度 = ${this.clientCertDer.length}`);
-    
+
     this.clientCertPem = CryptoUtil.getPemCertBytes(this.clientCertDer);
     console.info(`PairingManager: 证书 PEM 生成完成，长度 = ${this.clientCertPem.length}`);
-    
+
     await this.saveCertificatesToFile();
-    
-    console.info('PairingManager: 密钥对和证书生成完成');
+
+    console.info("PairingManager: 密钥对和证书生成完成");
   }
 
   private async saveCertificatesToFile(): Promise<void> {
     if (!this.certFilePath || !this.keyFilePath || !this.keyPair || !this.clientCertPem) {
-      console.warn('PairingManager: 无法保存证书（路径或数据不完整）');
+      console.warn("PairingManager: 无法保存证书（路径或数据不完整）");
       return;
     }
 
     try {
-      const textDecoder = util.TextDecoder.create('utf-8');
+      const textDecoder = util.TextDecoder.create("utf-8");
       const certContent = textDecoder.decodeToString(this.clientCertPem);
-      const certFile = await fileIo.open(this.certFilePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      const certFile = await fileIo.open(
+        this.certFilePath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC,
+      );
       await fileIo.write(certFile.fd, certContent);
       await fileIo.close(certFile);
       console.info(`PairingManager: 证书已保存到 ${this.certFilePath}`);
 
-      const priKeyBlob = this.keyPair.priKey.getEncodedPem('PKCS8');
-      const keyFile = await fileIo.open(this.keyFilePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      const priKeyBlob = this.keyPair.priKey.getEncodedPem("PKCS8");
+      const keyFile = await fileIo.open(
+        this.keyFilePath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC,
+      );
       await fileIo.write(keyFile.fd, priKeyBlob);
       await fileIo.close(keyFile);
       console.info(`PairingManager: 私钥已保存到 ${this.keyFilePath}`);
@@ -239,7 +251,7 @@ export class PairingManager {
 
   getClientCertHex(): string {
     if (!this.clientCertPem) {
-      return '';
+      return "";
     }
     return CryptoUtil.bytesToHex(this.clientCertPem);
   }
@@ -255,19 +267,25 @@ export class PairingManager {
     return this.serverCertDer;
   }
 
-  private async doRequest(url: string, timeout: number = 7000, useClientCert: boolean = false): Promise<string> {
+  private async doRequest(
+    url: string,
+    timeout: number = 7000,
+    useClientCert: boolean = false,
+  ): Promise<string> {
     console.info(`PairingManager: 请求 ${url}`);
-    console.info(`PairingManager: 超时设置 = ${timeout > 0 ? timeout : '无限制'}, 使用客户端证书 = ${useClientCert}`);
+    console.info(
+      `PairingManager: 超时设置 = ${timeout > 0 ? timeout : "无限制"}, 使用客户端证书 = ${useClientCert}`,
+    );
 
     if (useClientCert && this.certFilePath && this.keyFilePath) {
       return HttpClient.getWithClientCert(url, this.certFilePath, this.keyFilePath, {
         connectTimeout: 30000,
-        transferTimeout: timeout > 0 ? timeout : 300000
+        transferTimeout: timeout > 0 ? timeout : 300000,
       });
     } else {
       return HttpClient.get(url, {
         connectTimeout: 30000,
-        transferTimeout: timeout > 0 ? timeout : 300000
+        transferTimeout: timeout > 0 ? timeout : 300000,
       });
     }
   }
@@ -277,23 +295,23 @@ export class PairingManager {
   }
 
   private extractServerCert(xml: string): Uint8Array | null {
-    const certHex = XmlUtil.getValue(xml, 'plaincert');
+    const certHex = XmlUtil.getValue(xml, "plaincert");
     if (!certHex) {
       return null;
     }
-    
+
     const pemBytes = CryptoUtil.hexToBytes(certHex);
-    
-    let pemString = '';
+
+    let pemString = "";
     for (let i = 0; i < pemBytes.length; i++) {
       pemString += String.fromCharCode(pemBytes[i]);
     }
-    
+
     console.info(`PairingManager: 服务器证书 PEM 前80字符 = ${pemString.substring(0, 80)}`);
-    
+
     const derBytes = CryptoUtil.pemToDer(pemString);
     console.info(`PairingManager: 服务器证书 DER 长度 = ${derBytes.length}`);
-    
+
     return derBytes;
   }
 
@@ -323,9 +341,9 @@ export class PairingManager {
   private async fetchServerMajorVersion(): Promise<number> {
     try {
       const response = await this.fetchServerInfo();
-      const appVersion = XmlUtil.getValue(response, 'appversion');
+      const appVersion = XmlUtil.getValue(response, "appversion");
       if (appVersion) {
-        const parts = appVersion.split('.');
+        const parts = appVersion.split(".");
         if (parts.length > 0) {
           const major = parseInt(parts[0]);
           if (!isNaN(major)) {
@@ -343,7 +361,7 @@ export class PairingManager {
   private async getHttpsUrl(): Promise<string> {
     try {
       const response = await this.fetchServerInfo();
-      const httpsPortStr = XmlUtil.getValue(response, 'HttpsPort');
+      const httpsPortStr = XmlUtil.getValue(response, "HttpsPort");
       if (httpsPortStr) {
         const httpsPort = parseInt(httpsPortStr);
         if (httpsPort > 0) {
@@ -367,10 +385,12 @@ export class PairingManager {
 
     const serverMajorVersion = await this.fetchServerMajorVersion();
     const useSha256 = serverMajorVersion >= 7;
-    console.info(`PairingManager: 服务器版本 ${serverMajorVersion}, 使用 ${useSha256 ? 'SHA-256' : 'SHA-1'} 哈希算法`);
+    console.info(
+      `PairingManager: 服务器版本 ${serverMajorVersion}, 使用 ${useSha256 ? "SHA-256" : "SHA-1"} 哈希算法`,
+    );
 
     try {
-      console.info('PairingManager: 步骤1 - 发送 salt 和客户端证书');
+      console.info("PairingManager: 步骤1 - 发送 salt 和客户端证书");
       console.info(`PairingManager: PIN = ${pin}`);
 
       const salt = CryptoUtil.generateRandomBytes(16);
@@ -383,21 +403,21 @@ export class PairingManager {
 
       const step1Url = this.buildPairUrl(
         `devicename=roth&updateState=1&phrase=getservercert` +
-        `&salt=${CryptoUtil.bytesToHex(salt)}&clientcert=${this.getClientCertHex()}`
+          `&salt=${CryptoUtil.bytesToHex(salt)}&clientcert=${this.getClientCertHex()}`,
       );
 
-      console.info('PairingManager: 等待服务器响应（用户需要在服务器上输入 PIN）...');
+      console.info("PairingManager: 等待服务器响应（用户需要在服务器上输入 PIN）...");
 
       const step1Response = await this.doRequest(step1Url, 300000);
 
       console.info(`PairingManager: 步骤1响应 = ${step1Response.substring(0, 200)}...`);
 
-      if (XmlUtil.getValue(step1Response, 'paired') !== '1') {
-        console.error('PairingManager: 步骤1失败 - paired != 1');
+      if (XmlUtil.getValue(step1Response, "paired") !== "1") {
+        console.error("PairingManager: 步骤1失败 - paired != 1");
         return { state: PairState.FAILED };
       }
 
-      const pairName = XmlUtil.getValue(step1Response, 'pairname');
+      const pairName = XmlUtil.getValue(step1Response, "pairname");
       this.serverCertDer = this.extractServerCert(step1Response);
 
       if (!this.serverCertDer) {
@@ -405,77 +425,84 @@ export class PairingManager {
         return { state: PairState.ALREADY_IN_PROGRESS, pairName };
       }
 
-      console.info('PairingManager: 步骤2 - 发送客户端挑战');
+      console.info("PairingManager: 步骤2 - 发送客户端挑战");
 
       const randomChallenge = CryptoUtil.generateRandomBytes(16);
       const encryptedChallenge = await CryptoUtil.aesEncrypt(randomChallenge, aesKey);
 
       const step2Url = this.buildPairUrl(
         `devicename=roth&updateState=1` +
-        `&clientchallenge=${CryptoUtil.bytesToHex(encryptedChallenge)}`
+          `&clientchallenge=${CryptoUtil.bytesToHex(encryptedChallenge)}`,
       );
 
       const step2Response = await this.doRequest(step2Url);
 
-      if (XmlUtil.getValue(step2Response, 'paired') !== '1') {
+      if (XmlUtil.getValue(step2Response, "paired") !== "1") {
         await this.unpair();
         return { state: PairState.FAILED, pairName };
       }
 
       const encServerChallengeResponse = CryptoUtil.hexToBytes(
-        XmlUtil.getValue(step2Response, 'challengeresponse')
+        XmlUtil.getValue(step2Response, "challengeresponse"),
       );
-      const decServerChallengeResponse = await CryptoUtil.aesDecrypt(encServerChallengeResponse, aesKey);
+      const decServerChallengeResponse = await CryptoUtil.aesDecrypt(
+        encServerChallengeResponse,
+        aesKey,
+      );
 
       const hashLength = this.getHashLength(useSha256);
       const serverResponse = decServerChallengeResponse.slice(0, hashLength);
       const serverChallenge = decServerChallengeResponse.slice(hashLength, hashLength + 16);
 
-      console.info('PairingManager: 步骤3 - 发送服务器挑战响应');
+      console.info("PairingManager: 步骤3 - 发送服务器挑战响应");
 
       const clientSecret = CryptoUtil.generateRandomBytes(16);
 
       const clientCertSignature = this.getClientCertSignature();
       const challengeRespData = CryptoUtil.concatBytes(
         CryptoUtil.concatBytes(serverChallenge, clientCertSignature),
-        clientSecret
+        clientSecret,
       );
       const challengeRespHash = await this.hashData(challengeRespData, useSha256);
       const challengeRespEncrypted = await CryptoUtil.aesEncrypt(challengeRespHash, aesKey);
 
       const step3Url = this.buildPairUrl(
         `devicename=roth&updateState=1` +
-        `&serverchallengeresp=${CryptoUtil.bytesToHex(challengeRespEncrypted)}`
+          `&serverchallengeresp=${CryptoUtil.bytesToHex(challengeRespEncrypted)}`,
       );
 
       const step3Response = await this.doRequest(step3Url);
 
-      if (XmlUtil.getValue(step3Response, 'paired') !== '1') {
+      if (XmlUtil.getValue(step3Response, "paired") !== "1") {
         await this.unpair();
         return { state: PairState.FAILED, pairName };
       }
 
       const serverSecretResp = CryptoUtil.hexToBytes(
-        XmlUtil.getValue(step3Response, 'pairingsecret')
+        XmlUtil.getValue(step3Response, "pairingsecret"),
       );
       const serverSecret = serverSecretResp.slice(0, 16);
       const serverSignature = serverSecretResp.slice(16);
 
-      const serverSignatureValid = await CryptoUtil.verifyWithCert(serverSecret, serverSignature, this.serverCertDer!);
+      const serverSignatureValid = await CryptoUtil.verifyWithCert(
+        serverSecret,
+        serverSignature,
+        this.serverCertDer!,
+      );
       if (!serverSignatureValid) {
-        console.error('PairingManager: 服务器签名验证失败，可能存在中间人攻击');
+        console.error("PairingManager: 服务器签名验证失败，可能存在中间人攻击");
         await this.unpair();
         return { state: PairState.FAILED, pairName };
       }
-      console.info('PairingManager: 服务器签名验证通过');
+      console.info("PairingManager: 服务器签名验证通过");
 
       const serverCertSignature = CryptoUtil.extractCertSignature(this.serverCertDer!);
       const expectedServerResponse = await this.hashData(
         CryptoUtil.concatBytes(
           CryptoUtil.concatBytes(randomChallenge, serverCertSignature),
-          serverSecret
+          serverSecret,
         ),
-        useSha256
+        useSha256,
       );
 
       if (!this.arraysEqual(expectedServerResponse, serverResponse)) {
@@ -483,7 +510,7 @@ export class PairingManager {
         return { state: PairState.PIN_WRONG, pairName };
       }
 
-      console.info('PairingManager: 步骤4 - 发送客户端 secret');
+      console.info("PairingManager: 步骤4 - 发送客户端 secret");
 
       console.info(`PairingManager: clientSecret 长度 = ${clientSecret.length}`);
       const clientSignature = await CryptoUtil.rsaSign(clientSecret, this.keyPair!.priKey);
@@ -493,38 +520,38 @@ export class PairingManager {
 
       const step4Url = this.buildPairUrl(
         `devicename=roth&updateState=1` +
-        `&clientpairingsecret=${CryptoUtil.bytesToHex(clientPairingSecret)}`
+          `&clientpairingsecret=${CryptoUtil.bytesToHex(clientPairingSecret)}`,
       );
 
       const step4Response = await this.doRequest(step4Url);
 
-      if (XmlUtil.getValue(step4Response, 'paired') !== '1') {
+      if (XmlUtil.getValue(step4Response, "paired") !== "1") {
         await this.unpair();
         return { state: PairState.FAILED, pairName };
       }
 
-      console.info('PairingManager: 步骤5 - 完成配对');
+      console.info("PairingManager: 步骤5 - 完成配对");
 
       const httpsUrl = await this.getHttpsUrl();
-      const step5Url = `${httpsUrl}/pair?` +
+      const step5Url =
+        `${httpsUrl}/pair?` +
         `uniqueid=${this.uniqueId}&devicename=roth&updateState=1&phrase=pairchallenge`;
 
       const step5Response = await this.doRequest(step5Url, 7000, true);
 
-      if (XmlUtil.getValue(step5Response, 'paired') !== '1') {
+      if (XmlUtil.getValue(step5Response, "paired") !== "1") {
         await this.unpair();
         return { state: PairState.FAILED, pairName };
       }
 
-      console.info('PairingManager: 配对成功!');
+      console.info("PairingManager: 配对成功!");
       return {
         state: PairState.PAIRED,
         serverCert: this.serverCertDer,
-        pairName
+        pairName,
       };
-
     } catch (err) {
-      console.error('PairingManager: 配对失败', err);
+      console.error("PairingManager: 配对失败", err);
       return { state: PairState.FAILED };
     }
   }
@@ -534,7 +561,7 @@ export class PairingManager {
       const url = `${this.baseUrl}/unpair?uniqueid=${this.uniqueId}`;
       await this.doRequest(url);
     } catch (err) {
-      console.warn('PairingManager: 取消配对失败', err);
+      console.warn("PairingManager: 取消配对失败", err);
     }
   }
 

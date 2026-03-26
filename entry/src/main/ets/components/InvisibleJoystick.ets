@@ -35,7 +35,6 @@ export type InvisibleJoystickRevokeCallback = () => void;
 
 /** Whether in edit mode (edit mode disables joystick input but shows border) */
 export type InvisibleEditModeGetter = () => boolean;
-
 @Component
 export struct InvisibleJoystick {
   /** Touch area width (vp) */
@@ -45,13 +44,13 @@ export struct InvisibleJoystick {
   /** Joystick visible radius (vp), radius of circle that appears on touch */
   @Prop stickRadius: number = 60;
   /** Outer ring color */
-  @Prop ringColor: string = '#6050C080';
+  @Prop ringColor: string = "#6050C080";
   /** Inner joystick color */
-  @Prop stickColor: string = '#A050C080';
+  @Prop stickColor: string = "#A050C080";
   /** Pressed color */
-  @Prop pressedColor: string = '#C070E090';
+  @Prop pressedColor: string = "#C070E090";
   /** Border color in edit mode */
-  @Prop editBorderColor: string = '#80FFFFFF';
+  @Prop editBorderColor: string = "#80FFFFFF";
   /** Opacity 0-100 */
   @Prop opacity_: number = 80;
 
@@ -102,33 +101,33 @@ export struct InvisibleJoystick {
     Stack() {
       // Transparent touch area (always present for hit testing)
       Rect()
-        .width('100%')
-        .height('100%')
-        .fill('#01000000')
+        .width("100%")
+        .height("100%")
+        .fill("#01000000")
 
       // Edit mode shows dashed border indicating touch area
       if (this.isEditMode()) {
         Rect()
-          .width('100%')
-          .height('100%')
-          .fill('transparent')
+          .width("100%")
+          .height("100%")
+          .fill("transparent")
           .stroke(this.editBorderColor)
           .strokeWidth(1.5)
           .strokeDashArray([6, 4])
-          .borderRadius(4)
+          .borderRadius(4);
 
         // Edit mode draws preview joystick outline at center
         Circle()
           .width(this.stickRadius * 2)
           .height(this.stickRadius * 2)
-          .fill('transparent')
+          .fill("transparent")
           .stroke(this.ringColor)
           .strokeWidth(1)
           .strokeOpacity(0.3)
           .position({
             x: this.areaWidth / 2 - this.stickRadius,
-            y: this.areaHeight / 2 - this.stickRadius
-          })
+            y: this.areaHeight / 2 - this.stickRadius,
+          });
       }
 
       // On press, show joystick at touch point
@@ -137,26 +136,26 @@ export struct InvisibleJoystick {
         Circle()
           .width(this.stickRadius * 2)
           .height(this.stickRadius * 2)
-          .fill('transparent')
+          .fill("transparent")
           .stroke(this.ringColor)
           .strokeWidth(1.5)
           .position({
             x: this.centerX - this.stickRadius,
-            y: this.centerY - this.stickRadius
-          })
+            y: this.centerY - this.stickRadius,
+          });
 
         // Dead zone circle
         Circle()
           .width(this.stickRadius * 2 * this.deadzone)
           .height(this.stickRadius * 2 * this.deadzone)
-          .fill('transparent')
+          .fill("transparent")
           .stroke(this.ringColor)
           .strokeWidth(0.5)
           .strokeOpacity(0.3)
           .position({
             x: this.centerX - this.stickRadius * this.deadzone,
-            y: this.centerY - this.stickRadius * this.deadzone
-          })
+            y: this.centerY - this.stickRadius * this.deadzone,
+          });
 
         // Inner joystick head
         Circle()
@@ -167,8 +166,8 @@ export struct InvisibleJoystick {
           .strokeWidth(1.5)
           .position({
             x: this.centerX - this.innerRadius + this.stickOffsetX,
-            y: this.centerY - this.innerRadius + this.stickOffsetY
-          })
+            y: this.centerY - this.innerRadius + this.stickOffsetY,
+          });
       }
     }
     .width(this.areaWidth)
@@ -179,7 +178,7 @@ export struct InvisibleJoystick {
     .onTouch((event: TouchEvent): void => {
       if (this.isEditMode()) return;
       this.handleTouch(event);
-    })
+    });
   }
 
   private handleTouch(event: TouchEvent): void {
@@ -271,7 +270,10 @@ export struct InvisibleJoystick {
     const magnitude: number = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
     // Dead zone timeout check (150ms then auto-release dead zone, consistent with Android)
-    if (this.deadzoneActive && Date.now() - this.touchDownTime > InvisibleJoystick.DEADZONE_TIMEOUT_MS) {
+    if (
+      this.deadzoneActive &&
+      Date.now() - this.touchDownTime > InvisibleJoystick.DEADZONE_TIMEOUT_MS
+    ) {
       this.deadzoneActive = false;
     }
     // Once outside dead zone range, permanently release
@@ -291,9 +293,10 @@ export struct InvisibleJoystick {
       if (magnitude > 0) {
         const effectiveDeadzone: number = this.deadzoneActive ? this.deadzone : 0;
         if (magnitude > effectiveDeadzone) {
-          const remapScale: number = effectiveDeadzone > 0
-            ? (magnitude - effectiveDeadzone) / (1 - effectiveDeadzone)
-            : magnitude;
+          const remapScale: number =
+            effectiveDeadzone > 0
+              ? (magnitude - effectiveDeadzone) / (1 - effectiveDeadzone)
+              : magnitude;
           const factor: number = remapScale / magnitude;
           outX = normalizedX * factor;
           outY = normalizedY * factor;

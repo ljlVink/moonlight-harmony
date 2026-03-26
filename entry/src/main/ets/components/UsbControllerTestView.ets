@@ -8,18 +8,17 @@
  * (at your option) any later version.
  */
 
-
-import { usbManager } from '@kit.BasicServicesKit';
+import { usbManager } from "@kit.BasicServicesKit";
 import {
   AbstractController,
   ButtonFlags,
   ControllerType,
   UsbDriverListener,
-  UsbDriverService
-} from '../service/usbdriver';
-import { GamepadManager } from '../service/GamepadManager';
-import { AXIS_MAX } from '../service/GamepadTypes';
-import { AppColors } from '../common/Theme';
+  UsbDriverService,
+} from "../service/usbdriver";
+import { GamepadManager } from "../service/GamepadManager";
+import { AXIS_MAX } from "../service/GamepadTypes";
+import { AppColors } from "../common/Theme";
 
 class ControllerInputState {
   buttons: number = 0;
@@ -51,7 +50,7 @@ interface ABXYButtonParams {
 }
 
 class DeviceInfo {
-  name: string = '';
+  name: string = "";
   vid: number = 0;
   pid: number = 0;
   type: number = 0;
@@ -59,37 +58,47 @@ class DeviceInfo {
 
 class TestViewDriverListener implements UsbDriverListener {
   private view: UsbControllerTestView;
-  
+
   constructor(view: UsbControllerTestView) {
     this.view = view;
   }
-  
-  reportControllerState(controllerId: number, buttonFlags: number,
-    leftStickX: number, leftStickY: number,
-    rightStickX: number, rightStickY: number,
-    leftTrigger: number, rightTrigger: number): void {
-    
+
+  reportControllerState(
+    controllerId: number,
+    buttonFlags: number,
+    leftStickX: number,
+    leftStickY: number,
+    rightStickX: number,
+    rightStickY: number,
+    leftTrigger: number,
+    rightTrigger: number,
+  ): void {
     this.view.incrementPollCount();
-    
+
     const state = new ControllerInputState();
     state.buttons = buttonFlags;
     state.leftStickX = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(leftStickX * AXIS_MAX)));
     state.leftStickY = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(-leftStickY * AXIS_MAX)));
     state.rightStickX = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(rightStickX * AXIS_MAX)));
-    state.rightStickY = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(-rightStickY * AXIS_MAX)));
+    state.rightStickY = Math.max(
+      -AXIS_MAX,
+      Math.min(AXIS_MAX, Math.floor(-rightStickY * AXIS_MAX)),
+    );
     state.leftTrigger = leftTrigger;
     state.rightTrigger = rightTrigger;
-    
+
     this.view.updateInputState(state);
   }
 
-  reportControllerMotion(controllerId: number, motionType: number,
-    x: number, y: number, z: number): void {
-  }
+  reportControllerMotion(
+    controllerId: number,
+    motionType: number,
+    x: number,
+    y: number,
+    z: number,
+  ): void {}
 
-  reportTouchpadInput(controllerId: number, active: boolean,
-    x: number, y: number): void {
-  }
+  reportTouchpadInput(controllerId: number, active: boolean, x: number, y: number): void {}
 
   deviceAdded(controller: AbstractController): void {
     this.view.onDeviceAdded(controller);
@@ -99,7 +108,6 @@ class TestViewDriverListener implements UsbDriverListener {
     this.view.onDeviceRemoved(controller);
   }
 }
-
 @Component
 export struct UsbControllerTestView {
   @State isRunning: boolean = false;
@@ -126,7 +134,7 @@ export struct UsbControllerTestView {
   private internalLastInputState: ControllerInputState | null = null;
 
   aboutToAppear(): void {
-    this.addLog('USB 手柄测试视图初始化');
+    this.addLog("USB 手柄测试视图初始化");
     this.checkUsbDevices();
     this.startPollRateTimer();
     this.startUiRefreshTimer();
@@ -137,25 +145,25 @@ export struct UsbControllerTestView {
     this.stopPollRateTimer();
     this.stopDriver();
   }
-  
+
   private startPollRateTimer(): void {
     this.lastPollStatTime = Date.now();
     this.pollCountInternal = 0;
-    
+
     this.pollRateTimer = setInterval(() => {
       const now = Date.now();
       const elapsed = (now - this.lastPollStatTime) / 1000;
-      
+
       if (elapsed > 0) {
         this.pollRate = Math.round(this.pollCountInternal / elapsed);
         this.pollCount = this.pollCountInternal;
       }
-      
+
       this.pollCountInternal = 0;
       this.lastPollStatTime = now;
     }, 1000);
   }
-  
+
   private stopPollRateTimer(): void {
     if (this.pollRateTimer !== -1) {
       clearInterval(this.pollRateTimer);
@@ -185,7 +193,7 @@ export struct UsbControllerTestView {
       this.uiRefreshTimer = -1;
     }
   }
-  
+
   incrementPollCount(): void {
     this.pollCountInternal++;
   }
@@ -194,13 +202,15 @@ export struct UsbControllerTestView {
     const timestamp: string = new Date().toLocaleTimeString();
     this.logMessages = [`[${timestamp}] ${message}`, ...this.logMessages.slice(0, 49)];
   }
-  
+
   updateInputState(state: ControllerInputState): void {
     this.internalLastInputState = state;
   }
-  
+
   onDeviceAdded(controller: AbstractController): void {
-    const exists = this.connectedDevices.some((d: DeviceInfo) => d.vid === controller.getVendorId() && d.pid === controller.getProductId());
+    const exists = this.connectedDevices.some(
+      (d: DeviceInfo) => d.vid === controller.getVendorId() && d.pid === controller.getProductId(),
+    );
     if (exists) {
       this.addLog(`设备已存在，跳过重复: ${controller.getName()}`);
       return;
@@ -213,7 +223,7 @@ export struct UsbControllerTestView {
     deviceInfo.type = controller.getControllerType();
     this.connectedDevices = [...this.connectedDevices, deviceInfo];
   }
-  
+
   onDeviceRemoved(controller: AbstractController): void {
     this.addLog(`设备已断开: ${controller.getName()}`);
     this.connectedDevices = [];
@@ -227,7 +237,9 @@ export struct UsbControllerTestView {
 
       for (let i: number = 0; i < devices.length; i++) {
         const device: usbManager.USBDevice = devices[i];
-        this.addLog(`设备 ${i + 1}: VID=0x${device.vendorId.toString(16).toUpperCase()}, PID=0x${device.productId.toString(16).toUpperCase()}`);
+        this.addLog(
+          `设备 ${i + 1}: VID=0x${device.vendorId.toString(16).toUpperCase()}, PID=0x${device.productId.toString(16).toUpperCase()}`,
+        );
       }
     } catch (err) {
       this.addLog(`检查设备失败: ${err}`);
@@ -244,15 +256,15 @@ export struct UsbControllerTestView {
     this.usbDriverService.setListener(this.listener);
     this.usbDriverService.start();
     this.isRunning = true;
-    this.addLog('USB 驱动服务已启动（测试模式）');
+    this.addLog("USB 驱动服务已启动（测试模式）");
   }
 
   private stopDriver(): void {
     if (this.usbDriverService !== null) {
       this.usbDriverService.stop();
-      
+
       this.restoreGamepadManagerListenerOnly();
-      
+
       this.usbDriverService = null;
       this.listener = null;
       this.isRunning = false;
@@ -266,44 +278,44 @@ export struct UsbControllerTestView {
       this.displayLT = 0;
       this.displayRT = 0;
       this.internalLastInputState = null;
-      this.addLog('USB 驱动测试已停止（已释放设备独占）');
+      this.addLog("USB 驱动测试已停止（已释放设备独占）");
     }
   }
-  
+
   private restoreGamepadManagerListenerOnly(): void {
     try {
       const gamepadManager = GamepadManager.getInstance();
       UsbDriverService.getInstance().setListener(gamepadManager);
-      console.info('[UsbControllerTest] 已恢复 GamepadManager listener（未重启驱动）');
+      console.info("[UsbControllerTest] 已恢复 GamepadManager listener（未重启驱动）");
     } catch (err) {
-      console.error('[UsbControllerTest] 恢复 GamepadManager listener 失败:', err);
+      console.error("[UsbControllerTest] 恢复 GamepadManager listener 失败:", err);
     }
   }
 
   private getControllerTypeName(type: number): string {
     if (type === ControllerType.XBOX) {
-      return 'Xbox';
+      return "Xbox";
     } else if (type === ControllerType.PS) {
-      return 'PlayStation';
+      return "PlayStation";
     } else if (type === ControllerType.NINTENDO) {
-      return 'Nintendo';
+      return "Nintendo";
     } else {
-      return 'Generic';
+      return "Generic";
     }
   }
-  
+
   private getControllerTypeIcon(type: number): string {
     if (type === ControllerType.XBOX) {
-      return '🎮';
+      return "🎮";
     } else if (type === ControllerType.PS) {
-      return '🎮';
+      return "🎮";
     } else if (type === ControllerType.NINTENDO) {
-      return '🕹️';
+      return "🕹️";
     } else {
-      return '🎮';
+      return "🎮";
     }
   }
-  
+
   private getPollRateColor(): ResourceColor {
     if (this.pollRate >= 250) {
       return AppColors.Success;
@@ -315,20 +327,20 @@ export struct UsbControllerTestView {
       return AppColors.Error;
     }
   }
-  
+
   private getPollRateDesc(): string {
     if (this.pollRate >= 500) {
-      return '专业级响应';
+      return "专业级响应";
     } else if (this.pollRate >= 250) {
-      return '流畅游戏';
+      return "流畅游戏";
     } else if (this.pollRate >= 125) {
-      return '标准响应';
+      return "标准响应";
     } else if (this.pollRate >= 60) {
-      return '可能有延迟';
+      return "可能有延迟";
     } else if (this.pollRate > 0) {
-      return '响应较慢';
+      return "响应较慢";
     } else {
-      return '等待数据';
+      return "等待数据";
     }
   }
 
@@ -339,7 +351,7 @@ export struct UsbControllerTestView {
     }
     return `${percent}%`;
   }
-  
+
   private formatTriggerValue(value: number): string {
     return `${Math.round(value * 100)}%`;
   }
@@ -353,14 +365,12 @@ export struct UsbControllerTestView {
       Column({ space: 10 }) {
         Column({ space: 10 }) {
           Row() {
-            Text('设备状态')
+            Text("设备状态")
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
-
             Blank()
-
-            Button(this.isRunning ? '停止' : '启动')
+            Button(this.isRunning ? "停止" : "启动")
               .onClick(() => {
                 if (this.isRunning) {
                   this.stopDriver();
@@ -374,8 +384,7 @@ export struct UsbControllerTestView {
               .height(30)
               .padding({ left: 14, right: 14 })
               .borderRadius(15)
-
-            Button('刷新')
+            Button("刷新")
               .onClick(() => {
                 this.checkUsbDevices();
               })
@@ -386,30 +395,31 @@ export struct UsbControllerTestView {
               .padding({ left: 14, right: 14 })
               .borderRadius(15)
               .margin({ left: 8 })
-          }
-          .width('100%')
-
+          }.width("100%")
           Row() {
             Column({ space: 2 }) {
               Text(`${this.deviceCount}`)
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(AppColors.TextPrimary)
-              Text('USB 设备')
+              Text("USB 设备")
                 .fontSize(11)
                 .fontColor(AppColors.TextSecondary)
             }
             .alignItems(HorizontalAlign.Center)
             .layoutWeight(1)
-
-            Row().width(1).height(28).backgroundColor(AppColors.Divider)
-
+            Row()
+              .width(1)
+              .height(28)
+              .backgroundColor(AppColors.Divider)
             Column({ space: 2 }) {
               Text(`${this.connectedDevices.length}`)
                 .fontSize(20)
                 .fontWeight(FontWeight.Bold)
-                .fontColor(this.connectedDevices.length > 0 ? AppColors.Success : AppColors.TextTertiary)
-              Text('已连接')
+                .fontColor(
+                  this.connectedDevices.length > 0 ? AppColors.Success : AppColors.TextTertiary,
+                )
+              Text("已连接")
                 .fontSize(11)
                 .fontColor(AppColors.TextSecondary)
             }
@@ -417,7 +427,7 @@ export struct UsbControllerTestView {
             .layoutWeight(1)
 
             if (this.connectedDevices.length > 0) {
-              Row().width(1).height(28).backgroundColor(AppColors.Divider)
+              Row().width(1).height(28).backgroundColor(AppColors.Divider);
 
               Column({ space: 2 }) {
                 Row() {
@@ -425,7 +435,7 @@ export struct UsbControllerTestView {
                     .fontSize(20)
                     .fontWeight(FontWeight.Bold)
                     .fontColor(this.getPollRateColor())
-                  Text(' Hz')
+                  Text(" Hz")
                     .fontSize(12)
                     .fontColor(AppColors.TextSecondary)
                 }
@@ -434,36 +444,36 @@ export struct UsbControllerTestView {
                   .fontColor(AppColors.TextSecondary)
               }
               .alignItems(HorizontalAlign.Center)
-              .layoutWeight(1)
+              .layoutWeight(1);
             }
-          }
-          .width('100%')
+          }.width("100%")
 
           if (this.connectedDevices.length > 0) {
             ForEach(this.connectedDevices, (device: DeviceInfo) => {
               Row({ space: 8 }) {
-                Text(this.getControllerTypeIcon(device.type))
-                  .fontSize(20)
+                Text(this.getControllerTypeIcon(device.type)).fontSize(20)
                 Column({ space: 1 }) {
                   Text(device.name)
                     .fontSize(13)
                     .fontWeight(FontWeight.Medium)
                     .fontColor(AppColors.TextPrimary)
-                  Text(`${this.getControllerTypeName(device.type)} · VID:0x${device.vid.toString(16).toUpperCase()} PID:0x${device.pid.toString(16).toUpperCase()}`)
+                  Text(
+                    `${this.getControllerTypeName(device.type)} · VID:0x${device.vid.toString(16).toUpperCase()} PID:0x${device.pid.toString(16).toUpperCase()}`,
+                  )
                     .fontSize(10)
                     .fontColor(AppColors.TextTertiary)
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
               }
-              .width('100%')
+              .width("100%")
               .padding({ left: 8, right: 8, top: 6, bottom: 6 })
-              .backgroundColor('#0A808080')
-              .borderRadius(6)
-            })
+              .backgroundColor("#0A808080")
+              .borderRadius(6);
+            });
           }
         }
-        .width('100%')
+        .width("100%")
         .padding(12)
         .backgroundColor(AppColors.CardBackground)
         .borderRadius(12)
@@ -472,174 +482,221 @@ export struct UsbControllerTestView {
         if (this.hasInput) {
           Column({ space: 10 }) {
             Row() {
-              Text('输入状态')
+              Text("输入状态")
                 .fontSize(15)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(AppColors.TextPrimary)
               Blank()
-              Text('实时')
+              Text("实时")
                 .fontSize(10)
                 .fontColor(AppColors.Success)
                 .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-                .backgroundColor('#1A4CAF50')
+                .backgroundColor("#1A4CAF50")
                 .borderRadius(4)
-            }
-            .width('100%')
-
+            }.width("100%")
             Row() {
               Column({ space: 4 }) {
                 Row() {
-                  Text('LB')
+                  Text("LB")
                     .fontSize(10)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor((this.displayButtons & ButtonFlags.LB_FLAG) !== 0 ? '#FFFFFF' : AppColors.TextTertiary)
+                    .fontColor(
+                      (this.displayButtons & ButtonFlags.LB_FLAG) !== 0
+                        ? "#FFFFFF"
+                        : AppColors.TextTertiary,
+                    )
                 }
                 .width(48)
                 .height(22)
                 .borderRadius(11)
-                .backgroundColor((this.displayButtons & ButtonFlags.LB_FLAG) !== 0 ? AppColors.Primary : '#1A808080')
+                .backgroundColor(
+                  (this.displayButtons & ButtonFlags.LB_FLAG) !== 0
+                    ? AppColors.Primary
+                    : "#1A808080",
+                )
                 .justifyContent(FlexAlign.Center)
                 .animation({ duration: 60 })
-
                 Row({ space: 4 }) {
-                  Text('LT')
+                  Text("LT")
                     .fontSize(9)
                     .fontColor(AppColors.TextTertiary)
                   Stack({ alignContent: Alignment.Start }) {
-                    Row().width(64).height(6).backgroundColor('#1A808080').borderRadius(3)
+                    Row()
+                      .width(64)
+                      .height(6)
+                      .backgroundColor("#1A808080")
+                      .borderRadius(3)
                     Row()
                       .width(Math.max(3, this.displayLT * 64))
                       .height(6)
                       .borderRadius(3)
-                      .linearGradient({ angle: 90, colors: [['#3D8ECF', 0], ['#5BA8E6', 1]] })
+                      .linearGradient({
+                        angle: 90,
+                        colors: [
+                          ["#3D8ECF", 0],
+                          ["#5BA8E6", 1],
+                        ],
+                      })
                       .animation({ duration: 50, curve: Curve.Linear })
                   }
                 }
-              }
-              .alignItems(HorizontalAlign.Center)
-
+              }.alignItems(HorizontalAlign.Center)
               Blank()
-
               Column({ space: 4 }) {
                 Row() {
-                  Text('RB')
+                  Text("RB")
                     .fontSize(10)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor((this.displayButtons & ButtonFlags.RB_FLAG) !== 0 ? '#FFFFFF' : AppColors.TextTertiary)
+                    .fontColor(
+                      (this.displayButtons & ButtonFlags.RB_FLAG) !== 0
+                        ? "#FFFFFF"
+                        : AppColors.TextTertiary,
+                    )
                 }
                 .width(48)
                 .height(22)
                 .borderRadius(11)
-                .backgroundColor((this.displayButtons & ButtonFlags.RB_FLAG) !== 0 ? AppColors.Error : '#1A808080')
+                .backgroundColor(
+                  (this.displayButtons & ButtonFlags.RB_FLAG) !== 0 ? AppColors.Error : "#1A808080",
+                )
                 .justifyContent(FlexAlign.Center)
                 .animation({ duration: 60 })
-
                 Row({ space: 4 }) {
                   Stack({ alignContent: Alignment.End }) {
-                    Row().width(64).height(6).backgroundColor('#1A808080').borderRadius(3)
+                    Row()
+                      .width(64)
+                      .height(6)
+                      .backgroundColor("#1A808080")
+                      .borderRadius(3)
                     Row()
                       .width(Math.max(3, this.displayRT * 64))
                       .height(6)
                       .borderRadius(3)
-                      .linearGradient({ angle: 90, colors: [['#E85D75', 0], ['#E81123', 1]] })
+                      .linearGradient({
+                        angle: 90,
+                        colors: [
+                          ["#E85D75", 0],
+                          ["#E81123", 1],
+                        ],
+                      })
                       .animation({ duration: 50, curve: Curve.Linear })
                   }
-                  Text('RT')
+                  Text("RT")
                     .fontSize(9)
                     .fontColor(AppColors.TextTertiary)
                 }
-              }
-              .alignItems(HorizontalAlign.Center)
+              }.alignItems(HorizontalAlign.Center)
             }
-            .width('100%')
+            .width("100%")
             .padding({ left: 20, right: 20 })
-
             Row() {
               Column({ space: 14 }) {
                 this.StickVisualizer({ x: this.displayLSX, y: this.displayLSY, isRight: false })
-                Text((this.displayButtons & ButtonFlags.LS_CLK_FLAG) !== 0 ? 'L3 ●' : 'L3')
+                Text((this.displayButtons & ButtonFlags.LS_CLK_FLAG) !== 0 ? "L3 ●" : "L3")
                   .fontSize(9)
-                  .fontColor((this.displayButtons & ButtonFlags.LS_CLK_FLAG) !== 0 ?
-                    AppColors.Primary : AppColors.TextTertiary)
+                  .fontColor(
+                    (this.displayButtons & ButtonFlags.LS_CLK_FLAG) !== 0
+                      ? AppColors.Primary
+                      : AppColors.TextTertiary,
+                  )
                   .margin({ top: -8 })
                 this.DPadVisualizer()
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
-
               Column() {
                 Row({ space: 16 }) {
-                  this.FunctionButton({ label: '≡', buttons: this.displayButtons, flag: ButtonFlags.BACK_FLAG })
-                  this.FunctionButton({ label: '⊙', buttons: this.displayButtons, flag: ButtonFlags.SPECIAL_BUTTON_FLAG })
-                  this.FunctionButton({ label: '▶', buttons: this.displayButtons, flag: ButtonFlags.PLAY_FLAG })
+                  this.FunctionButton({
+                    label: "≡",
+                    buttons: this.displayButtons,
+                    flag: ButtonFlags.BACK_FLAG,
+                  })
+                  this.FunctionButton({
+                    label: "⊙",
+                    buttons: this.displayButtons,
+                    flag: ButtonFlags.SPECIAL_BUTTON_FLAG,
+                  })
+                  this.FunctionButton({
+                    label: "▶",
+                    buttons: this.displayButtons,
+                    flag: ButtonFlags.PLAY_FLAG,
+                  })
                 }
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
               .justifyContent(FlexAlign.Center)
-
               Column({ space: 14 }) {
                 this.ABXYVisualizer()
                 this.StickVisualizer({ x: this.displayRSX, y: this.displayRSY, isRight: true })
-                Text((this.displayButtons & ButtonFlags.RS_CLK_FLAG) !== 0 ? 'R3 ●' : 'R3')
+                Text((this.displayButtons & ButtonFlags.RS_CLK_FLAG) !== 0 ? "R3 ●" : "R3")
                   .fontSize(9)
-                  .fontColor((this.displayButtons & ButtonFlags.RS_CLK_FLAG) !== 0 ?
-                    AppColors.Error : AppColors.TextTertiary)
+                  .fontColor(
+                    (this.displayButtons & ButtonFlags.RS_CLK_FLAG) !== 0
+                      ? AppColors.Error
+                      : AppColors.TextTertiary,
+                  )
                   .margin({ top: -8 })
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
             }
-            .width('100%')
+            .width("100%")
             .padding({ left: 4, right: 4 })
-
             Row() {
               Column() {
-                Text(`L: ${this.formatStickValue(this.displayLSX)},${this.formatStickValue(this.displayLSY)}`)
+                Text(
+                  `L: ${this.formatStickValue(this.displayLSX)},${this.formatStickValue(this.displayLSY)}`,
+                )
                   .fontSize(11)
                   .fontColor(AppColors.TextSecondary)
-                  .fontFamily('monospace')
+                  .fontFamily("monospace")
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
-
-              Row().width(1).height(16).backgroundColor(AppColors.Divider)
-
+              Row()
+                .width(1)
+                .height(16)
+                .backgroundColor(AppColors.Divider)
               Column() {
-                Text(`LT:${this.formatTriggerValue(this.displayLT)} RT:${this.formatTriggerValue(this.displayRT)}`)
+                Text(
+                  `LT:${this.formatTriggerValue(this.displayLT)} RT:${this.formatTriggerValue(this.displayRT)}`,
+                )
                   .fontSize(11)
                   .fontColor(AppColors.TextSecondary)
-                  .fontFamily('monospace')
+                  .fontFamily("monospace")
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
-
-              Row().width(1).height(16).backgroundColor(AppColors.Divider)
-
+              Row()
+                .width(1)
+                .height(16)
+                .backgroundColor(AppColors.Divider)
               Column() {
-                Text(`R: ${this.formatStickValue(this.displayRSX)},${this.formatStickValue(this.displayRSY)}`)
+                Text(
+                  `R: ${this.formatStickValue(this.displayRSX)},${this.formatStickValue(this.displayRSY)}`,
+                )
                   .fontSize(11)
                   .fontColor(AppColors.TextSecondary)
-                  .fontFamily('monospace')
+                  .fontFamily("monospace")
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
             }
-            .width('100%')
+            .width("100%")
             .padding({ left: 4, right: 4, top: 6, bottom: 4 })
-            .backgroundColor('#0A808080')
+            .backgroundColor("#0A808080")
             .borderRadius(6)
           }
-          .width('100%')
+          .width("100%")
           .padding(12)
           .backgroundColor(AppColors.CardBackground)
           .borderRadius(12)
-          .border({ width: 1, color: AppColors.CardBorder })
+          .border({ width: 1, color: AppColors.CardBorder });
         }
-
         Column({ space: 8 }) {
           Row() {
-            Text('调试日志')
+            Text("调试日志")
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
@@ -647,40 +704,38 @@ export struct UsbControllerTestView {
             Text(`${this.logMessages.length} 条`)
               .fontSize(11)
               .fontColor(AppColors.TextTertiary)
-          }
-          .width('100%')
-
+          }.width("100%")
           List() {
             ForEach(this.logMessages, (message: string, index: number) => {
               ListItem() {
                 Text(message)
                   .fontSize(11)
                   .fontColor(AppColors.TextSecondary)
-                  .fontFamily('monospace')
-                  .width('100%')
+                  .fontFamily("monospace")
+                  .width("100%")
               }
-              .padding({ top: 3, bottom: 3 })
+              .padding({ top: 3, bottom: 3 });
             })
           }
           .height(100)
-          .width('100%')
-          .backgroundColor('#0A808080')
+          .width("100%")
+          .backgroundColor("#0A808080")
           .borderRadius(6)
           .padding(8)
         }
-        .width('100%')
+        .width("100%")
         .padding(12)
         .backgroundColor(AppColors.CardBackground)
         .borderRadius(12)
         .border({ width: 1, color: AppColors.CardBorder })
       }
       .padding(12)
-      .width('100%')
+      .width("100%")
     }
-    .width('100%')
-    .height('100%')
+    .width("100%")
+    .height("100%")
     .backgroundColor(AppColors.Background)
-    .scrollBar(BarState.Off)
+    .scrollBar(BarState.Off);
   }
 
   @Builder
@@ -689,39 +744,41 @@ export struct UsbControllerTestView {
       Circle()
         .width(76)
         .height(76)
-        .fill('#0A808080')
-        .stroke('#20808080')
+        .fill("#0A808080")
+        .stroke("#20808080")
         .strokeWidth(1.5)
-
       Line()
         .width(56)
         .height(0.5)
-        .backgroundColor('#15808080')
+        .backgroundColor("#15808080")
       Line()
         .width(0.5)
         .height(56)
-        .backgroundColor('#15808080')
-
+        .backgroundColor("#15808080")
       Circle()
         .width(12)
         .height(12)
         .fill(Color.Transparent)
-        .stroke('#18808080')
+        .stroke("#18808080")
         .strokeWidth(0.5)
-      
       Circle()
         .width(18)
         .height(18)
-        .fill($$.isRight ? '#E81123' : '#3D8ECF')
-        .shadow({ radius: 10, color: $$.isRight ? '#50E81123' : '#503D8ECF', offsetX: 0, offsetY: 0 })
+        .fill($$.isRight ? "#E81123" : "#3D8ECF")
+        .shadow({
+          radius: 10,
+          color: $$.isRight ? "#50E81123" : "#503D8ECF",
+          offsetX: 0,
+          offsetY: 0,
+        })
         .offset({
           x: ($$.x / 32767) * 28,
-          y: -($$.y / 32767) * 28
+          y: -($$.y / 32767) * 28,
         })
         .animation({ duration: 50, curve: Curve.Linear })
     }
     .width(76)
-    .height(76)
+    .height(76);
   }
 
   @Builder
@@ -729,30 +786,52 @@ export struct UsbControllerTestView {
     Column() {
       Text($$.label)
         .fontSize(13)
-        .fontColor(($$.buttons & $$.flag) !== 0 ? '#FFFFFF' : AppColors.TextTertiary)
+        .fontColor(($$.buttons & $$.flag) !== 0 ? "#FFFFFF" : AppColors.TextTertiary)
     }
     .width(30)
     .height(30)
     .borderRadius(15)
-    .backgroundColor(($$.buttons & $$.flag) !== 0 ? '#606060' : '#1A808080')
+    .backgroundColor(($$.buttons & $$.flag) !== 0 ? "#606060" : "#1A808080")
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .scale({ x: ($$.buttons & $$.flag) !== 0 ? 0.88 : 1, y: ($$.buttons & $$.flag) !== 0 ? 0.88 : 1 })
-    .animation({ duration: 80 })
+    .scale({
+      x: ($$.buttons & $$.flag) !== 0 ? 0.88 : 1,
+      y: ($$.buttons & $$.flag) !== 0 ? 0.88 : 1,
+    })
+    .animation({ duration: 80 });
   }
-  
+
   @Builder
   ABXYVisualizer() {
     Column({ space: 1 }) {
-      this.ABXYButton({ label: 'Y', buttons: this.displayButtons, flag: ButtonFlags.Y_FLAG, color: '#FFB900' })
-
+      this.ABXYButton({
+        label: "Y",
+        buttons: this.displayButtons,
+        flag: ButtonFlags.Y_FLAG,
+        color: "#FFB900",
+      })
       Row({ space: 22 }) {
-        this.ABXYButton({ label: 'X', buttons: this.displayButtons, flag: ButtonFlags.X_FLAG, color: '#0078D4' })
-        this.ABXYButton({ label: 'B', buttons: this.displayButtons, flag: ButtonFlags.B_FLAG, color: '#E81123' })
+        this.ABXYButton({
+          label: "X",
+          buttons: this.displayButtons,
+          flag: ButtonFlags.X_FLAG,
+          color: "#0078D4",
+        })
+        this.ABXYButton({
+          label: "B",
+          buttons: this.displayButtons,
+          flag: ButtonFlags.B_FLAG,
+          color: "#E81123",
+        })
       }
 
-      this.ABXYButton({ label: 'A', buttons: this.displayButtons, flag: ButtonFlags.A_FLAG, color: '#107C10' })
-    }
+      this.ABXYButton({
+        label: "A",
+        buttons: this.displayButtons,
+        flag: ButtonFlags.A_FLAG,
+        color: "#107C10",
+      })
+    };
   }
 
   @Builder
@@ -761,37 +840,42 @@ export struct UsbControllerTestView {
       Text($$.label)
         .fontSize(13)
         .fontWeight(FontWeight.Bold)
-        .fontColor(($$.buttons & $$.flag) !== 0 ? '#FFFFFF' : AppColors.TextTertiary)
+        .fontColor(($$.buttons & $$.flag) !== 0 ? "#FFFFFF" : AppColors.TextTertiary)
     }
     .width(34)
     .height(34)
     .borderRadius(17)
-    .backgroundColor(($$.buttons & $$.flag) !== 0 ? $$.color : '#1A808080')
+    .backgroundColor(($$.buttons & $$.flag) !== 0 ? $$.color : "#1A808080")
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .shadow(($$.buttons & $$.flag) !== 0 ?
-      { radius: 10, color: `${$$.color}80`, offsetX: 0, offsetY: 1 } : undefined)
-    .scale({ x: ($$.buttons & $$.flag) !== 0 ? 1.12 : 1, y: ($$.buttons & $$.flag) !== 0 ? 1.12 : 1 })
-    .animation({ duration: 60 })
+    .shadow(
+      ($$.buttons & $$.flag) !== 0
+        ? { radius: 10, color: `${$$.color}80`, offsetX: 0, offsetY: 1 }
+        : undefined,
+    )
+    .scale({
+      x: ($$.buttons & $$.flag) !== 0 ? 1.12 : 1,
+      y: ($$.buttons & $$.flag) !== 0 ? 1.12 : 1,
+    })
+    .animation({ duration: 60 });
   }
-  
+
   @Builder
   DPadVisualizer() {
     Column({ space: 1 }) {
-      this.DPadArrow({ label: '▲', buttons: this.displayButtons, flag: ButtonFlags.UP_FLAG })
-
+      this.DPadArrow({ label: "▲", buttons: this.displayButtons, flag: ButtonFlags.UP_FLAG })
       Row({ space: 1 }) {
-        this.DPadArrow({ label: '◀', buttons: this.displayButtons, flag: ButtonFlags.LEFT_FLAG })
+        this.DPadArrow({ label: "◀", buttons: this.displayButtons, flag: ButtonFlags.LEFT_FLAG })
         Column()
           .width(26)
           .height(26)
-          .backgroundColor('#1A808080')
+          .backgroundColor("#1A808080")
           .borderRadius(3)
-        this.DPadArrow({ label: '▶', buttons: this.displayButtons, flag: ButtonFlags.RIGHT_FLAG })
+        this.DPadArrow({ label: "▶", buttons: this.displayButtons, flag: ButtonFlags.RIGHT_FLAG })
       }
 
-      this.DPadArrow({ label: '▼', buttons: this.displayButtons, flag: ButtonFlags.DOWN_FLAG })
-    }
+      this.DPadArrow({ label: "▼", buttons: this.displayButtons, flag: ButtonFlags.DOWN_FLAG })
+    };
   }
 
   @Builder
@@ -799,15 +883,18 @@ export struct UsbControllerTestView {
     Column() {
       Text($$.label)
         .fontSize(11)
-        .fontColor(($$.buttons & $$.flag) !== 0 ? '#FFFFFF' : AppColors.TextTertiary)
+        .fontColor(($$.buttons & $$.flag) !== 0 ? "#FFFFFF" : AppColors.TextTertiary)
     }
     .width(26)
     .height(26)
     .borderRadius(3)
-    .backgroundColor(($$.buttons & $$.flag) !== 0 ? AppColors.Primary : '#1A808080')
+    .backgroundColor(($$.buttons & $$.flag) !== 0 ? AppColors.Primary : "#1A808080")
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .scale({ x: ($$.buttons & $$.flag) !== 0 ? 1.08 : 1, y: ($$.buttons & $$.flag) !== 0 ? 1.08 : 1 })
-    .animation({ duration: 60 })
+    .scale({
+      x: ($$.buttons & $$.flag) !== 0 ? 1.08 : 1,
+      y: ($$.buttons & $$.flag) !== 0 ? 1.08 : 1,
+    })
+    .animation({ duration: 60 });
   }
 }

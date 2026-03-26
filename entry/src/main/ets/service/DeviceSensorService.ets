@@ -9,17 +9,15 @@
  */
 
 /**
- * 
- * 
+ *
+ *
  */
 
-import { sensor } from '@kit.SensorServiceKit';
-import { display } from '@kit.ArkUI';
-
+import { sensor } from "@kit.SensorServiceKit";
+import { display } from "@kit.ArkUI";
 
 export const LI_MOTION_TYPE_ACCEL = 0x01;
 export const LI_MOTION_TYPE_GYRO = 0x02;
-
 
 const RAD_TO_DEG = 57.2957795;
 
@@ -28,9 +26,8 @@ export type SensorDataCallback = (
   motionType: number,
   x: number,
   y: number,
-  z: number
+  z: number,
 ) => void;
-
 
 export class DeviceSensorService {
   private static instance: DeviceSensorService;
@@ -76,23 +73,23 @@ export class DeviceSensorService {
     }
 
     try {
-      sensor.once(sensor.SensorId.GYROSCOPE, (_data: sensor.GyroscopeResponse) => {
-      });
+      sensor.once(sensor.SensorId.GYROSCOPE, (_data: sensor.GyroscopeResponse) => {});
       this.gyroAvailable = true;
     } catch {
       this.gyroAvailable = false;
     }
 
     try {
-      sensor.once(sensor.SensorId.ACCELEROMETER, (_data: sensor.AccelerometerResponse) => {
-      });
+      sensor.once(sensor.SensorId.ACCELEROMETER, (_data: sensor.AccelerometerResponse) => {});
       this.accelAvailable = true;
     } catch {
       this.accelAvailable = false;
     }
 
     this.availabilityChecked = true;
-    console.info(`[DeviceSensor] 可用性检查: gyro=${this.gyroAvailable}, accel=${this.accelAvailable}`);
+    console.info(
+      `[DeviceSensor] 可用性检查: gyro=${this.gyroAvailable}, accel=${this.accelAvailable}`,
+    );
   }
 
   setDataCallback(callback: SensorDataCallback | null): void {
@@ -113,7 +110,7 @@ export class DeviceSensorService {
   }
 
   /**
-   * 
+   *
    */
   private correctOrientation(rawX: number, rawY: number, rawZ: number): number[] {
     const rotation = this.getDeviceRotation();
@@ -151,7 +148,7 @@ export class DeviceSensorService {
   }
 
   /**
-   * 
+   *
    */
   setMotionEventState(motionType: number, reportRateHz: number): void {
     if (motionType === LI_MOTION_TYPE_GYRO) {
@@ -174,7 +171,7 @@ export class DeviceSensorService {
     this.gyroReportRateHz = reportRateHz;
 
     if (reportRateHz === 0) {
-      console.info('[DeviceSensor] 陀螺仪已禁用');
+      console.info("[DeviceSensor] 陀螺仪已禁用");
       if (this.dataCallback) {
         this.dataCallback(this.controllerNumber, LI_MOTION_TYPE_GYRO, 0, 0, 0);
       }
@@ -184,29 +181,35 @@ export class DeviceSensorService {
     const intervalUs = Math.floor(1000000 / Math.min(200, reportRateHz));
 
     try {
-      sensor.on(sensor.SensorId.GYROSCOPE, (data: sensor.GyroscopeResponse) => {
-        if (data.x === this.lastGyroValues[0] &&
+      sensor.on(
+        sensor.SensorId.GYROSCOPE,
+        (data: sensor.GyroscopeResponse) => {
+          if (
+            data.x === this.lastGyroValues[0] &&
             data.y === this.lastGyroValues[1] &&
-            data.z === this.lastGyroValues[2]) {
-          return;
-        }
-        this.lastGyroValues[0] = data.x;
-        this.lastGyroValues[1] = data.y;
-        this.lastGyroValues[2] = data.z;
+            data.z === this.lastGyroValues[2]
+          ) {
+            return;
+          }
+          this.lastGyroValues[0] = data.x;
+          this.lastGyroValues[1] = data.y;
+          this.lastGyroValues[2] = data.z;
 
-        const rawX = data.x * RAD_TO_DEG;
-        const rawY = data.y * RAD_TO_DEG;
-        const rawZ = data.z * RAD_TO_DEG;
+          const rawX = data.x * RAD_TO_DEG;
+          const rawY = data.y * RAD_TO_DEG;
+          const rawZ = data.z * RAD_TO_DEG;
 
-        const corrected = this.correctOrientation(rawX, rawY, rawZ);
-        const cx = corrected[0];
-        const cy = corrected[1];
-        const cz = corrected[2];
+          const corrected = this.correctOrientation(rawX, rawY, rawZ);
+          const cx = corrected[0];
+          const cy = corrected[1];
+          const cz = corrected[2];
 
-        if (this.dataCallback) {
-          this.dataCallback(this.controllerNumber, LI_MOTION_TYPE_GYRO, cx, cy, cz);
-        }
-      }, { interval: intervalUs });
+          if (this.dataCallback) {
+            this.dataCallback(this.controllerNumber, LI_MOTION_TYPE_GYRO, cx, cy, cz);
+          }
+        },
+        { interval: intervalUs },
+      );
 
       this.gyroEnabled = true;
       console.info(`[DeviceSensor] 陀螺仪已启用: rate=${reportRateHz}Hz, interval=${intervalUs}us`);
@@ -229,39 +232,47 @@ export class DeviceSensorService {
     this.accelReportRateHz = reportRateHz;
 
     if (reportRateHz === 0) {
-      console.info('[DeviceSensor] 加速度计已禁用');
+      console.info("[DeviceSensor] 加速度计已禁用");
       return;
     }
 
     const intervalUs = Math.floor(1000000 / Math.min(200, reportRateHz));
 
     try {
-      sensor.on(sensor.SensorId.ACCELEROMETER, (data: sensor.AccelerometerResponse) => {
-        if (data.x === this.lastAccelValues[0] &&
+      sensor.on(
+        sensor.SensorId.ACCELEROMETER,
+        (data: sensor.AccelerometerResponse) => {
+          if (
+            data.x === this.lastAccelValues[0] &&
             data.y === this.lastAccelValues[1] &&
-            data.z === this.lastAccelValues[2]) {
-          return;
-        }
-        this.lastAccelValues[0] = data.x;
-        this.lastAccelValues[1] = data.y;
-        this.lastAccelValues[2] = data.z;
+            data.z === this.lastAccelValues[2]
+          ) {
+            return;
+          }
+          this.lastAccelValues[0] = data.x;
+          this.lastAccelValues[1] = data.y;
+          this.lastAccelValues[2] = data.z;
 
-        const rawX = data.x;
-        const rawY = data.y;
-        const rawZ = data.z;
+          const rawX = data.x;
+          const rawY = data.y;
+          const rawZ = data.z;
 
-        const corrected = this.correctOrientation(rawX, rawY, rawZ);
-        const cx = corrected[0];
-        const cy = corrected[1];
-        const cz = corrected[2];
+          const corrected = this.correctOrientation(rawX, rawY, rawZ);
+          const cx = corrected[0];
+          const cy = corrected[1];
+          const cz = corrected[2];
 
-        if (this.dataCallback) {
-          this.dataCallback(this.controllerNumber, LI_MOTION_TYPE_ACCEL, cx, cy, cz);
-        }
-      }, { interval: intervalUs });
+          if (this.dataCallback) {
+            this.dataCallback(this.controllerNumber, LI_MOTION_TYPE_ACCEL, cx, cy, cz);
+          }
+        },
+        { interval: intervalUs },
+      );
 
       this.accelEnabled = true;
-      console.info(`[DeviceSensor] 加速度计已启用: rate=${reportRateHz}Hz, interval=${intervalUs}us`);
+      console.info(
+        `[DeviceSensor] 加速度计已启用: rate=${reportRateHz}Hz, interval=${intervalUs}us`,
+      );
     } catch (err) {
       console.error(`[DeviceSensor] 启用加速度计失败: ${err}`);
       this.accelAvailable = false;
@@ -272,7 +283,7 @@ export class DeviceSensorService {
     this.setGyroState(0);
     this.setAccelState(0);
     this.dataCallback = null;
-    console.info('[DeviceSensor] 所有传感器已禁用');
+    console.info("[DeviceSensor] 所有传感器已禁用");
   }
 
   reenableActiveSensors(): void {

@@ -8,7 +8,6 @@
  * (at your option) any later version.
  */
 
-
 export type JoystickMovementCallback = (x: number, y: number) => void;
 
 export type JoystickClickCallback = () => void;
@@ -16,13 +15,12 @@ export type JoystickClickCallback = () => void;
 export type JoystickRevokeCallback = () => void;
 
 export type EditModeGetter = () => boolean;
-
 @Component
 export struct VirtualJoystick {
   @Prop joystickSize: number = 120;
-  @Prop ringColor: string = '#6050C080';
-  @Prop stickColor: string = '#A050C080';
-  @Prop pressedColor: string = '#C070E090';
+  @Prop ringColor: string = "#6050C080";
+  @Prop stickColor: string = "#A050C080";
+  @Prop pressedColor: string = "#C070E090";
   @Prop opacity_: number = 80;
   @Prop invisibleMode: boolean = false;
 
@@ -63,21 +61,16 @@ export struct VirtualJoystick {
   build() {
     Stack() {
       if (this.invisibleMode) {
-        Column()
-          .width('100%')
-          .height('100%')
-          .backgroundColor('#01000000')
+        Column().width("100%").height("100%").backgroundColor("#01000000");
       }
-
       Circle()
         .width(this.stickOuterRadius * 2)
         .height(this.stickOuterRadius * 2)
-        .fill('#01000000')
+        .fill("#01000000")
         .stroke(this.isPressed ? this.pressedColor : this.ringColor)
         .strokeWidth(1.5)
         .translate(this.invisibleMode ? { x: this.dynamicOffsetX, y: this.dynamicOffsetY } : {})
         .opacity(this.invisibleMode && !this.isPressed ? 0 : 1)
-
       Circle()
         .width(this.stickInnerRadius * 2)
         .height(this.stickInnerRadius * 2)
@@ -86,7 +79,7 @@ export struct VirtualJoystick {
         .strokeWidth(1)
         .translate({
           x: this.stickX * this.stickMaxTravel + (this.invisibleMode ? this.dynamicOffsetX : 0),
-          y: this.stickY * this.stickMaxTravel + (this.invisibleMode ? this.dynamicOffsetY : 0)
+          y: this.stickY * this.stickMaxTravel + (this.invisibleMode ? this.dynamicOffsetY : 0),
         })
         .opacity(this.invisibleMode && !this.isPressed ? 0 : 1)
     }
@@ -100,7 +93,7 @@ export struct VirtualJoystick {
       event.stopPropagation();
       if (this.isEditMode()) return;
       this.handleTouch(event);
-    })
+    });
   }
 
   private handleTouch(event: TouchEvent): void {

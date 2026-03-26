@@ -8,43 +8,41 @@
  * (at your option) any later version.
  */
 
-
-import { display, LengthMetrics, promptAction, router } from '@kit.ArkUI';
-import { common } from '@kit.AbilityKit';
-import { displaySync } from '@kit.ArkGraphics2D';
-import { VirtualControllerOverlay } from '../components/VirtualController';
-import { PerformanceOverlay } from '../components/PerformanceOverlay';
-import { OptionPickerDialog, OptionPickerDialogConfig } from '../components/OptionPickerDialog';
-import { GameMenuCallbacks, GameMenuDialog } from '../components/GameMenuDialog';
-import { StreamMenuManager } from '../components/StreamMenuManager';
-import { StreamViewModel, TouchMode } from '../viewmodel/StreamViewModel';
-import { TouchInputHandler, TouchInputMode } from '../service/TouchInputHandler';
-import { StreamWindowManager } from '../service/StreamWindowManager';
-import { Shortcut, ShortcutManager } from '../components/ShortcutManager';
-import { ShortcutEditData, ShortcutEditorDialog } from '../components/ShortcutEditorDialog';
+import { display, LengthMetrics, promptAction, router } from "@kit.ArkUI";
+import { common } from "@kit.AbilityKit";
+import { displaySync } from "@kit.ArkGraphics2D";
+import { VirtualControllerOverlay } from "../components/VirtualController";
+import { PerformanceOverlay } from "../components/PerformanceOverlay";
+import { OptionPickerDialog, OptionPickerDialogConfig } from "../components/OptionPickerDialog";
+import { GameMenuCallbacks, GameMenuDialog } from "../components/GameMenuDialog";
+import { StreamMenuManager } from "../components/StreamMenuManager";
+import { StreamViewModel, TouchMode } from "../viewmodel/StreamViewModel";
+import { TouchInputHandler, TouchInputMode } from "../service/TouchInputHandler";
+import { StreamWindowManager } from "../service/StreamWindowManager";
+import { Shortcut, ShortcutManager } from "../components/ShortcutManager";
+import { ShortcutEditData, ShortcutEditorDialog } from "../components/ShortcutEditorDialog";
 import {
   GamepadManager,
   GamepadState,
   MoonlightControllerType,
-  MouseEmulationCallback
-} from '../service/GamepadManager';
-import { GyroAssistService } from '../service/GyroAssistService';
-import { BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE, MoonBridge } from '../service/MoonBridge';
-import { SuperCmd } from '../service/NvHttp';
-import { KeyAction, sendShortcutKeys, VirtualKey } from '../service/CustomKeyTypes';
-import { pointer } from '@kit.InputKit';
-import { InputInterceptorService } from '../service/InputInterceptorService';
-import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { SettingsKeys } from '../service/SettingsService';
-import { StreamInputHandler } from './StreamInputHandler';
-import { StreamLifecycleManager } from './StreamLifecycleManager';
-import { StreamIMEManager } from './StreamIMEManager';
-import { VirtualKeyboard } from '../components/VirtualKeyboard';
-import { CustomKeyOverlay } from '../components/CustomKeyOverlay';
-import { CustomKeyManager, CustomKeyManagerHost, SessionLike } from '../service/CustomKeyManager';
-import { CustomKeyStore } from '../service/CustomKeyStore';
-import { PanZoomHandler, PanZoomState, PointXY } from '../service/PanZoomHandler';
-
+  MouseEmulationCallback,
+} from "../service/GamepadManager";
+import { GyroAssistService } from "../service/GyroAssistService";
+import { BUTTON_ACTION_PRESS, BUTTON_ACTION_RELEASE, MoonBridge } from "../service/MoonBridge";
+import { SuperCmd } from "../service/NvHttp";
+import { KeyAction, sendShortcutKeys, VirtualKey } from "../service/CustomKeyTypes";
+import { pointer } from "@kit.InputKit";
+import { InputInterceptorService } from "../service/InputInterceptorService";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { SettingsKeys } from "../service/SettingsService";
+import { StreamInputHandler } from "./StreamInputHandler";
+import { StreamLifecycleManager } from "./StreamLifecycleManager";
+import { StreamIMEManager } from "./StreamIMEManager";
+import { VirtualKeyboard } from "../components/VirtualKeyboard";
+import { CustomKeyOverlay } from "../components/CustomKeyOverlay";
+import { CustomKeyManager, CustomKeyManagerHost, SessionLike } from "../service/CustomKeyManager";
+import { CustomKeyStore } from "../service/CustomKeyStore";
+import { PanZoomHandler, PanZoomState, PointXY } from "../service/PanZoomHandler";
 
 class MoonBridgeMouseCallback implements MouseEmulationCallback {
   sendMouseMove(deltaX: number, deltaY: number): void {
@@ -72,7 +70,6 @@ interface StreamPageParams {
   displayGuid?: string;
   useVdd?: boolean;
 }
-
 
 class CustomKeyManagerHostImpl implements CustomKeyManagerHost {
   getSessionFn: () => SessionLike | null = () => null;
@@ -127,9 +124,9 @@ class CustomKeyManagerHostImpl implements CustomKeyManagerHost {
 struct StreamPage {
   // ViewModel
   @State viewModel: StreamViewModel = new StreamViewModel();
-  
-  @State xComponentWidth: Length = '100%';
-  @State xComponentHeight: Length = '100%';
+
+  @State xComponentWidth: Length = "100%";
+  @State xComponentHeight: Length = "100%";
   @State xComponentAlignment: Alignment = Alignment.Center;
   @State xComponentOffsetX: number = 0;
   @State xComponentOffsetY: number = 0;
@@ -149,22 +146,24 @@ struct StreamPage {
   @State videoScale: number = 1.0;
   @State videoTranslateX: number = 0;
   @State videoTranslateY: number = 0;
-  
+
   private mouseDisplaySync: displaySync.DisplaySync | null = null;
-  
+
   private inputHandler: StreamInputHandler = new StreamInputHandler();
   private lifecycleManager: StreamLifecycleManager = new StreamLifecycleManager();
-  private imeManager: StreamIMEManager = new StreamIMEManager(getContext(this) as common.UIAbilityContext);
-  
+  private imeManager: StreamIMEManager = new StreamIMEManager(
+    getContext(this) as common.UIAbilityContext,
+  );
+
   private gameMenuDialogController: CustomDialogController | null = null;
   private shortcutEditorController: CustomDialogController | null = null;
   private optionPickerDialogController: CustomDialogController | null = null;
   private optionPickerDialogConfig: OptionPickerDialogConfig = {
-    title: '',
+    title: "",
     options: [],
-    onSelect: () => {}
+    onSelect: () => {},
   };
-  
+
   private xComponentActualWidthVp: number = 0;
   private xComponentActualHeightVp: number = 0;
 
@@ -177,23 +176,23 @@ struct StreamPage {
   private gamepadManager: GamepadManager = GamepadManager.getInstance();
   private customKeyManager: CustomKeyManager | null = null;
   private panZoomHandler: PanZoomHandler = new PanZoomHandler();
-  private controllerTypes: Map<number, number> = new Map();  // slot → MoonlightControllerType
-  
-  private computerId: string = '';
+  private controllerTypes: Map<number, number> = new Map(); // slot → MoonlightControllerType
+
+  private computerId: string = "";
   private appId: number = 0;
-  private appName: string = '';
-  private displayGuid: string = '';
+  private appName: string = "";
+  private displayGuid: string = "";
   private useVdd: boolean = false;
   private cmdList: SuperCmd[] = [];
   private enableBackgroundTask: boolean = true;
-  
+
   aboutToAppear(): void {
     const params = router.getParams() as StreamPageParams;
     if (params) {
       this.computerId = params.computerId;
       this.appId = params.appId;
-      this.appName = params.appName || '';
-      this.displayGuid = params.displayGuid || '';
+      this.appName = params.appName || "";
+      this.displayGuid = params.displayGuid || "";
       this.useVdd = params.useVdd || false;
       if (params.cmdList) {
         try {
@@ -212,15 +211,14 @@ struct StreamPage {
         }
       });
     }
-    
+
     this.windowManager = new StreamWindowManager(this.context);
     this.windowManager.setOnWindowSizeChanged(() => this.recalculateXComponentSize());
-    
+
     this.shortcutManager.initialize(this.context);
-    
+
     this.menuManager = new StreamMenuManager(this.viewModel, {
-      onResume: () => {
-      },
+      onResume: () => {},
       onDisconnect: () => {
         this.stopStreaming();
       },
@@ -234,9 +232,9 @@ struct StreamPage {
         setTimeout(() => {
           this.showTouchModeMenu();
         }, 100);
-      }
+      },
     });
-    
+
     this.initializeGamepad();
 
     const customKeyHost = new CustomKeyManagerHostImpl();
@@ -248,8 +246,12 @@ struct StreamPage {
         this.imeManager.show();
       }
     };
-    customKeyHost.showIMEFn = (): void => { this.imeManager.show(); };
-    customKeyHost.openGameMenuFn = (): void => { this.showStreamMenu(); };
+    customKeyHost.showIMEFn = (): void => {
+      this.imeManager.show();
+    };
+    customKeyHost.openGameMenuFn = (): void => {
+      this.showStreamMenu();
+    };
     customKeyHost.toggleMouseModeFn = (): void => {
       this.showTouchModeMenu();
     };
@@ -262,9 +264,11 @@ struct StreamPage {
     customKeyHost.hideCustomKeysFn = (): void => {
       this.showCustomKeys = false;
     };
-    customKeyHost.onCustomKeysImportedFn = (): void => { this.showCustomKeys = true; };
+    customKeyHost.onCustomKeysImportedFn = (): void => {
+      this.showCustomKeys = true;
+    };
     this.customKeyManager = new CustomKeyManager(customKeyHost);
-    
+
     this.inputHandler.initialize(this.viewModel, this.gamepadManager);
     this.inputHandler.setOnShowStreamMenu(() => this.showStreamMenu());
 
@@ -280,7 +284,7 @@ struct StreamPage {
         this.touchInputHandler.setCoordinateTransform(null);
       }
     });
-    
+
     this.lifecycleManager.initialize(this.viewModel, this.windowManager, {
       updateXComponentSize: (width: Length, height: Length) => {
         this.xComponentWidth = width;
@@ -291,22 +295,22 @@ struct StreamPage {
       },
       reconnectStreaming: () => {
         this.reconnectStreaming();
-      }
+      },
     });
-    
+
     this.imeManager.initialize(this.viewModel, {
       onKeyboardVisibilityChanged: (visible: boolean) => {
         this.showKeyboardPanel = visible;
       },
       onKeyboardHeightChanged: (height: number) => {
         this.keyboardHeight = height;
-      }
+      },
     });
-    
+
     this.initializeDisplay();
-    
+
     this.lifecycleManager.registerAppStateListener();
-    
+
     this.lifecycleManager.registerDisplayChangeListener();
   }
   private initializeGamepad(): void {
@@ -319,11 +323,11 @@ struct StreamPage {
       onGamepadDisconnected: (deviceId: number) => {
         console.info(`手柄已断开: ID ${deviceId}`);
         this.controllerTypes.delete(deviceId);
-        promptAction.showToast({ message: '手柄已断开' });
+        promptAction.showToast({ message: "手柄已断开" });
       },
       onGamepadInput: (deviceId: number, state: GamepadState) => {
         this.handleGamepadInput(deviceId, state);
-      }
+      },
     });
 
     this.gamepadManager.setMouseEmulationCallback(new MoonBridgeMouseCallback());
@@ -336,7 +340,7 @@ struct StreamPage {
       this.showStreamMenu();
     });
   }
-  
+
   private initializeGyroAssist(): void {
     const settings = this.viewModel.inputSettings;
     if (!settings) return;
@@ -346,41 +350,49 @@ struct StreamPage {
       sensitivity: settings.gyroSensitivity,
       invertX: settings.gyroInvertX,
       invertY: settings.gyroInvertY,
-      activationKey: settings.gyroActivationKey
+      activationKey: settings.gyroActivationKey,
     });
 
-    gyroAssist.setSendCallback((
-      deviceId: number,
-      buttons: number,
-      leftStickX: number,
-      leftStickY: number,
-      rightStickX: number,
-      rightStickY: number,
-      leftTrigger: number,
-      rightTrigger: number,
-      controllerType: number
-    ) => {
-      if (this.viewModel.isConnected) {
-        this.viewModel.sendGamepadState(
-          deviceId, buttons, leftStickX, leftStickY,
-          rightStickX, rightStickY,
-          leftTrigger, rightTrigger, controllerType
-        );
-      }
-    });
+    gyroAssist.setSendCallback(
+      (
+        deviceId: number,
+        buttons: number,
+        leftStickX: number,
+        leftStickY: number,
+        rightStickX: number,
+        rightStickY: number,
+        leftTrigger: number,
+        rightTrigger: number,
+        controllerType: number,
+      ) => {
+        if (this.viewModel.isConnected) {
+          this.viewModel.sendGamepadState(
+            deviceId,
+            buttons,
+            leftStickX,
+            leftStickY,
+            rightStickX,
+            rightStickY,
+            leftTrigger,
+            rightTrigger,
+            controllerType,
+          );
+        }
+      },
+    );
 
     if (settings.gyroAssistEnabled) {
       gyroAssist.setEnabled(true);
     }
   }
-  
+
   private handleGamepadInput(deviceId: number, state: GamepadState): void {
     if (!this.viewModel.isConnected) {
       return;
     }
-    
+
     const controllerType = this.controllerTypes.get(deviceId) ?? MoonlightControllerType.XBOX;
-    
+
     const gyroAssist = GyroAssistService.getInstance();
     let rsX = state.rightStickX;
     let rsY = state.rightStickY;
@@ -395,13 +407,13 @@ struct StreamPage {
         state.rightStickY,
         state.leftTrigger,
         state.rightTrigger,
-        controllerType
+        controllerType,
       );
       const fused = gyroAssist.fuseRightStick(state.rightStickX, state.rightStickY);
       rsX = fused.x;
       rsY = fused.y;
     }
-    
+
     this.viewModel.sendGamepadState(
       deviceId,
       state.buttons,
@@ -411,50 +423,50 @@ struct StreamPage {
       rsY,
       state.leftTrigger,
       state.rightTrigger,
-      controllerType
+      controllerType,
     );
   }
-  
+
   private async initializeDisplay(): Promise<void> {
     try {
       const displayInfo = display.getDefaultDisplaySync();
       const screenWidth = displayInfo.width / displayInfo.densityPixels;
       const screenHeight = displayInfo.height / displayInfo.densityPixels;
-      
+
       this.viewModel.displayInfo.screenWidth = screenWidth;
       this.viewModel.displayInfo.screenHeight = screenHeight;
 
       this.panZoomHandler.setParentSize(screenWidth, screenHeight);
-      
+
       await this.windowManager?.configureWindow();
     } catch (err) {
-      console.error('初始化显示失败:', err);
+      console.error("初始化显示失败:", err);
     }
   }
-  
+
   aboutToDisappear(): void {
-    console.info('StreamPage aboutToDisappear - cleaning up');
-    
+    console.info("StreamPage aboutToDisappear - cleaning up");
+
     this.lifecycleManager.unregisterAppStateListener();
     this.lifecycleManager.unregisterDisplayChangeListener();
 
     this.lifecycleManager.stopBackgroundTask();
-    
+
     this.viewModel.dispose();
-    
+
     this.touchInputHandler.dispose();
-    
+
     InputInterceptorService.getInstance().stop();
     this.inputHandler.stopMouseInterceptor();
     this.stopMouseKeepAlive();
 
     GyroAssistService.getInstance().dispose();
-    
+
     this.gamepadManager.setListener(null);
     this.gamepadManager.resetSession();
-    
+
     this.customKeyManager?.reset();
-    
+
     this.imeManager.hide();
     this.windowManager?.restoreWindow();
 
@@ -462,7 +474,7 @@ struct StreamPage {
       pointer.setPointerVisibleSync(true);
     } catch (_) {}
   }
-  
+
   onBackPress(): boolean {
     this.inputHandler.releaseAllKeys();
 
@@ -484,15 +496,15 @@ struct StreamPage {
       this.imeManager.hide();
       return true;
     }
-    
+
     if (this.viewModel.isConnected) {
       this.showStreamMenu();
       return true;
     }
-    
+
     return false;
   }
-  
+
   private buildGameMenuCallbacks(): GameMenuCallbacks {
     return {
       onDismiss: () => {
@@ -534,13 +546,17 @@ struct StreamPage {
       onToggleCustomKeys: () => {
         this.showCustomKeys = !this.showCustomKeys;
         if (this.showCustomKeys) {
-          setTimeout(() => { this.customKeyHitReady += 1; }, 100);
+          setTimeout(() => {
+            this.customKeyHitReady += 1;
+          }, 100);
         }
       },
       onEditCustomKeys: () => {
         this.showCustomKeys = true;
         this.customKeyEditMode = true;
-        setTimeout(() => { this.customKeyHitReady += 1; }, 100);
+        setTimeout(() => {
+          this.customKeyHitReady += 1;
+        }, 100);
       },
       onExportCustomKeys: () => {
         this.customKeyManager?.exportProfile();
@@ -552,8 +568,8 @@ struct StreamPage {
         this.gamepadManager.toggleMouseEmulation();
         const active = this.gamepadManager.isMouseEmulationActive();
         promptAction.showToast({
-          message: active ? '手柄鼠标模拟已开启' : '手柄鼠标模拟已关闭',
-          duration: 2000
+          message: active ? "手柄鼠标模拟已开启" : "手柄鼠标模拟已关闭",
+          duration: 2000,
         });
       },
       onControllerOpacityChange: (opacity: number) => {
@@ -577,9 +593,9 @@ struct StreamPage {
       onUnlockOverlay: () => {
         this.viewModel.overlayState.config.isLocked = false;
         this.viewModel.overlayState.configVersion++;
-        AppStorage.setOrCreate('perf_overlay_locked', false);
+        AppStorage.setOrCreate("perf_overlay_locked", false);
         PreferencesUtil.put(SettingsKeys.PERF_OVERLAY_LOCKED, false);
-        promptAction.showToast({ message: '已解锁覆盖层', duration: 1500 });
+        promptAction.showToast({ message: "已解锁覆盖层", duration: 1500 });
         this.gameMenuDialogController?.close();
       },
       onToggleWindowMode: async () => {
@@ -589,13 +605,15 @@ struct StreamPage {
       onTogglePanZoom: () => {
         this.isTouchOverrideEnabled = !this.isTouchOverrideEnabled;
         promptAction.showToast({
-          message: this.isTouchOverrideEnabled ? '画面缩放已开启，双指捏合缩放画面' : '画面缩放已关闭',
-          duration: 2000
+          message: this.isTouchOverrideEnabled
+            ? "画面缩放已开启，双指捏合缩放画面"
+            : "画面缩放已关闭",
+          duration: 2000,
         });
       },
       onResetPanZoom: () => {
         this.panZoomHandler.reset();
-        promptAction.showToast({ message: '缩放已重置', duration: 1500 });
+        promptAction.showToast({ message: "缩放已重置", duration: 1500 });
       },
       onSwitchCustomKeyProfile: async (name: string) => {
         this.customKeyManager?.reset();
@@ -606,7 +624,7 @@ struct StreamPage {
             CustomKeyStore.setGameProfile(this.appId, profile.name);
           }
         }
-      }
+      },
     };
   }
 
@@ -615,7 +633,7 @@ struct StreamPage {
 
     this.inputHandler.stopMouseInterceptor();
     this.stopMouseKeepAlive();
-    
+
     this.gameMenuDialogController = new CustomDialogController({
       builder: GameMenuDialog({
         viewModel: this.viewModel,
@@ -630,17 +648,17 @@ struct StreamPage {
         touchPassthrough: this.touchPassthrough,
         showCustomKeys: this.showCustomKeys,
         isPanZoomActive: this.isTouchOverrideEnabled,
-        callbacks: this.buildGameMenuCallbacks()
+        callbacks: this.buildGameMenuCallbacks(),
       }),
       alignment: DialogAlignment.CenterEnd,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.gameMenuDialogController.open();
   }
-  
+
   private getXComponentWidthVp(): number {
-    if (typeof this.xComponentWidth === 'string') {
+    if (typeof this.xComponentWidth === "string") {
       return this.xComponentActualWidthVp > 0
         ? this.xComponentActualWidthVp
         : this.viewModel.displayInfo.screenWidth;
@@ -649,7 +667,7 @@ struct StreamPage {
   }
 
   private getXComponentHeightVp(): number {
-    if (typeof this.xComponentHeight === 'string') {
+    if (typeof this.xComponentHeight === "string") {
       return this.xComponentActualHeightVp > 0
         ? this.xComponentActualHeightVp
         : this.viewModel.displayInfo.screenHeight;
@@ -659,27 +677,37 @@ struct StreamPage {
 
   private getAlignmentFromPosition(position: string): Alignment {
     switch (position) {
-      case '左上': return Alignment.TopStart;
-      case '上': return Alignment.Top;
-      case '右上': return Alignment.TopEnd;
-      case '左': return Alignment.Start;
-      case '居中': return Alignment.Center;
-      case '右': return Alignment.End;
-      case '左下': return Alignment.BottomStart;
-      case '下': return Alignment.Bottom;
-      case '右下': return Alignment.BottomEnd;
-      default: return Alignment.Center;
+      case "左上":
+        return Alignment.TopStart;
+      case "上":
+        return Alignment.Top;
+      case "右上":
+        return Alignment.TopEnd;
+      case "左":
+        return Alignment.Start;
+      case "居中":
+        return Alignment.Center;
+      case "右":
+        return Alignment.End;
+      case "左下":
+        return Alignment.BottomStart;
+      case "下":
+        return Alignment.Bottom;
+      case "右下":
+        return Alignment.BottomEnd;
+      default:
+        return Alignment.Center;
     }
   }
 
   private updateDisplayPosition(): void {
     this.xComponentAlignment = this.getAlignmentFromPosition(
-      this.viewModel.displayInfo.screenPosition
+      this.viewModel.displayInfo.screenPosition,
     );
     const baseWidth = this.getXComponentWidthVp();
     const baseHeight = this.getXComponentHeightVp();
-    this.xComponentOffsetX = baseWidth * this.viewModel.displayInfo.screenOffsetX / 100;
-    this.xComponentOffsetY = baseHeight * this.viewModel.displayInfo.screenOffsetY / 100;
+    this.xComponentOffsetX = (baseWidth * this.viewModel.displayInfo.screenOffsetX) / 100;
+    this.xComponentOffsetY = (baseHeight * this.viewModel.displayInfo.screenOffsetY) / 100;
   }
 
   private async recalculateXComponentSize(): Promise<void> {
@@ -687,13 +715,13 @@ struct StreamPage {
 
     if (this.windowManager.isFullscreen) {
       const size = this.windowManager.calculateXComponentSize(
-        this.viewModel.displayInfo.stretchVideo
+        this.viewModel.displayInfo.stretchVideo,
       );
       this.xComponentWidth = size.width;
       this.xComponentHeight = size.height;
     } else {
-      this.xComponentWidth = '100%';
-      this.xComponentHeight = '100%';
+      this.xComponentWidth = "100%";
+      this.xComponentHeight = "100%";
     }
     this.updateDisplayPosition();
   }
@@ -702,7 +730,7 @@ struct StreamPage {
     if (!this.viewModel.isConnected) return;
     const monitorOk = this.inputHandler.startMouseInterceptor(
       this.getXComponentWidthVp(),
-      this.getXComponentHeightVp()
+      this.getXComponentHeightVp(),
     );
     if (!monitorOk) {
       this.startMouseKeepAlive();
@@ -727,7 +755,7 @@ struct StreamPage {
       this.mouseDisplaySync.start();
       console.info(`StreamPage: DisplaySync 已启动（请求 60-${deviceRefreshRate}Hz 高刷新率）`);
     } catch (e) {
-      console.warn('StreamPage: DisplaySync 创建失败:', JSON.stringify(e));
+      console.warn("StreamPage: DisplaySync 创建失败:", JSON.stringify(e));
       this.mouseDisplaySync = null;
     }
   }
@@ -738,7 +766,7 @@ struct StreamPage {
         this.mouseDisplaySync.stop();
       } catch (_) {}
       this.mouseDisplaySync = null;
-      console.info('StreamPage: DisplaySync 已停止');
+      console.info("StreamPage: DisplaySync 已停止");
     }
   }
 
@@ -755,27 +783,33 @@ struct StreamPage {
                 data.keys,
                 data.icon,
                 data.color,
-                data.keySequence
+                data.keySequence,
               );
               promptAction.showToast({ message: `快捷键 "${data.name}" 已更新` });
             } else {
-              await this.shortcutManager.addShortcut(data.name, data.keys, data.icon, data.color, data.keySequence);
+              await this.shortcutManager.addShortcut(
+                data.name,
+                data.keys,
+                data.icon,
+                data.color,
+                data.keySequence,
+              );
               promptAction.showToast({ message: `快捷键 "${data.name}" 已添加` });
             }
             this.resumeMouseInterceptor();
           },
           onCancel: () => {
             this.resumeMouseInterceptor();
-          }
-        }
+          },
+        },
       }),
       alignment: DialogAlignment.Center,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.shortcutEditorController.open();
   }
-  
+
   async cycleCustomKeyProfile(): Promise<void> {
     this.customKeyManager?.reset();
     const profile = await CustomKeyStore.cycleNextProfile();
@@ -786,29 +820,29 @@ struct StreamPage {
       }
       promptAction.showToast({ message: `已切换到: ${profile.name}`, duration: 1500 });
     } else {
-      promptAction.showToast({ message: '仅有一个配置', duration: 1500 });
+      promptAction.showToast({ message: "仅有一个配置", duration: 1500 });
     }
   }
 
   showTouchModeMenu(): void {
     if (!this.menuManager) return;
-    
+
     this.optionPickerDialogConfig = this.menuManager.getTouchModeMenuConfig();
     this.optionPickerDialogController = new CustomDialogController({
       builder: OptionPickerDialog({
-        config: this.optionPickerDialogConfig
+        config: this.optionPickerDialogConfig,
       }),
       alignment: DialogAlignment.Bottom,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.optionPickerDialogController.open();
   }
-  
+
   private async configureStreamWindow(): Promise<void> {
     this.windowManager?.setStreamResolution(
       this.viewModel.displayInfo.streamWidth,
-      this.viewModel.displayInfo.streamHeight
+      this.viewModel.displayInfo.streamHeight,
     );
 
     await this.windowManager?.configureWindow();
@@ -821,7 +855,9 @@ struct StreamPage {
       this.viewModel.displayInfo.screenHeight = screenSize.height;
     }
 
-    const xComponentSize = this.windowManager?.calculateXComponentSize(this.viewModel.displayInfo.stretchVideo);
+    const xComponentSize = this.windowManager?.calculateXComponentSize(
+      this.viewModel.displayInfo.stretchVideo,
+    );
     if (xComponentSize) {
       this.xComponentWidth = xComponentSize.width;
       this.xComponentHeight = xComponentSize.height;
@@ -837,7 +873,7 @@ struct StreamPage {
     const streamConfig = this.viewModel.streamConfig;
     if (streamConfig && streamConfig.fps > 60) {
       try {
-        const frameNode = this.getUIContext().getFrameNodeById('streamSurface');
+        const frameNode = this.getUIContext().getFrameNodeById("streamSurface");
         if (frameNode) {
           MoonBridge.setXComponentFrameRate(frameNode, streamConfig.fps);
           console.info(`XComponent 帧率已设置为 ${streamConfig.fps} fps`);
@@ -847,26 +883,39 @@ struct StreamPage {
       }
     }
 
-    await this.viewModel.startStreaming(this.computerId, this.appId, surfaceId, this.context, this.displayGuid, this.useVdd);
+    await this.viewModel.startStreaming(
+      this.computerId,
+      this.appId,
+      surfaceId,
+      this.context,
+      this.displayGuid,
+      this.useVdd,
+    );
   }
 
   async startStreaming(): Promise<void> {
     try {
       await this.viewModel.loadSettings();
       this.lifecycleManager.setLatencyToastEnabled(
-        await PreferencesUtil.get<boolean>(SettingsKeys.LATENCY_TOAST, false)
+        await PreferencesUtil.get<boolean>(SettingsKeys.LATENCY_TOAST, false),
       );
       this.lifecycleManager.setDisableWarnings(
-        await PreferencesUtil.get<boolean>(SettingsKeys.DISABLE_WARNINGS, false)
+        await PreferencesUtil.get<boolean>(SettingsKeys.DISABLE_WARNINGS, false),
       );
-      this.enableBackgroundTask = await PreferencesUtil.get<boolean>(SettingsKeys.ENABLE_BACKGROUND_TASK, true);
+      this.enableBackgroundTask = await PreferencesUtil.get<boolean>(
+        SettingsKeys.ENABLE_BACKGROUND_TASK,
+        true,
+      );
       this.lifecycleManager.setEnableBackgroundTask(this.enableBackgroundTask);
-      this.useVirtualKeyboard = await PreferencesUtil.get<boolean>(SettingsKeys.ENABLE_ONSCREEN_KEYBOARD, false);
+      this.useVirtualKeyboard = await PreferencesUtil.get<boolean>(
+        SettingsKeys.ENABLE_ONSCREEN_KEYBOARD,
+        false,
+      );
       this.controllerScaleValue = await VirtualControllerOverlay.loadScale();
       this.controllerOpacityValue = await VirtualControllerOverlay.loadOpacity();
       await this.gamepadManager.reloadSettings();
 
-      const escMenuKey = await PreferencesUtil.get<string>(SettingsKeys.ESC_MENU_KEY, 'ESC');
+      const escMenuKey = await PreferencesUtil.get<string>(SettingsKeys.ESC_MENU_KEY, "ESC");
       this.inputHandler.setMenuKey(escMenuKey);
 
       await this.customKeyManager?.init();
@@ -875,15 +924,18 @@ struct StreamPage {
 
       const streamConfig = this.viewModel.streamConfig;
       if (streamConfig) {
-        await this.windowManager?.setHdrBrightness(streamConfig.hdr, streamConfig.hdrHighBrightness);
+        await this.windowManager?.setHdrBrightness(
+          streamConfig.hdr,
+          streamConfig.hdrHighBrightness,
+        );
       }
-      
+
       const touchModeStr = this.viewModel.touchMode as string;
       this.touchInputHandler.setMode(touchModeStr as TouchInputMode);
       if (streamConfig) {
         this.touchInputHandler.setDoubleTapTimeThreshold(streamConfig.doubleTapTimeThreshold);
       }
-      
+
       this.viewModel.setConnectionTerminatedCallback((errorCode: number) => {
         this.lifecycleManager.handleConnectionTerminated(errorCode);
       });
@@ -904,7 +956,7 @@ struct StreamPage {
 
       const monitorOk = this.inputHandler.startMouseInterceptor(
         this.getXComponentWidthVp(),
-        this.getXComponentHeightVp()
+        this.getXComponentHeightVp(),
       );
       if (!monitorOk) {
         this.startMouseKeepAlive();
@@ -915,19 +967,18 @@ struct StreamPage {
       if (!this.viewModel.showLocalCursor) {
         try {
           pointer.setPointerVisibleSync(false);
-          console.info('StreamPage: 已隐藏本地系统鼠标光标');
+          console.info("StreamPage: 已隐藏本地系统鼠标光标");
         } catch (e) {
-          console.warn('StreamPage: 隐藏鼠标光标失败:', JSON.stringify(e));
+          console.warn("StreamPage: 隐藏鼠标光标失败:", JSON.stringify(e));
         }
       } else {
-        console.info('StreamPage: 本地光标模式已启用，保持系统光标可见');
+        console.info("StreamPage: 本地光标模式已启用，保持系统光标可见");
       }
-      
     } catch (err) {
-      console.error('开始串流失败:', err);
+      console.error("开始串流失败:", err);
     }
   }
-  
+
   private async exitStreamAndReturn(): Promise<void> {
     await this.windowManager?.restoreWindow();
     await new Promise<void>((resolve) => setTimeout(resolve, 150));
@@ -951,39 +1002,42 @@ struct StreamPage {
     await this.lifecycleManager.stopBackgroundTask();
 
     if (this.viewModel.streamConfig?.lockScreenAfterDisconnect) {
-      this.viewModel.getSession()?.sendKeys([0x5B, 0x4C]); // VK_LWIN + VK_L
+      this.viewModel.getSession()?.sendKeys([0x5b, 0x4c]); // VK_LWIN + VK_L
       await new Promise<void>((resolve) => setTimeout(resolve, 500));
     }
 
     await this.exitStreamAndReturn();
-    this.viewModel.quitGame().then(() => {}).catch((_err: Error) => {});
+    this.viewModel
+      .quitGame()
+      .then(() => {})
+      .catch((_err: Error) => {});
   }
 
   async reconnectStreaming(): Promise<void> {
-    console.info('[StreamPage] 开始重连串流...');
+    console.info("[StreamPage] 开始重连串流...");
     try {
       await this.viewModel.stopStreaming();
-      console.info('[StreamPage] 旧会话已停止，开始重新连接...');
+      console.info("[StreamPage] 旧会话已停止，开始重新连接...");
 
       await this.configureStreamWindow();
 
       await this.launchStream();
-      console.info('[StreamPage] 重连串流成功');
+      console.info("[StreamPage] 重连串流成功");
 
-      promptAction.showToast({ message: '已重新连接' });
+      promptAction.showToast({ message: "已重新连接" });
     } catch (err) {
-      console.error('[StreamPage] 重连串流失败:', err);
-      promptAction.showToast({ message: '重连失败，请手动重试' });
+      console.error("[StreamPage] 重连串流失败:", err);
+      promptAction.showToast({ message: "重连失败，请手动重试" });
     }
   }
-  
+
   async sendSuperCmd(cmdId: string): Promise<void> {
     try {
       const success = await this.viewModel.sendSuperCmd(cmdId);
       if (success) {
-        promptAction.showToast({ message: '指令已发送' });
+        promptAction.showToast({ message: "指令已发送" });
       } else {
-        promptAction.showToast({ message: '指令发送失败' });
+        promptAction.showToast({ message: "指令发送失败" });
       }
     } catch (err) {
       promptAction.showToast({ message: `指令发送失败: ${(err as Error).message}` });
@@ -993,22 +1047,26 @@ struct StreamPage {
   sendShortcut(shortcut: Shortcut): void {
     const session = this.viewModel.getSession();
     if (!session) return;
-    sendShortcutKeys((keys: number[]) => session.sendKeys(keys), shortcut.keys, shortcut.keySequence);
+    sendShortcutKeys(
+      (keys: number[]) => session.sendKeys(keys),
+      shortcut.keys,
+      shortcut.keySequence,
+    );
   }
 
   getTouchModeName(): string {
     switch (this.viewModel.touchMode) {
-      case 'trackpad':
-        return '触控板模式';
-      case 'direct':
-        return '多点触控模式';
-      case 'mouse':
-        return '鼠标模式';
+      case "trackpad":
+        return "触控板模式";
+      case "direct":
+        return "多点触控模式";
+      case "mouse":
+        return "鼠标模式";
       default:
         return this.viewModel.touchMode;
     }
   }
-  
+
   handleTouch(event: TouchEvent): void {
     if (!this.viewModel.isConnected) {
       return;
@@ -1024,28 +1082,28 @@ struct StreamPage {
     this.touchInputHandler.setMode(mode as TouchInputMode);
     console.info(`StreamPage: 触摸模式切换为 ${mode}`);
   }
-  
+
   async forceUsbDriverMode(): Promise<void> {
     try {
       const success = await this.gamepadManager.forceUsbDriverMode();
       if (success) {
         const modeDesc = this.gamepadManager.getInputModeDescription();
-        promptAction.showToast({ 
+        promptAction.showToast({
           message: `已切换到: ${modeDesc}`,
-          duration: 3000
+          duration: 3000,
         });
         console.info(`StreamPage: 已切换输入模式 -> ${modeDesc}`);
       } else {
-        promptAction.showToast({ 
-          message: '切换失败，请重试',
-          duration: 2000
+        promptAction.showToast({
+          message: "切换失败，请重试",
+          duration: 2000,
         });
       }
     } catch (err) {
-      console.error('强制 USB 驱动模式切换失败:', err);
-      promptAction.showToast({ 
-        message: '切换失败: ' + (err as Error).message,
-        duration: 2000
+      console.error("强制 USB 驱动模式切换失败:", err);
+      promptAction.showToast({
+        message: "切换失败: " + (err as Error).message,
+        duration: 2000,
       });
     }
   }
@@ -1054,21 +1112,25 @@ struct StreamPage {
     Stack() {
       Stack() {
         XComponent({
-          id: 'streamSurface',
+          id: "streamSurface",
           type: XComponentType.SURFACE,
-          controller: this.xComponentController
+          controller: this.xComponentController,
         })
           .onLoad(() => {
-            console.info('XComponent 加载完成');
+            console.info("XComponent 加载完成");
             this.startStreaming();
           })
           .onDestroy(() => {
-            console.info('XComponent 销毁');
+            console.info("XComponent 销毁");
           })
           .width(this.xComponentWidth)
           .height(this.xComponentHeight)
           .offset({ x: this.xComponentOffsetX, y: this.xComponentOffsetY })
-          .hitTestBehavior((this.viewModel.showController && !this.touchPassthrough) ? HitTestMode.None : HitTestMode.Default)
+          .hitTestBehavior(
+            this.viewModel.showController && !this.touchPassthrough
+              ? HitTestMode.None
+              : HitTestMode.Default,
+          )
           .onTouch((event: TouchEvent) => {
             if (event.source === SourceType.Mouse) return;
             if (this.isTouchOverrideEnabled) {
@@ -1099,51 +1161,51 @@ struct StreamPage {
             }
           })
       }
-      .width('100%')
-      .height('100%')
+      .width("100%")
+      .height("100%")
       .alignContent(this.xComponentAlignment)
       .clip(true)
       .scale({
         x: this.videoScale,
         y: this.videoScale,
         centerX: 0,
-        centerY: 0
+        centerY: 0,
       })
       .translate({
         x: this.videoTranslateX,
-        y: this.videoTranslateY
+        y: this.videoTranslateY,
       })
 
       if (this.viewModel.isConnecting) {
-        this.ConnectingOverlay()
+        this.ConnectingOverlay();
       }
 
       if (this.viewModel.hasError) {
         Column() {
           this.ErrorOverlay()
         }
-        .width('100%')
+        .width("100%")
         .alignItems(HorizontalAlign.Center)
         .position({ bottom: 48 })
-        .hitTestBehavior(HitTestMode.Transparent)
+        .hitTestBehavior(HitTestMode.Transparent);
       }
 
       if (this.viewModel.isConnected && this.viewModel.connectionPoor) {
         Column() {
           this.ConnectionWarningOverlay()
         }
-        .width('100%')
+        .width("100%")
         .alignItems(HorizontalAlign.Center)
         .position({ bottom: 48 })
-        .hitTestBehavior(HitTestMode.None)
+        .hitTestBehavior(HitTestMode.None);
       }
 
       if (this.viewModel.isConnected && this.viewModel.showOverlay) {
         PerformanceOverlay({
           viewModel: this.viewModel,
           screenWidth: this.viewModel.displayInfo.screenWidth,
-          screenHeight: this.viewModel.displayInfo.screenHeight
-        })
+          screenHeight: this.viewModel.displayInfo.screenHeight,
+        });
       }
 
       if (this.viewModel.isConnected && this.viewModel.showController) {
@@ -1157,8 +1219,8 @@ struct StreamPage {
           halfHeightPortrait: this.viewModel.inputSettings?.halfHeightOscPortrait ?? true,
           onInput: (input) => {
             this.viewModel.sendInput(input);
-          }
-        })
+          },
+        });
       }
 
       if (this.showCustomKeys && this.viewModel.isConnected) {
@@ -1191,14 +1253,14 @@ struct StreamPage {
             },
           })
         }
-          .width('100%')
-          .height('100%')
-          .hitTestBehavior(this.customKeyEditMode ? HitTestMode.Default : HitTestMode.Transparent)
-          .opacity(this.customKeyHitReady > 0 ? 1 : 0.99)
+        .width("100%")
+        .height("100%")
+        .hitTestBehavior(this.customKeyEditMode ? HitTestMode.Default : HitTestMode.Transparent)
+        .opacity(this.customKeyHitReady > 0 ? 1 : 0.99);
       }
 
       if (this.showKeyboardPanel) {
-        this.KeyboardInputPanel()
+        this.KeyboardInputPanel();
       }
 
       if (this.showVirtualKeyboard && this.viewModel.isConnected) {
@@ -1212,19 +1274,17 @@ struct StreamPage {
           onClose: (): void => {
             this.showVirtualKeyboard = false;
           },
-        })
-          .width('100%')
+        }).width("100%");
       }
-
     }
-    .width('100%')
-    .height('100%')
+    .width("100%")
+    .height("100%")
     .backgroundColor(Color.Black)
     .focusable(true)
     .defaultFocus(true)
     .onKeyEvent((event: KeyEvent) => {
       return this.inputHandler.handleKeyEvent(event);
-    })
+    });
   }
 
   // ==================== UI Builders ====================
@@ -1234,27 +1294,27 @@ struct StreamPage {
     Column({ space: 0 }) {
       Scroll() {
         Row({ space: 6 }) {
-          Text('⌨')
+          Text("⌨")
             .fontSize(17)
-            .fontColor('#D0FFFFFF')
-
-          Button('主机键盘')
+            .fontColor("#D0FFFFFF")
+          Button("主机键盘")
             .fontSize(11)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#3B82F6')
+            .fontColor("#FFFFFF")
+            .backgroundColor("#3B82F6")
             .height(26)
             .borderRadius(13)
             .padding({ left: 10, right: 10 })
             .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
             .onClick(() => {
-              this.viewModel.getSession()?.sendKeys([VirtualKey.VK_LWIN, VirtualKey.VK_CONTROL, VirtualKey.VK_O]);
+              this.viewModel
+                .getSession()
+                ?.sendKeys([VirtualKey.VK_LWIN, VirtualKey.VK_CONTROL, VirtualKey.VK_O]);
               this.imeManager.hide();
             })
-
-          Button('虚拟键盘')
+          Button("虚拟键盘")
             .fontSize(11)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#8B5CF6')
+            .fontColor("#FFFFFF")
+            .backgroundColor("#8B5CF6")
             .height(26)
             .borderRadius(13)
             .padding({ left: 10, right: 10 })
@@ -1263,59 +1323,59 @@ struct StreamPage {
               this.imeManager.hide();
               this.showVirtualKeyboard = true;
             })
-
           Divider()
             .vertical(true)
             .height(16)
-            .color('#33FFFFFF')
+            .color("#33FFFFFF")
             .strokeWidth(1)
-
-          ForEach(this.shortcutManager.getShortcuts(), (shortcut: Shortcut) => {
-            Row() {
-              if (shortcut.icon) {
-                Text(shortcut.icon)
-                  .fontSize(11)
-                  .margin({ right: 3 })
-              }
-              Text(shortcut.name)
-                .fontSize(11)
-                .fontColor('#F0FFFFFF')
-            }
-            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-            .backgroundColor(`#50${(shortcut.color || '#9DABB2').replace('#', '')}`)
-            .border({ width: 1, color: `#80${(shortcut.color || '#9DABB2').replace('#', '')}` })
-            .borderRadius(13)
-            .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-            .onClick(() => {
-              this.sendShortcut(shortcut);
-            })
-          }, (shortcut: Shortcut) => shortcut.id)
-
-          if (this.cmdList.length > 0) {
-            Divider()
-              .vertical(true)
-              .height(16)
-              .color('#33FFFFFF')
-              .strokeWidth(1)
-
-            ForEach(this.cmdList, (cmd: SuperCmd) => {
+          ForEach(
+            this.shortcutManager.getShortcuts(),
+            (shortcut: Shortcut) => {
               Row() {
-                Text('⚡')
+                if (shortcut.icon) {
+                  Text(shortcut.icon).fontSize(11).margin({ right: 3 });
+                }
+                Text(shortcut.name)
                   .fontSize(11)
-                  .margin({ right: 3 })
-                Text(cmd.name)
-                  .fontSize(11)
-                  .fontColor('#F0FFFFFF')
+                  .fontColor("#F0FFFFFF")
               }
               .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-              .backgroundColor('#50D97706')
-              .border({ width: 1, color: '#80D97706' })
+              .backgroundColor(`#50${(shortcut.color || "#9DABB2").replace("#", "")}`)
+              .border({ width: 1, color: `#80${(shortcut.color || "#9DABB2").replace("#", "")}` })
               .borderRadius(13)
               .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
               .onClick(() => {
-                this.sendSuperCmd(cmd.id);
-              })
-            }, (cmd: SuperCmd) => cmd.id)
+                this.sendShortcut(shortcut);
+              });
+            },
+            (shortcut: Shortcut) => shortcut.id,
+          )
+
+          if (this.cmdList.length > 0) {
+            Divider().vertical(true).height(16).color("#33FFFFFF").strokeWidth(1);
+
+            ForEach(
+              this.cmdList,
+              (cmd: SuperCmd) => {
+                Row() {
+                  Text("⚡")
+                    .fontSize(11)
+                    .margin({ right: 3 })
+                  Text(cmd.name)
+                    .fontSize(11)
+                    .fontColor("#F0FFFFFF")
+                }
+                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                .backgroundColor("#50D97706")
+                .border({ width: 1, color: "#80D97706" })
+                .borderRadius(13)
+                .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+                .onClick(() => {
+                  this.sendSuperCmd(cmd.id);
+                });
+              },
+              (cmd: SuperCmd) => cmd.id,
+            );
           }
         }
       }
@@ -1327,50 +1387,52 @@ struct StreamPage {
       .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(20) })
     }
     .direction(Direction.Ltr)
-    .width('100%')
+    .width("100%")
     .height(40)
-    .backgroundColor('#CC1A1A2E')
+    .backgroundColor("#CC1A1A2E")
     .backdropBlur(40)
     .borderRadius({ topLeft: 16, topRight: 16 })
-    .shadow({ radius: 12, color: '#40000000', offsetY: -2 })
-    .position({ left: 0, bottom: this.keyboardHeight })
+    .shadow({ radius: 12, color: "#40000000", offsetY: -2 })
+    .position({ left: 0, bottom: this.keyboardHeight });
 
-    Text('✕')
+    Text("✕")
       .fontSize(13)
-      .fontColor('#99FFFFFF')
+      .fontColor("#99FFFFFF")
       .width(24)
       .height(24)
       .textAlign(TextAlign.Center)
       .borderRadius(12)
-      .backgroundColor('#661A1A2E')
+      .backgroundColor("#661A1A2E")
       .backdropBlur(20)
       .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.85 })
       .onClick(() => {
         this.imeManager.hide();
       })
-      .position({ right: 8, bottom: this.keyboardHeight + 44 })
+      .position({ right: 8, bottom: this.keyboardHeight + 44 });
   }
 
   @Builder
   ConnectionWarningOverlay() {
     Row({ space: 8 }) {
-      Text('⚠')
+      Text("⚠")
         .fontSize(16)
-        .fontColor('#FFFFB74D')
-      Text(this.viewModel.streamConfig && this.viewModel.streamConfig.bitrate > 5000
-        ? '网速慢，请尝试降低码率或使用有线连接'
-        : '网络连接不稳定')
+        .fontColor("#FFFFB74D")
+      Text(
+        this.viewModel.streamConfig && this.viewModel.streamConfig.bitrate > 5000
+          ? "网速慢，请尝试降低码率或使用有线连接"
+          : "网络连接不稳定",
+      )
         .fontSize(13)
-        .fontColor('#EEFFFFFF')
+        .fontColor("#EEFFFFFF")
     }
     .padding({ left: 16, right: 16, top: 10, bottom: 10 })
     .borderRadius(20)
-    .backgroundColor('#B01A1A2E')
+    .backgroundColor("#B01A1A2E")
     .backdropBlur(30)
-    .border({ width: 1, color: '#18FFFFFF' })
-    .shadow({ radius: 12, color: '#40000000', offsetY: 4 })
+    .border({ width: 1, color: "#18FFFFFF" })
+    .shadow({ radius: 12, color: "#40000000", offsetY: 4 })
     .hitTestBehavior(HitTestMode.None)
-    .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300 }));
   }
 
   @Builder
@@ -1380,51 +1442,49 @@ struct StreamPage {
         .width(48)
         .height(48)
         .color(Color.White)
-
-      Text(this.viewModel.connectionStageText || '正在连接...')
+      Text(this.viewModel.connectionStageText || "正在连接...")
         .fontSize(14)
-        .fontColor('#B0FFFFFF')
+        .fontColor("#B0FFFFFF")
         .margin({ top: 16 })
         .textAlign(TextAlign.Center)
         .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor('#CC000000')
-    .justifyContent(FlexAlign.Center)
+    .width("100%")
+    .height("100%")
+    .backgroundColor("#CC000000")
+    .justifyContent(FlexAlign.Center);
   }
 
   @Builder
   ErrorOverlay() {
     Column({ space: 12 }) {
       Row({ space: 8 }) {
-        Text('✕')
+        Text("✕")
           .fontSize(16)
-          .fontColor('#FFEF5350')
+          .fontColor("#FFEF5350")
         Text(this.viewModel.errorMessage)
           .fontSize(13)
-          .fontColor('#EEFFFFFF')
+          .fontColor("#EEFFFFFF")
           .constraintSize({ maxWidth: 280 })
           .maxLines(3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-
-      Text('返回')
+      Text("返回")
         .fontSize(12)
-        .fontColor('#EEFFFFFF')
+        .fontColor("#EEFFFFFF")
         .padding({ left: 20, right: 20, top: 6, bottom: 6 })
         .borderRadius(14)
-        .backgroundColor('#30FFFFFF')
+        .backgroundColor("#30FFFFFF")
         .onClick(() => {
           router.back();
         })
     }
     .padding({ left: 20, right: 20, top: 14, bottom: 14 })
     .borderRadius(20)
-    .backgroundColor('#B01A1A2E')
+    .backgroundColor("#B01A1A2E")
     .backdropBlur(30)
-    .border({ width: 1, color: '#18FFFFFF' })
-    .shadow({ radius: 12, color: '#40000000', offsetY: 4 })
-    .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
+    .border({ width: 1, color: "#18FFFFFF" })
+    .shadow({ radius: 12, color: "#40000000", offsetY: 4 })
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300 }));
   }
 }

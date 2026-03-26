@@ -8,20 +8,15 @@
  * (at your option) any later version.
  */
 
-import {
-  CustomKeyDef,
-  KeyAction,
-  createDefaultKeyDef,
-} from '../service/CustomKeyTypes';
-import { OV_TEXT_WHITE } from '../common/OverlayConstants';
+import { CustomKeyDef, KeyAction, createDefaultKeyDef } from "../service/CustomKeyTypes";
+import { OV_TEXT_WHITE } from "../common/OverlayConstants";
 import {
   EDIT_BORDER_COLOR,
   SELECT_BORDER_COLOR,
   DRAG_THRESHOLD,
   SnapResult,
   doKeyHaptic,
-} from './CustomKeyConstants';
-
+} from "./CustomKeyConstants";
 @Component
 export struct CustomKeyBtn {
   keyDef: CustomKeyDef = createDefaultKeyDef();
@@ -53,24 +48,26 @@ export struct CustomKeyBtn {
       .textAlign(TextAlign.Center)
       .width(this.keyDef.width)
       .height(this.keyDef.height)
-      .borderRadius(this.keyDef.shape === 'circle'
-        ? this.keyDef.width / 2
-        : this.keyDef.borderRadius)
-      .backgroundColor(this.isPressed || this.isToggled
-        ? this.keyDef.pressedColor
-        : this.keyDef.bgColor)
+      .borderRadius(
+        this.keyDef.shape === "circle" ? this.keyDef.width / 2 : this.keyDef.borderRadius,
+      )
+      .backgroundColor(
+        this.isPressed || this.isToggled ? this.keyDef.pressedColor : this.keyDef.bgColor,
+      )
       .border({
         width: this.editMode ? 2 : (this.keyDef.borderWidth ?? 1),
         color: this.editMode
-          ? (this.isSelected ? SELECT_BORDER_COLOR : EDIT_BORDER_COLOR)
-          : (this.isPressed || this.isToggled
-              ? this.keyDef.pressedColor
-              : this.keyDef.normalColor),
+          ? this.isSelected
+            ? SELECT_BORDER_COLOR
+            : EDIT_BORDER_COLOR
+          : this.isPressed || this.isToggled
+            ? this.keyDef.pressedColor
+            : this.keyDef.normalColor,
         style: this.editMode ? BorderStyle.Dashed : BorderStyle.Solid,
       })
       .shadow({
         radius: this.isPressed || this.isToggled ? 8 : 3,
-        color: this.isPressed || this.isToggled ? '#40A8D8EA' : '#20000000',
+        color: this.isPressed || this.isToggled ? "#40A8D8EA" : "#20000000",
         offsetY: 1,
       })
       .opacity(this.keyDef.opacity / 100)
@@ -83,11 +80,11 @@ export struct CustomKeyBtn {
         } else {
           this.handlePlayTouch(event);
         }
-      })
+      });
   }
 
   private handlePlayTouch(event: TouchEvent): void {
-    if (this.keyDef.behavior === 'toggle') {
+    if (this.keyDef.behavior === "toggle") {
       if (event.type === TouchType.Down) {
         this.isToggled = !this.isToggled;
         this.onAction(this.keyDef.action, this.isToggled);
@@ -151,9 +148,7 @@ export struct CustomKeyBtn {
       case TouchType.Cancel:
         this.cancelLongPress();
         if (this.dragging) {
-          this.onDragFinish(this.keyDef.id,
-            this.dragOffsetX,
-            this.dragOffsetY);
+          this.onDragFinish(this.keyDef.id, this.dragOffsetX, this.dragOffsetY);
         } else {
           this.onSelect(this.keyDef.id);
         }
@@ -170,6 +165,6 @@ export struct CustomKeyBtn {
   }
 
   private doHaptic(): void {
-    doKeyHaptic(this.keyDef.haptic ?? 'light');
+    doKeyHaptic(this.keyDef.haptic ?? "light");
   }
 }

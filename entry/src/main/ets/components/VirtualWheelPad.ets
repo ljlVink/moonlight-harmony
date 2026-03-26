@@ -8,26 +8,24 @@
  * (at your option) any later version.
  */
 
-import { KeyAction, WheelPadSegment } from '../service/CustomKeyTypes';
+import { KeyAction, WheelPadSegment } from "../service/CustomKeyTypes";
 
 export type WheelSegmentActionCallback = (action: KeyAction, isDown: boolean) => void;
 
 export type WheelEditModeGetter = () => boolean;
-
 @Component
 export struct VirtualWheelPad {
   @Prop wheelSize: number = 150;
-  @Prop normalColor: string = '#6050C080';
-  @Prop pressedColor: string = '#C070E090';
-  @Prop bgColor: string = '#3050C080';
-  @Prop textColor: string = '#E0FFFFFF';
+  @Prop normalColor: string = "#6050C080";
+  @Prop pressedColor: string = "#C070E090";
+  @Prop bgColor: string = "#3050C080";
+  @Prop textColor: string = "#E0FFFFFF";
   @Prop opacity_: number = 80;
   segments: WheelPadSegment[] = [];
-  onSegmentAction: WheelSegmentActionCallback = (_a: KeyAction, _d: boolean): void => {
-  };
+  onSegmentAction: WheelSegmentActionCallback = (_a: KeyAction, _d: boolean): void => {};
   isEditMode: WheelEditModeGetter = (): boolean => false;
 
-  @State @Watch('onActiveChanged') private activeIndex: number = -1;
+  @State @Watch("onActiveChanged") private activeIndex: number = -1;
 
   private trackingTouchId: number = -1;
 
@@ -41,7 +39,7 @@ export struct VirtualWheelPad {
 
   aboutToAppear(): void {
     this.wheelRadius = this.wheelSize / 2;
-    this.innerRadius = this.wheelRadius * 0.30;
+    this.innerRadius = this.wheelRadius * 0.3;
   }
 
   build() {
@@ -49,7 +47,7 @@ export struct VirtualWheelPad {
       Canvas(this.ctx)
         .width(this.wheelSize)
         .height(this.wheelSize)
-        .backgroundColor('#01000000')
+        .backgroundColor("#01000000")
         .onReady(() => {
           this.canvasReady = true;
           this.drawWheel();
@@ -63,7 +61,7 @@ export struct VirtualWheelPad {
       if (this.isEditMode()) return;
       event.stopPropagation();
       this.handleTouch(event);
-    })
+    });
   }
 
   private onActiveChanged(): void {
@@ -96,7 +94,7 @@ export struct VirtualWheelPad {
       ctx.arc(cx, cy, outerR, startAngle, endAngle, false);
       ctx.arc(cx, cy, innerR, endAngle, startAngle, true);
       ctx.closePath();
-      ctx.fillStyle = (i === this.activeIndex) ? this.pressedColor : this.bgColor;
+      ctx.fillStyle = i === this.activeIndex ? this.pressedColor : this.bgColor;
       ctx.fill();
 
       const lineStartX: number = cx + innerR * Math.cos(startAngle);
@@ -119,7 +117,7 @@ export struct VirtualWheelPad {
 
     ctx.beginPath();
     ctx.arc(cx, cy, innerR, 0, 2 * Math.PI, false);
-    ctx.fillStyle = '#CC1A1A2E';
+    ctx.fillStyle = "#CC1A1A2E";
     ctx.fill();
     ctx.strokeStyle = this.normalColor;
     ctx.lineWidth = 1.5;
@@ -128,15 +126,15 @@ export struct VirtualWheelPad {
     const textR: number = innerR + (outerR - innerR) * 0.55;
     const fontSize: number = Math.max(8, (outerR - innerR) * 0.28);
     ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
 
     for (let i = 0; i < N; i++) {
       const midAngle: number = i * sweepRad - Math.PI / 2;
       const tx: number = cx + textR * Math.cos(midAngle);
       const ty: number = cy + textR * Math.sin(midAngle);
 
-      ctx.fillStyle = (i === this.activeIndex) ? '#FFFFFFFF' : this.textColor;
+      ctx.fillStyle = i === this.activeIndex ? "#FFFFFFFF" : this.textColor;
       ctx.fillText(this.segments[i].label, tx, ty);
     }
   }

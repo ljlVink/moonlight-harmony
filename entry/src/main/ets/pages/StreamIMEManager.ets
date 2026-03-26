@@ -11,9 +11,9 @@
 /**
  * StreamPage IME keyboard manager
  */
-import { window } from '@kit.ArkUI';
-import { inputMethod } from '@kit.IMEKit';
-import { StreamViewModel } from '../viewmodel/StreamViewModel';
+import { window } from "@kit.ArkUI";
+import { inputMethod } from "@kit.IMEKit";
+import { StreamViewModel } from "../viewmodel/StreamViewModel";
 
 /**
  * IME callbacks interface for StreamPage
@@ -66,7 +66,7 @@ export class StreamIMEManager {
 
     try {
       const win = await window.getLastWindow(this.context);
-      win.on('keyboardHeightChange', (height: number) => {
+      win.on("keyboardHeightChange", (height: number) => {
         this.callbacks?.onKeyboardHeightChanged(px2vp(height));
       });
 
@@ -76,28 +76,28 @@ export class StreamIMEManager {
       const textConfig: inputMethod.TextConfig = {
         inputAttribute: {
           textInputType: inputMethod.TextInputType.TEXT,
-          enterKeyType: inputMethod.EnterKeyType.SEND
-        }
+          enterKeyType: inputMethod.EnterKeyType.SEND,
+        },
       };
       await controller.attach(true, textConfig);
-      
-      controller.on('insertText', (text: string) => {
+
+      controller.on("insertText", (text: string) => {
         session.sendUtf8Text(text);
       });
 
-      controller.on('deleteLeft', (length: number) => {
+      controller.on("deleteLeft", (length: number) => {
         for (let i = 0; i < length; i++) {
           session.sendKeyboardInput(0x08, 0x03); // VK_BACK DOWN
           session.sendKeyboardInput(0x08, 0x04); // VK_BACK UP
         }
       });
 
-      controller.on('sendFunctionKey', (key: inputMethod.FunctionKey) => {
-        session.sendKeyboardInput(0x0D, 0x03); // VK_RETURN DOWN
-        session.sendKeyboardInput(0x0D, 0x04); // VK_RETURN UP
+      controller.on("sendFunctionKey", (key: inputMethod.FunctionKey) => {
+        session.sendKeyboardInput(0x0d, 0x03); // VK_RETURN DOWN
+        session.sendKeyboardInput(0x0d, 0x04); // VK_RETURN UP
       });
 
-      controller.on('sendKeyboardStatus', (status: inputMethod.KeyboardStatus) => {
+      controller.on("sendKeyboardStatus", (status: inputMethod.KeyboardStatus) => {
         if (status === inputMethod.KeyboardStatus.HIDE && Date.now() - this.imeReadyTime > 300) {
           this.hide();
         }
@@ -116,15 +116,15 @@ export class StreamIMEManager {
   hide(): void {
     try {
       if (this.imeController) {
-        this.imeController.off('insertText');
-        this.imeController.off('deleteLeft');
-        this.imeController.off('sendFunctionKey');
-        this.imeController.off('sendKeyboardStatus');
+        this.imeController.off("insertText");
+        this.imeController.off("deleteLeft");
+        this.imeController.off("sendFunctionKey");
+        this.imeController.off("sendKeyboardStatus");
         this.imeController.detach();
         this.imeController = null;
       }
       window.getLastWindow(this.context).then((win) => {
-        win.off('keyboardHeightChange');
+        win.off("keyboardHeightChange");
       });
     } catch (err) {
       console.error(`[StreamPage] Failed to hide IME: ${JSON.stringify(err)}`);

@@ -8,25 +8,31 @@
  * (at your option) any later version.
  */
 
-import { ComputerInfo, ComputerInfoBuilder, ComputerState, PairState, selectBestAddress } from '../model/ComputerInfo';
-import { NvHttp, ServerInfo } from './NvHttp';
-import { PairingManager, PairState as PMPairState } from './PairingManager';
-import { DiscoveredComputer, MdnsDiscovery } from './MdnsDiscovery';
-import { ComputerPersistence } from './ComputerPersistence';
-import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { CryptoUtil } from '../utils/CryptoUtil';
-import { WakeOnLan } from './WakeOnLan';
-import { getBestIpv6Address, isIPv6Address, isLanAddress } from '../utils/NetHelper';
-import { connection } from '@kit.NetworkKit';
-import { MAX_PORT } from '../common/NetworkConstants';
-import { common } from '@kit.AbilityKit';
-import { buffer } from '@kit.ArkTS';
+import {
+  ComputerInfo,
+  ComputerInfoBuilder,
+  ComputerState,
+  PairState,
+  selectBestAddress,
+} from "../model/ComputerInfo";
+import { NvHttp, ServerInfo } from "./NvHttp";
+import { PairingManager, PairState as PMPairState } from "./PairingManager";
+import { DiscoveredComputer, MdnsDiscovery } from "./MdnsDiscovery";
+import { ComputerPersistence } from "./ComputerPersistence";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { CryptoUtil } from "../utils/CryptoUtil";
+import { WakeOnLan } from "./WakeOnLan";
+import { getBestIpv6Address, isIPv6Address, isLanAddress } from "../utils/NetHelper";
+import { connection } from "@kit.NetworkKit";
+import { MAX_PORT } from "../common/NetworkConstants";
+import { common } from "@kit.AbilityKit";
+import { buffer } from "@kit.ArkTS";
 
 /**
  * Address parse result
  */
 class AddressParseResult {
-  host: string = '';
+  host: string = "";
   port: number | undefined = undefined;
 }
 
@@ -56,9 +62,9 @@ export class ComputerManager {
   private netConnection: connection.NetConnection | null = null;
   /** Offline polling backoff: tracks consecutive offline count, polls offline hosts every N rounds */
   private offlineStreak: Map<string, number> = new Map();
-  
+
   // Initialization & Singleton
-  
+
   private constructor() {
     // mdnsDiscovery needs to be initialized with context in init()
   }
@@ -76,30 +82,30 @@ export class ComputerManager {
   async init(context: common.UIAbilityContext): Promise<void> {
     // Avoid duplicate initialization
     if (this.isInitialized) {
-      console.info('ComputerManager: Already initialized, skipping');
+      console.info("ComputerManager: Already initialized, skipping");
       return;
     }
-    
+
     this.context = context;
     this.mdnsDiscovery = new MdnsDiscovery(context);
-    
+
     // Initialize PreferencesUtil
     PreferencesUtil.init(context);
-  
+
     // Set mDNS discovery callback
     this.mdnsDiscovery.setOnComputerFoundListener((discovered: DiscoveredComputer) => {
       this.handleDiscoveredComputer(discovered);
     });
-  
+
     // Load saved computers (wait for completion)
     this.computers = await ComputerPersistence.loadComputers();
-  
+
     // Register network change listener (similar to Android registerDefaultNetworkCallback)
     this.registerNetworkListener();
-  
+
     this.isInitialized = true;
-    console.info('ComputerManager: Initialization complete');
-  
+    console.info("ComputerManager: Initialization complete");
+
     // Note: Don't trigger refresh here, let caller set callback then call refreshAllComputers()
   }
 
@@ -111,12 +117,14 @@ export class ComputerManager {
   }
 
   // mDNS Discovery
-  
+
   /**
    * Handle mDNS discovered computer
    */
   private async handleDiscoveredComputer(discovered: DiscoveredComputer): Promise<void> {
-    console.info(`ComputerManager: mDNS discovered ${discovered.name} @ ${discovered.address}:${discovered.port}`);
+    console.info(
+      `ComputerManager: mDNS discovered ${discovered.name} @ ${discovered.address}:${discovered.port}`,
+    );
 
     const existing = this.findComputerByAddress(discovered.address);
 
@@ -138,13 +146,13 @@ export class ComputerManager {
    * Find existing computer by address (matches all address fields)
    */
   private findComputerByAddress(address: string): ComputerInfo | undefined {
-    return Array.from(this.computers.values())
-      .find(c =>
+    return Array.from(this.computers.values()).find(
+      (c) =>
         c.address === address ||
         c.localAddress === address ||
         c.remoteAddress === address ||
-        c.manualAddress === address
-      );
+        c.manualAddress === address,
+    );
   }
 
   /**
@@ -167,20 +175,27 @@ export class ComputerManager {
    */
   private async verifyOrPollComputer(computer: ComputerInfo, address: string): Promise<void> {
     try {
-      const nvHttp = new NvHttp(address, computer.serverCert, this.context || undefined, computer.httpPort);
+      const nvHttp = new NvHttp(
+        address,
+        computer.serverCert,
+        this.context || undefined,
+        computer.httpPort,
+      );
       const serverInfo = await nvHttp.getServerInfo();
-  
+
       // Handle UUID reconciliation: discovered-* temporary entries get real UUID
       if (serverInfo.uniqueId && computer.uuid !== serverInfo.uniqueId) {
         this.reconcileUuid(computer, serverInfo.uniqueId);
       }
-  
+
       computer.state = ComputerState.ONLINE;
       if (!computer.address) computer.address = address;
       computer.runningGameId = serverInfo.currentGame;
       if (serverInfo.hostname) computer.name = serverInfo.hostname;
     } catch (err) {
-      console.warn(`ComputerManager: mDNS address unreachable for ${computer.name}, falling back to polling`);
+      console.warn(
+        `ComputerManager: mDNS address unreachable for ${computer.name}, falling back to polling`,
+      );
       await this.pollComputer(computer);
     }
   }
@@ -192,17 +207,19 @@ export class ComputerManager {
    */
   private reconcileUuid(computer: ComputerInfo, realUuid: string): ComputerInfo {
     const existingReal = this.computers.get(realUuid);
-  
+
     if (existingReal) {
       // Real UUID entry exists -> merge into existing entry, delete temporary entry
-      console.info(`ComputerManager: Merging temporary entry ${computer.uuid} -> existing entry ${realUuid}`);
+      console.info(
+        `ComputerManager: Merging temporary entry ${computer.uuid} -> existing entry ${realUuid}`,
+      );
       this.computers.delete(computer.uuid);
       if (computer.manualAddress && !existingReal.manualAddress) {
         existingReal.manualAddress = computer.manualAddress;
       }
       return existingReal;
     }
-  
+
     // Real UUID doesn't exist -> remap
     console.info(`ComputerManager: Temporary entry ${computer.uuid} got real UUID ${realUuid}`);
     this.computers.delete(computer.uuid);
@@ -221,13 +238,15 @@ export class ComputerManager {
   }
 
   // CRUD Operations
-  
+
   /**
    * Get all computers list
    * Returns deep-copied objects to ensure ArkTS @State can detect changes
    */
   async getComputers(): Promise<ComputerInfo[]> {
-    return Array.from(this.computers.values()).map(computer => ComputerPersistence.cloneComputer(computer));
+    return Array.from(this.computers.values()).map((computer) =>
+      ComputerPersistence.cloneComputer(computer),
+    );
   }
 
   /**
@@ -249,7 +268,7 @@ export class ComputerManager {
       console.warn(`ComputerManager: updateComputer computer not found ${uuid}`);
       return;
     }
-  
+
     // Update specified fields
     if (updates.pairState !== undefined) {
       computer.pairState = updates.pairState;
@@ -266,9 +285,11 @@ export class ComputerManager {
     if (updates.state !== undefined) {
       computer.state = updates.state;
     }
-    
-    console.info(`ComputerManager: Updated computer ${computer.name} - pairState=${computer.pairState}, serverCert=${computer.serverCert ? 'yes' : 'no'}`);
-  
+
+    console.info(
+      `ComputerManager: Updated computer ${computer.name} - pairState=${computer.pairState}, serverCert=${computer.serverCert ? "yes" : "no"}`,
+    );
+
     // Save to persistent storage
     await this.saveComputers();
   }
@@ -285,15 +306,15 @@ export class ComputerManager {
   async addComputer(addressInput: string): Promise<ComputerInfo> {
     const parsed = this.parseAddressInput(addressInput);
     const result = await this.addComputerInternal(parsed.host, undefined, parsed.port);
-  
+
     // Save user-entered address (host part only, port stored in httpPort)
     // This address is never overwritten by auto-discovery, polling tries it first
     result.manualAddress = parsed.host;
-  
+
     // Save updated computer info
     this.computers.set(result.uuid, result);
     await this.saveComputers();
-    
+
     this.notifyListChanged();
     return result;
   }
@@ -304,24 +325,24 @@ export class ComputerManager {
   private parseAddressInput(input: string): AddressParseResult {
     const trimmed = input.trim();
     const result = new AddressParseResult();
-  
+
     // Check if it's an IPv6 address (contains multiple colons)
     let colonCount = 0;
     for (let i = 0; i < trimmed.length; i++) {
-      if (trimmed.charAt(i) === ':') {
+      if (trimmed.charAt(i) === ":") {
         colonCount++;
       }
     }
     const isLikelyIPv6 = colonCount >= 2;
-  
+
     if (isLikelyIPv6) {
       // IPv6 address handling
-      if (trimmed.startsWith('[')) {
+      if (trimmed.startsWith("[")) {
         // Format: [::1] or [::1]:47989
-        const closeBracket = trimmed.indexOf(']');
+        const closeBracket = trimmed.indexOf("]");
         if (closeBracket > 0) {
           result.host = trimmed.substring(1, closeBracket);
-          if (closeBracket < trimmed.length - 1 && trimmed.charAt(closeBracket + 1) === ':') {
+          if (closeBracket < trimmed.length - 1 && trimmed.charAt(closeBracket + 1) === ":") {
             const portStr = trimmed.substring(closeBracket + 2);
             const port = parseInt(portStr);
             if (port > 0 && port <= MAX_PORT) {
@@ -340,7 +361,7 @@ export class ComputerManager {
       }
     } else {
       // IPv4 or hostname
-      const colonIndex = trimmed.indexOf(':');
+      const colonIndex = trimmed.indexOf(":");
       if (colonIndex > 0) {
         // Format: 192.168.1.100:47989
         const host = trimmed.substring(0, colonIndex);
@@ -353,7 +374,7 @@ export class ComputerManager {
         }
       }
     }
-  
+
     // Default: no port
     result.host = trimmed;
     return result;
@@ -363,20 +384,24 @@ export class ComputerManager {
    * Internal add computer method
    * If computer with this UUID already exists, merge update instead of replace, preserving serverCert and pairing info
    */
-  private async addComputerInternal(address: string, discoveredName?: string, httpPort?: number): Promise<ComputerInfo> {
+  private async addComputerInternal(
+    address: string,
+    discoveredName?: string,
+    httpPort?: number,
+  ): Promise<ComputerInfo> {
     const nvHttp = new NvHttp(address, null, this.context || undefined, httpPort);
-  
+
     try {
       // Get server info
       const serverInfo = await nvHttp.getServerInfo();
-  
+
       // Use local address returned by server, or connection address if not available
       const localAddr = serverInfo.localAddress || address;
-      const remoteAddr = serverInfo.externalAddress || '';
-  
+      const remoteAddr = serverInfo.externalAddress || "";
+
       // Check if connection address is IPv6 (contains at least 2 colons)
-      const isIPv6 = address.includes(':') && address.split(':').length > 2;
-  
+      const isIPv6 = address.includes(":") && address.split(":").length > 2;
+
       // Check if computer with same UUID already exists
       const existing = this.computers.get(serverInfo.uniqueId);
       if (existing) {
@@ -405,13 +430,15 @@ export class ComputerManager {
         }
         // If existing.serverCert already has value, don't overwrite
         // serverCert can only be obtained through pairing process
-  
-        console.info(`ComputerManager: Merged update for existing computer ${existing.name} (${existing.uuid}), preserving pairing info`);
+
+        console.info(
+          `ComputerManager: Merged update for existing computer ${existing.name} (${existing.uuid}), preserving pairing info`,
+        );
         this.computers.set(existing.uuid, existing);
         await this.saveComputers();
         return existing;
       }
-  
+
       // New computer, create new entry
       const computer = new ComputerInfoBuilder()
         .setUuid(serverInfo.uniqueId)
@@ -420,17 +447,19 @@ export class ComputerManager {
         .setLocalAddress(localAddr) // Local address returned by server
         .setRemoteAddress(remoteAddr) // External address returned by server
         .setIpv6Address(isIPv6 ? address : undefined) // If connection address is IPv6, store it
-        .setMacAddress(serverInfo.macAddress || '')
+        .setMacAddress(serverInfo.macAddress || "")
         .setState(ComputerState.ONLINE)
         .setPairState(serverInfo.paired ? PairState.PAIRED : PairState.NOT_PAIRED)
         .setRunningGameId(serverInfo.currentGame || 0)
         .setHttpPort(httpPort) // Save custom port
         .build();
-  
+
       this.computers.set(computer.uuid, computer);
       await this.saveComputers();
-  
-      console.info(`ComputerManager: Successfully added computer ${computer.name} (${computer.uuid}), localAddr=${localAddr}, remoteAddr=${remoteAddr}`);
+
+      console.info(
+        `ComputerManager: Successfully added computer ${computer.name} (${computer.uuid}), localAddr=${localAddr}, remoteAddr=${remoteAddr}`,
+      );
       return computer;
     } catch (err) {
       // If unable to get server info, still add but mark as offline
@@ -443,7 +472,7 @@ export class ComputerManager {
           .setState(ComputerState.UNKNOWN)
           .setPairState(PairState.NOT_PAIRED)
           .build();
-  
+
         this.computers.set(computer.uuid, computer);
         console.info(`ComputerManager: Added unconfirmed computer ${computer.name}`);
         return computer;
@@ -461,7 +490,7 @@ export class ComputerManager {
   }
 
   // Polling & Network Listener
-  
+
   /**
    * Refresh all computer status
    * Parallel polling, notify UI immediately after each completes
@@ -482,23 +511,26 @@ export class ComputerManager {
                 return; // Skip this round
               }
             }
-  
+
             const online = await this.pollComputer(computer);
             if (online) {
               this.offlineStreak.delete(computer.uuid);
             } else {
-              this.offlineStreak.set(computer.uuid, (this.offlineStreak.get(computer.uuid) ?? 0) || 1);
+              this.offlineStreak.set(
+                computer.uuid,
+                (this.offlineStreak.get(computer.uuid) ?? 0) || 1,
+              );
             }
           } catch {
             computer.state = ComputerState.OFFLINE;
             this.offlineStreak.set(computer.uuid, (this.offlineStreak.get(computer.uuid) ?? 0) + 1);
           }
           this.notifyListChanged();
-        })
+        }),
       );
     } catch (err) {
-      console.error('ComputerManager: refreshAllComputers error:', err);
-      this.computers.forEach(computer => {
+      console.error("ComputerManager: refreshAllComputers error:", err);
+      this.computers.forEach((computer) => {
         if (computer.state === ComputerState.UNKNOWN) {
           computer.state = ComputerState.OFFLINE;
         }
@@ -511,43 +543,47 @@ export class ComputerManager {
     if (this.isPollingActive) {
       return;
     }
-    
+
     this.isPollingActive = true;
-    console.info('ComputerManager: 启动状态轮询');
-    
+    console.info("ComputerManager: 启动状态轮询");
+
     this.refreshAllComputers().catch((err: Error) => {
-      console.warn('ComputerManager: 初始刷新失败', err);
+      console.warn("ComputerManager: 初始刷新失败", err);
     });
-    
+
     this.pollingTimerId = setInterval(async () => {
       if (!this.isPollingActive) {
         return;
       }
-      
+
       await this.refreshAllComputers();
     }, SERVERINFO_POLLING_PERIOD_MS);
   }
-  
+
   private registerNetworkListener(): void {
     try {
       this.netConnection = connection.createNetConnection();
 
-      this.netConnection.on('netAvailable', () => {
-        console.info('ComputerManager: 网络变为可用，重置并重新轮询');
-        this.computers.forEach(c => { c.state = ComputerState.UNKNOWN; });
+      this.netConnection.on("netAvailable", () => {
+        console.info("ComputerManager: 网络变为可用，重置并重新轮询");
+        this.computers.forEach((c) => {
+          c.state = ComputerState.UNKNOWN;
+        });
         this.offlineStreak.clear();
 
         if (this.isPollingActive) {
           this.refreshAllComputers().catch((err: Error) => {
-            console.warn('ComputerManager: 网络恢复后刷新失败', err);
+            console.warn("ComputerManager: 网络恢复后刷新失败", err);
           });
         }
         this.notifyListChanged();
       });
 
-      this.netConnection.on('netLost', () => {
-        console.info('ComputerManager: 网络丢失，标记所有 PC 为离线');
-        this.computers.forEach(c => { c.state = ComputerState.OFFLINE; });
+      this.netConnection.on("netLost", () => {
+        console.info("ComputerManager: 网络丢失，标记所有 PC 为离线");
+        this.computers.forEach((c) => {
+          c.state = ComputerState.OFFLINE;
+        });
         this.notifyListChanged();
       });
 
@@ -555,11 +591,11 @@ export class ComputerManager {
         if (err) {
           console.error(`ComputerManager: 注册网络监听失败: ${JSON.stringify(err)}`);
         } else {
-          console.info('ComputerManager: 网络变化监听已注册');
+          console.info("ComputerManager: 网络变化监听已注册");
         }
       });
     } catch (err) {
-      console.error('ComputerManager: 注册网络监听异常', err);
+      console.error("ComputerManager: 注册网络监听异常", err);
     }
   }
 
@@ -570,11 +606,11 @@ export class ComputerManager {
           if (err) {
             console.error(`ComputerManager: 取消网络监听失败: ${JSON.stringify(err)}`);
           } else {
-            console.info('ComputerManager: 网络变化监听已取消');
+            console.info("ComputerManager: 网络变化监听已取消");
           }
         });
       } catch (err) {
-        console.error('ComputerManager: 取消网络监听异常', err);
+        console.error("ComputerManager: 取消网络监听异常", err);
       }
       this.netConnection = null;
     }
@@ -582,7 +618,7 @@ export class ComputerManager {
 
   stopPolling(): void {
     if (this.pollingTimerId !== -1) {
-      console.info('ComputerManager: 停止状态轮询');
+      console.info("ComputerManager: 停止状态轮询");
       clearInterval(this.pollingTimerId);
       this.pollingTimerId = -1;
     }
@@ -596,10 +632,10 @@ export class ComputerManager {
       return false;
     }
 
-    console.info(`ComputerManager: 轮询 ${computer.name}，地址: ${addresses.join(', ')}`);
+    console.info(`ComputerManager: 轮询 ${computer.name}，地址: ${addresses.join(", ")}`);
 
     const successResult = await this.raceForFirstSuccess(
-      addresses.map(addr => this.tryPollAddress(addr, computer))
+      addresses.map((addr) => this.tryPollAddress(addr, computer)),
     );
 
     if (successResult?.serverInfo) {
@@ -624,7 +660,12 @@ export class ComputerManager {
 
   private async tryPollAddress(address: string, computer: ComputerInfo): Promise<PollResult> {
     try {
-      const nvHttp = new NvHttp(address, computer.serverCert, this.context || undefined, computer.httpPort);
+      const nvHttp = new NvHttp(
+        address,
+        computer.serverCert,
+        this.context || undefined,
+        computer.httpPort,
+      );
       const serverInfo = await nvHttp.getServerInfo();
       return { address, serverInfo };
     } catch (err) {
@@ -706,11 +747,11 @@ export class ComputerManager {
     target.state = ComputerState.ONLINE;
     target.address = result.address;
     target.runningGameId = info.currentGame;
-    
-    if (info.macAddress && info.macAddress !== '00:00:00:00:00:00') {
+
+    if (info.macAddress && info.macAddress !== "00:00:00:00:00:00") {
       target.macAddress = info.macAddress;
     }
-    
+
     if (info.localAddress) target.localAddress = info.localAddress;
     if (info.externalAddress) target.remoteAddress = info.externalAddress;
 
@@ -721,7 +762,7 @@ export class ComputerManager {
     if (!target.ipv6Address && info.hostname) {
       this.lookupAndSetIpv6(target, info.hostname);
     }
-    
+
     if (info.paired) {
       target.pairState = PairState.PAIRED;
     } else if (target.serverCert) {
@@ -729,12 +770,16 @@ export class ComputerManager {
     } else {
       target.pairState = PairState.NOT_PAIRED;
     }
-    
-    console.info(`ComputerManager: ${target.name} 在线 (${result.address}), game=${info.currentGame}, paired=${target.pairState}`);
+
+    console.info(
+      `ComputerManager: ${target.name} 在线 (${result.address}), game=${info.currentGame}, paired=${target.pairState}`,
+    );
     this.saveComputers();
 
-    if (target.pairState === PairState.PAIRED && 
-        (!target.boxArtUrl || target.boxArtUrl.startsWith('http'))) {
+    if (
+      target.pairState === PairState.PAIRED &&
+      (!target.boxArtUrl || target.boxArtUrl.startsWith("http"))
+    ) {
       this.loadFirstAppBoxArt(target, result.address);
     }
   }
@@ -758,27 +803,34 @@ export class ComputerManager {
       }
     };
 
-    tryLookup(hostname).then((ipv6: string | undefined) => {
-      if (ipv6) {
-        computer.ipv6Address = ipv6;
-        console.info(`ComputerManager: 为 ${computer.name} 补充 IPv6 地址: ${ipv6}`);
-        this.saveComputers();
-        return;
-      }
-      return tryLookup(`${hostname}.local`);
-    }).then((ipv6: string | undefined) => {
-      if (ipv6) {
-        computer.ipv6Address = ipv6;
-        console.info(`ComputerManager: 为 ${computer.name} 补充 IPv6 地址 (.local): ${ipv6}`);
-        this.saveComputers();
-      }
-    }).catch(() => {
-    });
+    tryLookup(hostname)
+      .then((ipv6: string | undefined) => {
+        if (ipv6) {
+          computer.ipv6Address = ipv6;
+          console.info(`ComputerManager: 为 ${computer.name} 补充 IPv6 地址: ${ipv6}`);
+          this.saveComputers();
+          return;
+        }
+        return tryLookup(`${hostname}.local`);
+      })
+      .then((ipv6: string | undefined) => {
+        if (ipv6) {
+          computer.ipv6Address = ipv6;
+          console.info(`ComputerManager: 为 ${computer.name} 补充 IPv6 地址 (.local): ${ipv6}`);
+          this.saveComputers();
+        }
+      })
+      .catch(() => {});
   }
 
   private async loadFirstAppBoxArt(computer: ComputerInfo, address: string): Promise<void> {
     try {
-      const nvHttp = new NvHttp(address, computer.serverCert, this.context || undefined, computer.httpPort);
+      const nvHttp = new NvHttp(
+        address,
+        computer.serverCert,
+        this.context || undefined,
+        computer.httpPort,
+      );
       const apps = await nvHttp.getAppList();
       if (apps.length > 0) {
         const cachedPath = await nvHttp.getAppAssetCached(apps[0].id);
@@ -801,7 +853,7 @@ export class ComputerManager {
 
   async scanNetwork(): Promise<void> {
     if (!this.mdnsDiscovery) {
-      console.error('ComputerManager: mDNS 发现服务未初始化');
+      console.error("ComputerManager: mDNS 发现服务未初始化");
       return;
     }
 
@@ -809,7 +861,7 @@ export class ComputerManager {
       const discovered = await this.mdnsDiscovery.discover(5000);
       console.info(`ComputerManager: mDNS 扫描完成，发现 ${discovered.length} 台电脑`);
     } catch (err) {
-      console.error('ComputerManager: 网络扫描失败', err);
+      console.error("ComputerManager: 网络扫描失败", err);
     }
   }
 
@@ -819,7 +871,7 @@ export class ComputerManager {
     }
 
     this.mdnsDiscovery.startDiscovery().catch((err: Error) => {
-      console.error('ComputerManager: 后台扫描启动失败', err);
+      console.error("ComputerManager: 后台扫描启动失败", err);
     });
   }
 
@@ -832,7 +884,7 @@ export class ComputerManager {
   async pairComputer(uuid: string): Promise<string> {
     const computer = this.computers.get(uuid);
     if (!computer) {
-      throw new Error('电脑不存在');
+      throw new Error("电脑不存在");
     }
 
     const pin = this.generatePin();
@@ -840,7 +892,10 @@ export class ComputerManager {
 
     try {
       const pairingManager = new PairingManager(
-        selectBestAddress(computer), computer.uuid, this.context || undefined, computer.httpPort
+        selectBestAddress(computer),
+        computer.uuid,
+        this.context || undefined,
+        computer.httpPort,
       );
       const result = await pairingManager.pair(pin);
 
@@ -848,17 +903,17 @@ export class ComputerManager {
         computer.pairState = PairState.PAIRED;
         if (result.serverCert) {
           const buf = buffer.from(result.serverCert);
-          computer.serverCert = buf.toString('base64');
+          computer.serverCert = buf.toString("base64");
         }
-        computer.pairName = result.pairName || '';
+        computer.pairName = result.pairName || "";
         await this.saveComputers();
         return pin;
       } else if (result.state === PMPairState.PIN_WRONG) {
         computer.pairState = PairState.FAILED;
-        throw new Error('PIN 码错误');
+        throw new Error("PIN 码错误");
       } else if (result.state === PMPairState.ALREADY_IN_PROGRESS) {
         computer.pairState = PairState.FAILED;
-        throw new Error('另一个设备正在配对中');
+        throw new Error("另一个设备正在配对中");
       } else {
         computer.pairState = PairState.FAILED;
         throw new Error(`配对失败: ${result.state}`);
@@ -877,33 +932,38 @@ export class ComputerManager {
   async unpairComputer(uuid: string): Promise<void> {
     const computer = this.computers.get(uuid);
     if (!computer) {
-      throw new Error('电脑不存在');
+      throw new Error("电脑不存在");
     }
 
-    const nvHttp = new NvHttp(selectBestAddress(computer), computer.serverCert, this.context || undefined, computer.httpPort);
+    const nvHttp = new NvHttp(
+      selectBestAddress(computer),
+      computer.serverCert,
+      this.context || undefined,
+      computer.httpPort,
+    );
     await nvHttp.unpair();
-    
+
     computer.pairState = PairState.NOT_PAIRED;
-    computer.serverCert = '';
+    computer.serverCert = "";
     await this.saveComputers();
   }
 
   async wakeComputer(uuid: string): Promise<void> {
     const computer = this.computers.get(uuid);
     if (!computer || !computer.macAddress) {
-      throw new Error('无法唤醒：缺少 MAC 地址');
+      throw new Error("无法唤醒：缺少 MAC 地址");
     }
 
     await WakeOnLan.sendWolToAddresses(
       computer.macAddress,
       this.collectAddresses(computer),
-      computer.httpPort || NvHttp.DEFAULT_HTTP_PORT
+      computer.httpPort || NvHttp.DEFAULT_HTTP_PORT,
     );
   }
 
   private generatePin(): string {
     const randomBytes = CryptoUtil.generateRandomBytes(4);
-    let pin = '';
+    let pin = "";
     for (let i = 0; i < 4; i++) {
       pin += (randomBytes[i] % 10).toString();
     }

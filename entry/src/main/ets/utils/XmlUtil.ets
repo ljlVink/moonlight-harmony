@@ -9,30 +9,30 @@
  */
 
 /**
- * 
+ *
  */
 export class XmlUtil {
   static getValue(xml: string, tag: string, required: boolean = false): string {
-    const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 's');
+    const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, "s");
     const match = xml.match(regex);
-    const value = match ? match[1].trim() : '';
-    
+    const value = match ? match[1].trim() : "";
+
     if (required && !value) {
       throw new Error(`XML 中未找到必需的标签: ${tag}`);
     }
-    
+
     return value;
   }
 
   static getValues(xml: string, tag: string): string[] {
-    const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'gs');
+    const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, "gs");
     const matches: string[] = [];
     let match: RegExpExecArray | null;
-    
+
     while ((match = regex.exec(xml)) !== null) {
       matches.push(match[1].trim());
     }
-    
+
     return matches;
   }
 
@@ -44,11 +44,11 @@ export class XmlUtil {
 
   static getBoolValue(xml: string, tag: string): boolean {
     const value = XmlUtil.getValue(xml, tag).toLowerCase();
-    return value === '1' || value === 'true';
+    return value === "1" || value === "true";
   }
 
   static hasTag(xml: string, tag: string): boolean {
-    const regex = new RegExp(`<${tag}>.*?</${tag}>`, 's');
+    const regex = new RegExp(`<${tag}>.*?</${tag}>`, "s");
     return regex.test(xml);
   }
 }

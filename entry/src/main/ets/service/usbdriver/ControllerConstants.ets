@@ -9,7 +9,7 @@
  */
 
 /**
- * 
+ *
  */
 
 export class ButtonFlags {
@@ -17,8 +17,8 @@ export class ButtonFlags {
   static readonly DOWN_FLAG: number = 0x0002;
   static readonly LEFT_FLAG: number = 0x0004;
   static readonly RIGHT_FLAG: number = 0x0008;
-  static readonly PLAY_FLAG: number = 0x0010;     // Start
-  static readonly BACK_FLAG: number = 0x0020;     // Select/Back
+  static readonly PLAY_FLAG: number = 0x0010; // Start
+  static readonly BACK_FLAG: number = 0x0020; // Select/Back
   static readonly LS_CLK_FLAG: number = 0x0040;
   static readonly RS_CLK_FLAG: number = 0x0080;
   static readonly LB_FLAG: number = 0x0100;
@@ -51,7 +51,7 @@ export class ControllerCapabilities {
   static readonly ACCEL: number = 0x10;
   static readonly GYRO: number = 0x20;
   static readonly BATTERY: number = 0x40;
-  static readonly RGB_LED: number = 0x80;           // RGB LED
+  static readonly RGB_LED: number = 0x80; // RGB LED
 }
 
 export class MotionType {
@@ -83,7 +83,7 @@ export class UsbDirection {
 
 export class Xbox360 {
   static readonly IFACE_SUBCLASS: number = 93;
-  static readonly IFACE_PROTOCOL: number = 1;  // Wired only
+  static readonly IFACE_PROTOCOL: number = 1; // Wired only
   static readonly SUPPORTED_VENDORS: number[] = [
     0x0079, // GPD Win 2
     0x044f, // Thrustmaster
@@ -134,23 +134,23 @@ export class XboxOne {
 }
 
 export class DualShock4 {
-  static readonly VID: number = 0x054C;  // Sony
+  static readonly VID: number = 0x054c; // Sony
   static readonly PIDS: number[] = [
-    0x05c4,  // DualShock 4 v1
-    0x09cc,  // DualShock 4 v2
+    0x05c4, // DualShock 4 v1
+    0x09cc, // DualShock 4 v2
   ];
 }
 
 export class DualSense {
-  static readonly VID: number = 0x054C;  // Sony
+  static readonly VID: number = 0x054c; // Sony
   static readonly PIDS: number[] = [
-    0x0ce6,  // DualSense
-    0x0df2,  // DualSense Edge
+    0x0ce6, // DualSense
+    0x0df2, // DualSense Edge
   ];
 }
 
 export class SwitchPro {
-  static readonly VID: number = 0x057e;  // Nintendo
+  static readonly VID: number = 0x057e; // Nintendo
   static readonly PRO_PID: number = 0x2009;
   static readonly JOYCON_LEFT_PID: number = 0x2006;
   static readonly JOYCON_RIGHT_PID: number = 0x2007;

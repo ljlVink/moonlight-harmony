@@ -8,12 +8,12 @@
  * (at your option) any later version.
  */
 
-import { mdns } from '@kit.NetworkKit';
-import { connection } from '@kit.NetworkKit';
-import { common } from '@kit.AbilityKit';
-import { BusinessError } from '@kit.BasicServicesKit';
-import { NvHttp } from './NvHttp';
-import { getBestIpv6Address } from '../utils/NetHelper';
+import { mdns } from "@kit.NetworkKit";
+import { connection } from "@kit.NetworkKit";
+import { common } from "@kit.AbilityKit";
+import { BusinessError } from "@kit.BasicServicesKit";
+import { NvHttp } from "./NvHttp";
+import { getBestIpv6Address } from "../utils/NetHelper";
 
 export interface DiscoveredComputer {
   name: string;
@@ -26,7 +26,7 @@ export interface DiscoveredComputer {
  *
  */
 export class MdnsDiscovery {
-  private static readonly SERVICE_TYPE = '_nvstream._tcp';
+  private static readonly SERVICE_TYPE = "_nvstream._tcp";
   private static readonly DISCOVERY_TIMEOUT = 5000;
 
   private discoveryService: mdns.DiscoveryService | null = null;
@@ -45,7 +45,7 @@ export class MdnsDiscovery {
 
   async startDiscovery(): Promise<void> {
     if (this.isDiscovering) {
-      console.info('MdnsDiscovery: 已经在发现中');
+      console.info("MdnsDiscovery: 已经在发现中");
       return;
     }
 
@@ -55,13 +55,10 @@ export class MdnsDiscovery {
     console.info(`MdnsDiscovery: 开始发现服务类型 ${MdnsDiscovery.SERVICE_TYPE}`);
 
     try {
-      this.discoveryService = mdns.createDiscoveryService(
-        this.context,
-        MdnsDiscovery.SERVICE_TYPE
-      );
-      console.info('MdnsDiscovery: 发现服务已创建');
+      this.discoveryService = mdns.createDiscoveryService(this.context, MdnsDiscovery.SERVICE_TYPE);
+      console.info("MdnsDiscovery: 发现服务已创建");
 
-      this.discoveryService.on('serviceFound', async (serviceInfo: mdns.LocalServiceInfo) => {
+      this.discoveryService.on("serviceFound", async (serviceInfo: mdns.LocalServiceInfo) => {
         console.info(`MdnsDiscovery: [serviceFound] 原始信息: ${JSON.stringify(serviceInfo)}`);
         try {
           const resolvedInfo = await mdns.resolveLocalService(this.context, serviceInfo);
@@ -72,7 +69,7 @@ export class MdnsDiscovery {
         }
       });
 
-      this.discoveryService.on('serviceLost', async (serviceInfo: mdns.LocalServiceInfo) => {
+      this.discoveryService.on("serviceLost", async (serviceInfo: mdns.LocalServiceInfo) => {
         console.info(`MdnsDiscovery: [serviceLost] ${serviceInfo.serviceName}`);
         try {
           const resolvedInfo = await mdns.resolveLocalService(this.context, serviceInfo);
@@ -82,7 +79,7 @@ export class MdnsDiscovery {
         }
       });
 
-      this.discoveryService.on('discoveryStart', (info: mdns.DiscoveryEventInfo) => {
+      this.discoveryService.on("discoveryStart", (info: mdns.DiscoveryEventInfo) => {
         console.info(`MdnsDiscovery: 发现已开始 - ${JSON.stringify(info)}`);
         if (info.errorCode !== undefined && info.errorCode !== 0) {
           console.error(`MdnsDiscovery: 发现启动失败，错误码: ${info.errorCode}`);
@@ -91,14 +88,13 @@ export class MdnsDiscovery {
         }
       });
 
-      this.discoveryService.on('discoveryStop', (info: mdns.DiscoveryEventInfo) => {
+      this.discoveryService.on("discoveryStop", (info: mdns.DiscoveryEventInfo) => {
         console.info(`MdnsDiscovery: 发现已停止 - ${JSON.stringify(info)}`);
       });
 
-      console.info('MdnsDiscovery: 调用 startSearchingMDNS()');
+      console.info("MdnsDiscovery: 调用 startSearchingMDNS()");
       this.discoveryService.startSearchingMDNS();
-      console.info('MdnsDiscovery: startSearchingMDNS() 已调用');
-
+      console.info("MdnsDiscovery: startSearchingMDNS() 已调用");
     } catch (err) {
       const error = err as BusinessError;
       console.error(`MdnsDiscovery: 启动发现失败 - ${error.code}: ${error.message}`);
@@ -109,14 +105,16 @@ export class MdnsDiscovery {
 
   private async handleResolvedService(resolvedInfo: mdns.LocalServiceInfo): Promise<void> {
     if (!resolvedInfo.host) {
-      console.warn('MdnsDiscovery: 解析的服务没有 host 信息');
+      console.warn("MdnsDiscovery: 解析的服务没有 host 信息");
       return;
     }
 
     const host = resolvedInfo.host;
     const port = host.port ?? NvHttp.DEFAULT_HTTP_PORT;
 
-    console.info(`MdnsDiscovery: 发现服务器 ${resolvedInfo.serviceName} @ ${host.address} (family=${host.family})`);
+    console.info(
+      `MdnsDiscovery: 发现服务器 ${resolvedInfo.serviceName} @ ${host.address} (family=${host.family})`,
+    );
 
     let primaryAddress = host.address;
     let ipv6Address: string | undefined = host.family === 2 ? host.address : undefined;
@@ -129,7 +127,7 @@ export class MdnsDiscovery {
       name: resolvedInfo.serviceName,
       address: primaryAddress,
       port: port,
-      ipv6Address: ipv6Address
+      ipv6Address: ipv6Address,
     };
 
     this.discoveredComputers.set(computer.name, computer);
@@ -159,8 +157,7 @@ export class MdnsDiscovery {
           return best;
         }
       }
-    } catch (_err) {
-    }
+    } catch (_err) {}
 
     try {
       const addresses = await connection.getAddressesByName(`${hostname}.local`);
@@ -177,8 +174,7 @@ export class MdnsDiscovery {
           return best;
         }
       }
-    } catch (_err) {
-    }
+    } catch (_err) {}
 
     console.info(`MdnsDiscovery: 未能为 ${hostname} 获取 IPv6 地址`);
     return undefined;
@@ -196,18 +192,20 @@ export class MdnsDiscovery {
 
       if (resolvedService.host?.address) {
         const port = resolvedService.host?.port || resolvedService.port || NvHttp.DEFAULT_HTTP_PORT;
-        
+
         const computer: DiscoveredComputer = {
           name: resolvedService.serviceName,
           address: resolvedService.host.address,
-          port: port
+          port: port,
         };
 
-        if (resolvedService.host.address.includes(':')) {
+        if (resolvedService.host.address.includes(":")) {
           computer.ipv6Address = resolvedService.host.address;
         }
 
-        console.info(`MdnsDiscovery: 发现电脑 ${computer.name} @ ${computer.address}:${computer.port}`);
+        console.info(
+          `MdnsDiscovery: 发现电脑 ${computer.name} @ ${computer.address}:${computer.port}`,
+        );
         this.discoveredComputers.set(computer.name, computer);
 
         if (this.onComputerFound) {
@@ -225,14 +223,14 @@ export class MdnsDiscovery {
       return;
     }
 
-    console.info('MdnsDiscovery: 停止发现');
+    console.info("MdnsDiscovery: 停止发现");
 
     try {
       this.discoveryService.stopSearchingMDNS();
-      this.discoveryService.off('serviceFound');
-      this.discoveryService.off('serviceLost');
+      this.discoveryService.off("serviceFound");
+      this.discoveryService.off("serviceLost");
     } catch (err) {
-      console.error('MdnsDiscovery: 停止发现失败', err);
+      console.error("MdnsDiscovery: 停止发现失败", err);
     }
 
     this.discoveryService = null;

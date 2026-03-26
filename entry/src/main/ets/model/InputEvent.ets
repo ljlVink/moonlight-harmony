@@ -15,7 +15,7 @@ export enum InputType {
   KEYBOARD = 3,
   CONTROLLER_BUTTON = 4,
   CONTROLLER_AXIS = 5,
-  TOUCH = 6
+  TOUCH = 6,
 }
 
 export interface InputEvent {
@@ -75,7 +75,7 @@ export enum TouchAction {
   DOWN = 0,
   UP = 1,
   MOVE = 2,
-  CANCEL = 3
+  CANCEL = 3,
 }
 
 export enum ControllerButton {
@@ -99,7 +99,7 @@ export enum ControllerButton {
   PADDLE3 = 0x040000,
   PADDLE4 = 0x080000,
   TOUCHPAD = 0x100000,
-  MISC = 0x200000
+  MISC = 0x200000,
 }
 
 export enum ControllerAxis {
@@ -108,5 +108,5 @@ export enum ControllerAxis {
   RIGHT_X = 2,
   RIGHT_Y = 3,
   LEFT_TRIGGER = 4,
-  RIGHT_TRIGGER = 5
+  RIGHT_TRIGGER = 5,
 }

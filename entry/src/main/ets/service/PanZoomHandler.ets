@@ -8,14 +8,12 @@
  * (at your option) any later version.
  */
 
-
 export interface PointXY {
   x: number;
   y: number;
 }
 
 export interface PanZoomState {
-
   scale: number;
   translateX: number;
   translateY: number;
@@ -67,7 +65,7 @@ export class PanZoomHandler {
     const state: PanZoomState = {
       scale: this.scaleFactor,
       translateX: this.translateX,
-      translateY: this.translateY
+      translateY: this.translateY,
     };
     return state;
   }
@@ -99,8 +97,10 @@ export class PanZoomHandler {
       const focusX = (p1.x + p2.x) / 2;
       const focusY = (p1.y + p2.y) / 2;
 
-      if (changedTouches[0]?.type === TouchType.Down ||
-          (this.initialPinchDistance === 0 && changedTouches[0]?.type === TouchType.Move)) {
+      if (
+        changedTouches[0]?.type === TouchType.Down ||
+        (this.initialPinchDistance === 0 && changedTouches[0]?.type === TouchType.Move)
+      ) {
         this.initialPinchDistance = currentDistance;
         this.initialScaleFactor = this.scaleFactor;
         this.pinchFocusX = focusX;
@@ -116,8 +116,8 @@ export class PanZoomHandler {
 
         const oldScale = this.scaleFactor;
         if (oldScale > 0) {
-          const dPivotX = (this.translateX - focusX) / oldScale * newScale;
-          const dPivotY = (this.translateY - focusY) / oldScale * newScale;
+          const dPivotX = ((this.translateX - focusX) / oldScale) * newScale;
+          const dPivotY = ((this.translateY - focusY) / oldScale) * newScale;
           this.translateX = focusX + dPivotX;
           this.translateY = focusY + dPivotY;
         }
@@ -162,15 +162,13 @@ export class PanZoomHandler {
     return true;
   }
 
-
   inverseTransform(screenX: number, screenY: number): PointXY {
     const result: PointXY = {
       x: (screenX - this.translateX) / this.scaleFactor,
-      y: (screenY - this.translateY) / this.scaleFactor
+      y: (screenY - this.translateY) / this.scaleFactor,
     };
     return result;
   }
-
 
   private constrainToBounds(): void {
     if (this.parentWidth <= 0 || this.parentHeight <= 0) return;

@@ -8,54 +8,53 @@
  * (at your option) any later version.
  */
 
-
 export class PerfIcons {
-  static readonly RESOLUTION: string = '📱';
-  static readonly DECODER: string = '🎬';
-  static readonly PACKET_LOSS: string = '📶';
-  static readonly BITRATE: string = '⏳';
-  static readonly NETWORK: string = '🌐';
-  static readonly DECODE_NORMAL: string = '⏱️';
-  static readonly DECODE_HOT: string = '🥵';
-  static readonly HOST: string = '🖥️';
-  static readonly BATTERY: string = '🔋';
-  static readonly CHARGING: string = '⚡';
+  static readonly RESOLUTION: string = "📱";
+  static readonly DECODER: string = "🎬";
+  static readonly PACKET_LOSS: string = "📶";
+  static readonly BITRATE: string = "⏳";
+  static readonly NETWORK: string = "🌐";
+  static readonly DECODE_NORMAL: string = "⏱️";
+  static readonly DECODE_HOT: string = "🥵";
+  static readonly HOST: string = "🖥️";
+  static readonly BATTERY: string = "🔋";
+  static readonly CHARGING: string = "⚡";
 }
 
 export class PerfLabels {
-  static readonly RESOLUTION: string = '分辨率';
-  static readonly DECODER: string = '解码器';
-  static readonly FPS: string = '帧率';
-  static readonly PACKET_LOSS: string = '丢包率';
-  static readonly BITRATE: string = '带宽';
-  static readonly NETWORK: string = '网络状态';
-  static readonly DECODE: string = '解码延迟';
-  static readonly HOST: string = '主机延迟';
-  static readonly BATTERY: string = '电池';
+  static readonly RESOLUTION: string = "分辨率";
+  static readonly DECODER: string = "解码器";
+  static readonly FPS: string = "帧率";
+  static readonly PACKET_LOSS: string = "丢包率";
+  static readonly BITRATE: string = "带宽";
+  static readonly NETWORK: string = "网络状态";
+  static readonly DECODE: string = "解码延迟";
+  static readonly HOST: string = "主机延迟";
+  static readonly BATTERY: string = "电池";
 }
 
 export enum PerformanceItem {
-  RESOLUTION = 'resolution',
-  DECODER = 'decoder',
-  RENDER_FPS = 'render_fps',
-  PACKET_LOSS = 'packet_loss',
-  BITRATE = 'bitrate',
-  NETWORK_LATENCY = 'network_latency',
-  DECODE_LATENCY = 'decode_latency',
-  HOST_LATENCY = 'host_latency',
-  BATTERY = 'battery'
+  RESOLUTION = "resolution",
+  DECODER = "decoder",
+  RENDER_FPS = "render_fps",
+  PACKET_LOSS = "packet_loss",
+  BITRATE = "bitrate",
+  NETWORK_LATENCY = "network_latency",
+  DECODE_LATENCY = "decode_latency",
+  HOST_LATENCY = "host_latency",
+  BATTERY = "battery",
 }
 
 export enum SnapPosition {
-  TOP_LEFT = 'top_left',
-  TOP_CENTER = 'top_center',
-  TOP_RIGHT = 'top_right',
-  CENTER_LEFT = 'center_left',
-  CENTER = 'center',
-  CENTER_RIGHT = 'center_right',
-  BOTTOM_LEFT = 'bottom_left',
-  BOTTOM_CENTER = 'bottom_center',
-  BOTTOM_RIGHT = 'bottom_right'
+  TOP_LEFT = "top_left",
+  TOP_CENTER = "top_center",
+  TOP_RIGHT = "top_right",
+  CENTER_LEFT = "center_left",
+  CENTER = "center",
+  CENTER_RIGHT = "center_right",
+  BOTTOM_LEFT = "bottom_left",
+  BOTTOM_CENTER = "bottom_center",
+  BOTTOM_RIGHT = "bottom_right",
 }
 
 export class PerformanceData {
@@ -64,7 +63,7 @@ export class PerformanceData {
   targetFps: number = 0;
   receivedFps: number = 0;
   renderedFps: number = 0;
-  codec: string = '';
+  codec: string = "";
   isHdr: boolean = false;
   packetLoss: number = 0;
   bitrate: number = 0;
@@ -87,7 +86,7 @@ export class OverlayConfig {
 export class PerformanceItemInfo {
   title: string;
   description: string;
-  
+
   constructor(title: string, description: string) {
     this.title = title;
     this.description = description;
@@ -97,7 +96,7 @@ export class PerformanceItemInfo {
 export class Position {
   x: number;
   y: number;
-  
+
   constructor(x: number, y: number) {
     this.x = x;
     this.y = y;
@@ -117,7 +116,7 @@ export function getDefaultOverlayConfig(): OverlayConfig {
     PerformanceItem.BITRATE,
     PerformanceItem.NETWORK_LATENCY,
     PerformanceItem.DECODE_LATENCY,
-    PerformanceItem.HOST_LATENCY
+    PerformanceItem.HOST_LATENCY,
   ]);
   return config;
 }
@@ -127,53 +126,52 @@ export function getPerformanceItemInfo(item: PerformanceItem): PerformanceItemIn
     case PerformanceItem.RESOLUTION:
       return new PerformanceItemInfo(
         `${PerfIcons.RESOLUTION} 分辨率`,
-        '显示当前串流的分辨率和帧率。客户端分辨率是从服务器接收的视频分辨率，这可能与主机端设置的分辨率不同。'
+        "显示当前串流的分辨率和帧率。客户端分辨率是从服务器接收的视频分辨率，这可能与主机端设置的分辨率不同。",
       );
     case PerformanceItem.DECODER:
       return new PerformanceItemInfo(
         `${PerfIcons.DECODER} 解码器`,
-        '显示当前使用的视频编解码器。HEVC比AVC提供更好的压缩效率，在相同码率下能获得更好的画质。HDR表示正在使用高动态范围，能显示更丰富的色彩和对比度。'
+        "显示当前使用的视频编解码器。HEVC比AVC提供更好的压缩效率，在相同码率下能获得更好的画质。HDR表示正在使用高动态范围，能显示更丰富的色彩和对比度。",
       );
     case PerformanceItem.RENDER_FPS:
       return new PerformanceItemInfo(
         `📊 帧率`,
-        'Rx为从服务器接收的帧率，Rd为实际渲染到屏幕的帧率。如果渲染帧率低于接收帧率，可能是解码或显示瓶颈。'
+        "Rx为从服务器接收的帧率，Rd为实际渲染到屏幕的帧率。如果渲染帧率低于接收帧率，可能是解码或显示瓶颈。",
       );
     case PerformanceItem.PACKET_LOSS:
       return new PerformanceItemInfo(
         `${PerfIcons.PACKET_LOSS} 丢包率`,
-        '显示网络传输过程中丢失的数据包百分比。低于1%是优秀，1-5%是可接受，高于5%可能导致画面卡顿或花屏。'
+        "显示网络传输过程中丢失的数据包百分比。低于1%是优秀，1-5%是可接受，高于5%可能导致画面卡顿或花屏。",
       );
     case PerformanceItem.BITRATE:
       return new PerformanceItemInfo(
         `${PerfIcons.BITRATE} 码率`,
-        '当前视频流的下载带宽。带宽越高，画质越好，但也需要更快的网络连接。建议根据网络带宽调整码率设置。'
+        "当前视频流的下载带宽。带宽越高，画质越好，但也需要更快的网络连接。建议根据网络带宽调整码率设置。",
       );
     case PerformanceItem.NETWORK_LATENCY:
       return new PerformanceItemInfo(
         `${PerfIcons.NETWORK} 网络延迟`,
-        '网络往返延迟(RTT)，即数据包从客户端到服务器再返回的时间。低于20ms是优秀，20-50ms是良好，高于100ms可能感受到明显延迟。'
+        "网络往返延迟(RTT)，即数据包从客户端到服务器再返回的时间。低于20ms是优秀，20-50ms是良好，高于100ms可能感受到明显延迟。",
       );
     case PerformanceItem.DECODE_LATENCY:
       return new PerformanceItemInfo(
         `${PerfIcons.DECODE_NORMAL} 解码延迟`,
-        '视频帧解码所需的时间。低于10ms是优秀，10-20ms是正常，高于20ms可能需要降低分辨率或使用硬件解码器。'
+        "视频帧解码所需的时间。低于10ms是优秀，10-20ms是正常，高于20ms可能需要降低分辨率或使用硬件解码器。",
       );
     case PerformanceItem.HOST_LATENCY:
       return new PerformanceItemInfo(
         `${PerfIcons.HOST} 主机延迟`,
-        '服务器端渲染和编码游戏画面所需的时间。这取决于服务器的硬件性能和当前运行的游戏。较新的显卡通常有更低的编码延迟。'
+        "服务器端渲染和编码游戏画面所需的时间。这取决于服务器的硬件性能和当前运行的游戏。较新的显卡通常有更低的编码延迟。",
       );
     case PerformanceItem.BATTERY:
       return new PerformanceItemInfo(
         `${PerfIcons.BATTERY} 电池`,
-        '显示当前设备的电池电量。串流游戏会消耗较多电量，建议在电量充足时或连接充电器时进行长时间串流。'
+        "显示当前设备的电池电量。串流游戏会消耗较多电量，建议在电量充足时或连接充电器时进行长时间串流。",
       );
     default:
-      return new PerformanceItemInfo('未知', '');
+      return new PerformanceItemInfo("未知", "");
   }
 }
-
 
 export function isClockTime(): boolean {
   return new Date().getMinutes() % 15 === 0;
@@ -181,7 +179,7 @@ export function isClockTime(): boolean {
 
 export function getMoonPhaseIcon(locked: boolean = false): string {
   if (locked) {
-    return '📌';
+    return "📌";
   }
 
   const date = new Date();
@@ -190,13 +188,13 @@ export function getMoonPhaseIcon(locked: boolean = false): string {
   const phase = ((date.getTime() - newMoon.getTime()) / 1000) % lp;
   const phaseIndex = Math.floor(phase / (lp / 8));
 
-  const icons = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
-  return icons[phaseIndex] || '🌙';
+  const icons = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
+  return icons[phaseIndex] || "🌙";
 }
 
 export function formatDataRate(bps: number): string {
   const bytesPerSec = bps / 8;
-  
+
   if (bytesPerSec >= 1024 * 1024) {
     return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
   } else if (bytesPerSec >= 1024) {
@@ -207,35 +205,35 @@ export function formatDataRate(bps: number): string {
 
 export function getDecoderString(codec: string, isHdr: boolean): string {
   let result = codec.toUpperCase();
-  if (result.includes('HEVC') || result.includes('H265')) {
-    result = 'HEVC';
-  } else if (result.includes('AVC') || result.includes('H264')) {
-    result = 'AVC';
-  } else if (result.includes('AV1')) {
-    result = 'AV1';
+  if (result.includes("HEVC") || result.includes("H265")) {
+    result = "HEVC";
+  } else if (result.includes("AVC") || result.includes("H264")) {
+    result = "AVC";
+  } else if (result.includes("AV1")) {
+    result = "AV1";
   }
   if (isHdr) {
-    result += ' HDR';
+    result += " HDR";
   }
   return result;
 }
 
 export function getPacketLossColor(loss: number): string {
-  if (loss < 1.0) return '#7D9D7D';
-  if (loss < 5.0) return '#D4A574';
-  return '#B57D7D';
+  if (loss < 1.0) return "#7D9D7D";
+  if (loss < 5.0) return "#D4A574";
+  return "#B57D7D";
 }
 
 export function getLatencyColor(ms: number): string {
-  if (ms < 10) return '#7D9D7D';
-  if (ms < 20) return '#D597E3';
-  return '#B57D7D';
+  if (ms < 10) return "#7D9D7D";
+  if (ms < 20) return "#D597E3";
+  return "#B57D7D";
 }
 
 export function getBatteryColor(level: number): string {
-  if (level > 50) return '#90EE90';
-  if (level > 20) return '#FFA500';
-  return '#FF6B6B';
+  if (level > 50) return "#90EE90";
+  if (level > 20) return "#FFA500";
+  return "#FF6B6B";
 }
 
 export function calculateSnapPosition(
@@ -243,11 +241,11 @@ export function calculateSnapPosition(
   screenWidth: number,
   screenHeight: number,
   overlayWidth: number,
-  overlayHeight: number
+  overlayHeight: number,
 ): Position {
   let x: number;
   let y: number;
-  
+
   switch (position) {
     case SnapPosition.TOP_LEFT:
       x = 0;
@@ -289,7 +287,7 @@ export function calculateSnapPosition(
       x = 0;
       y = 0;
   }
-  
+
   return new Position(x, y);
 }
 
@@ -327,7 +325,7 @@ const ALL_SNAP_POSITIONS: SnapPosition[] = [
   SnapPosition.CENTER_RIGHT,
   SnapPosition.BOTTOM_LEFT,
   SnapPosition.BOTTOM_CENTER,
-  SnapPosition.BOTTOM_RIGHT
+  SnapPosition.BOTTOM_RIGHT,
 ];
 
 export function findNearestSnapPosition(
@@ -336,21 +334,29 @@ export function findNearestSnapPosition(
   screenWidth: number,
   screenHeight: number,
   overlayWidth: number,
-  overlayHeight: number
+  overlayHeight: number,
 ): SnapPosition {
   let nearestPosition = SnapPosition.TOP_LEFT;
   let minDistance = Infinity;
-  
+
   for (let i = 0; i < ALL_SNAP_POSITIONS.length; i++) {
     const pos = ALL_SNAP_POSITIONS[i];
-    const snapPos = calculateSnapPosition(pos, screenWidth, screenHeight, overlayWidth, overlayHeight);
-    const distance = Math.sqrt(Math.pow(currentX - snapPos.x, 2) + Math.pow(currentY - snapPos.y, 2));
-    
+    const snapPos = calculateSnapPosition(
+      pos,
+      screenWidth,
+      screenHeight,
+      overlayWidth,
+      overlayHeight,
+    );
+    const distance = Math.sqrt(
+      Math.pow(currentX - snapPos.x, 2) + Math.pow(currentY - snapPos.y, 2),
+    );
+
     if (distance < minDistance) {
       minDistance = distance;
       nearestPosition = pos;
     }
   }
-  
+
   return nearestPosition;
 }

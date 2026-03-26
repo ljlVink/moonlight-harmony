@@ -16,9 +16,9 @@
  *   6. poller.stop() — 停止 + 释放
  */
 
-import nativeLib from 'libmoonlight_nativelib.so';
+import nativeLib from "libmoonlight_nativelib.so";
 
-const TAG = '[DdkUsbPoller]';
+const TAG = "[DdkUsbPoller]";
 
 // ============================================================
 // ============================================================
@@ -27,11 +27,16 @@ interface DdkPollerNativeInterface {
   init(): DdkInitResult;
   findDevice(vid: number, pid: number): DdkFindResult;
   makeDeviceId(busNum: number, devAddress: number): DdkMakeDeviceIdResult;
-  startPoller(deviceId: number, ifaceIndex: number, inEndpoint: number,
-    outEndpoint: number, maxPacketSize: number,
+  startPoller(
+    deviceId: number,
+    ifaceIndex: number,
+    inEndpoint: number,
+    outEndpoint: number,
+    maxPacketSize: number,
     onData: (pollerId: number, data: Uint8Array, length: number) => void,
     onError: (pollerId: number, errorCode: number) => void,
-    timeoutMs: number): number;
+    timeoutMs: number,
+  ): number;
   stopPoller(pollerId: number): void;
   sendOutput(pollerId: number, endpoint: number, data: Uint8Array): number;
   getStats(pollerId: number): DdkPollerStats;
@@ -86,7 +91,6 @@ let ddkAvailable: boolean | null = null;
 // ============================================================
 
 export class DdkUsbPoller {
-
   private pollerId: number = -1;
   private outEndpointAddr: number = 0;
   private _running: boolean = false;
@@ -109,18 +113,20 @@ export class DdkUsbPoller {
    */
   static init(): DdkInitResult {
     if (!DdkUsbPoller.isAvailable()) {
-      return { code: -1, error: 'DDK native module not available' };
+      return { code: -1, error: "DDK native module not available" };
     }
 
     if (ddkInitialized) {
-      return { code: 0, status: 'already initialized' };
+      return { code: 0, status: "already initialized" };
     }
 
     try {
       const result = ddkNative!.init();
       if (result.code === 0) {
         ddkInitialized = true;
-        console.info(`${TAG} DDK 初始化成功 (GetDevices=${result.hasGetDevices}, GetDesc=${result.hasGetDeviceDescriptor})`);
+        console.info(
+          `${TAG} DDK 初始化成功 (GetDevices=${result.hasGetDevices}, GetDesc=${result.hasGetDeviceDescriptor})`,
+        );
       } else {
         console.error(`${TAG} DDK 初始化失败: code=${result.code}, error=${result.error}`);
       }
@@ -145,9 +151,13 @@ export class DdkUsbPoller {
     try {
       const result = ddkNative!.findDevice(vid, pid);
       if (result.found) {
-        console.info(`${TAG} 找到设备: VID=0x${vid.toString(16)} PID=0x${pid.toString(16)} deviceId=${result.deviceId}`);
+        console.info(
+          `${TAG} 找到设备: VID=0x${vid.toString(16)} PID=0x${pid.toString(16)} deviceId=${result.deviceId}`,
+        );
       } else {
-        console.warn(`${TAG} 未找到设备: VID=0x${vid.toString(16)} PID=0x${pid.toString(16)} (${result.deviceCount ?? 0} 个设备可见)`);
+        console.warn(
+          `${TAG} 未找到设备: VID=0x${vid.toString(16)} PID=0x${pid.toString(16)} (${result.deviceCount ?? 0} 个设备可见)`,
+        );
       }
       return result;
     } catch (err) {
@@ -170,9 +180,13 @@ export class DdkUsbPoller {
     try {
       const result = ddkNative!.makeDeviceId(busNum, devAddress);
       if (result.found) {
-        console.info(`${TAG} deviceId 构造成功: busNum=${busNum} devAddr=${devAddress} → deviceId=${result.deviceId} (${result.encoding})`);
+        console.info(
+          `${TAG} deviceId 构造成功: busNum=${busNum} devAddr=${devAddress} → deviceId=${result.deviceId} (${result.encoding})`,
+        );
       } else {
-        console.warn(`${TAG} deviceId 构造失败: busNum=${busNum} devAddr=${devAddress} — ${result.error}`);
+        console.warn(
+          `${TAG} deviceId 构造失败: busNum=${busNum} devAddr=${devAddress} — ${result.error}`,
+        );
       }
       return result;
     } catch (err) {
@@ -208,7 +222,7 @@ export class DdkUsbPoller {
     maxPacketSize: number,
     onData: (data: Uint8Array, length: number) => void,
     onError: (errorCode: number) => void,
-    timeoutMs: number = 100
+    timeoutMs: number = 100,
   ): boolean {
     if (!ddkInitialized || !ddkNative) {
       console.error(`${TAG} DDK 未初始化`);
@@ -224,14 +238,18 @@ export class DdkUsbPoller {
       this.outEndpointAddr = outEndpoint;
 
       const pollerId = ddkNative.startPoller(
-        deviceId, ifaceIndex, inEndpoint, outEndpoint, maxPacketSize,
+        deviceId,
+        ifaceIndex,
+        inEndpoint,
+        outEndpoint,
+        maxPacketSize,
         (_pollerId: number, data: Uint8Array, length: number) => {
           onData(data, length);
         },
         (_pollerId: number, errorCode: number) => {
           onError(errorCode);
         },
-        timeoutMs
+        timeoutMs,
       );
 
       if (pollerId < 0) {

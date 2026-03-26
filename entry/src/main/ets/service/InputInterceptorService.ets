@@ -8,12 +8,11 @@
  * (at your option) any later version.
  */
 
-
-import nativeLib from 'libmoonlight_nativelib.so';
+import nativeLib from "libmoonlight_nativelib.so";
 
 export interface InterceptedKeyEvent {
   keyCode: number;
-  action: number;      // 1 = KEY_DOWN, 2 = KEY_UP
+  action: number; // 1 = KEY_DOWN, 2 = KEY_UP
   actionTime: number;
   deviceId: number;
 }
@@ -30,10 +29,15 @@ interface InputInterceptorNative {
 interface MouseInterceptorNative {
   addMouseInterceptor(): number;
   removeMouseInterceptor(): number;
-  configureMouseInterceptor(windowX: number, windowY: number,
-                            windowWidth: number, windowHeight: number,
-                            screenWidth: number, screenHeight: number,
-                            relativeMode: boolean): void;
+  configureMouseInterceptor(
+    windowX: number,
+    windowY: number,
+    windowWidth: number,
+    windowHeight: number,
+    screenWidth: number,
+    screenHeight: number,
+    relativeMode: boolean,
+  ): void;
   isMouseInterceptorActive(): boolean;
 }
 
@@ -43,7 +47,9 @@ export class InputInterceptorService {
   private active: boolean = false;
 
   private constructor() {
-    this.native = (nativeLib as Record<string, Object>)['InputInterceptor'] as InputInterceptorNative;
+    this.native = (nativeLib as Record<string, Object>)[
+      "InputInterceptor"
+    ] as InputInterceptorNative;
   }
 
   static getInstance(): InputInterceptorService {
@@ -59,14 +65,14 @@ export class InputInterceptorService {
     }
 
     if (!this.native) {
-      console.warn('InputInterceptor: Native 模块不可用');
+      console.warn("InputInterceptor: Native 模块不可用");
       return -1;
     }
 
     const result = this.native.addKeyInterceptor(callback);
     if (result === 0) {
       this.active = true;
-      console.info('InputInterceptor: 按键拦截器已启动');
+      console.info("InputInterceptor: 按键拦截器已启动");
     } else {
       console.warn(`InputInterceptor: 启动失败，错误码=${result}`);
     }
@@ -80,7 +86,7 @@ export class InputInterceptorService {
 
     this.native.removeKeyInterceptor();
     this.active = false;
-    console.info('InputInterceptor: 按键拦截器已停止');
+    console.info("InputInterceptor: 按键拦截器已停止");
   }
 
   isActive(): boolean {
@@ -108,7 +114,9 @@ export class MouseInterceptorService {
   private active: boolean = false;
 
   private constructor() {
-    this.native = (nativeLib as Record<string, Object>)['MouseInterceptor'] as MouseInterceptorNative;
+    this.native = (nativeLib as Record<string, Object>)[
+      "MouseInterceptor"
+    ] as MouseInterceptorNative;
   }
 
   static getInstance(): MouseInterceptorService {
@@ -118,13 +126,25 @@ export class MouseInterceptorService {
     return MouseInterceptorService.instance;
   }
 
-  configure(windowX: number, windowY: number,
-            windowWidth: number, windowHeight: number,
-            screenWidth: number, screenHeight: number,
-            relativeMode: boolean): void {
+  configure(
+    windowX: number,
+    windowY: number,
+    windowWidth: number,
+    windowHeight: number,
+    screenWidth: number,
+    screenHeight: number,
+    relativeMode: boolean,
+  ): void {
     if (!this.native) return;
-    this.native.configureMouseInterceptor(windowX, windowY, windowWidth, windowHeight,
-                                          screenWidth, screenHeight, relativeMode);
+    this.native.configureMouseInterceptor(
+      windowX,
+      windowY,
+      windowWidth,
+      windowHeight,
+      screenWidth,
+      screenHeight,
+      relativeMode,
+    );
   }
 
   start(): number {
@@ -132,14 +152,14 @@ export class MouseInterceptorService {
       this.stop();
     }
     if (!this.native) {
-      console.warn('MouseInterceptor: Native 模块不可用');
+      console.warn("MouseInterceptor: Native 模块不可用");
       return -1;
     }
 
     const result = this.native.addMouseInterceptor();
     if (result === 0) {
       this.active = true;
-      console.info('MouseInterceptor: 鼠标拦截器已启动（全速轮询）');
+      console.info("MouseInterceptor: 鼠标拦截器已启动（全速轮询）");
     } else {
       console.warn(`MouseInterceptor: 启动失败，错误码=${result}`);
     }
@@ -150,7 +170,7 @@ export class MouseInterceptorService {
     if (!this.active || !this.native) return;
     this.native.removeMouseInterceptor();
     this.active = false;
-    console.info('MouseInterceptor: 鼠标拦截器已停止');
+    console.info("MouseInterceptor: 鼠标拦截器已停止");
   }
 
   isActive(): boolean {

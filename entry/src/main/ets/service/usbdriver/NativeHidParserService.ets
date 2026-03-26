@@ -9,20 +9,30 @@
  */
 
 /**
- * 
+ *
  */
 
-import nativelib from 'libmoonlight_nativelib.so';
-import { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from './NativeGamepad';
+import nativelib from "libmoonlight_nativelib.so";
+import { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from "./NativeGamepad";
 
-const TAG = '[NativeHidParser]';
+const TAG = "[NativeHidParser]";
 
 interface NativeGamepadModule {
-  parseHidReport(vendorId: number, productId: number, data: Uint8Array, forceType?: number): NativeGamepadState;
+  parseHidReport(
+    vendorId: number,
+    productId: number,
+    data: Uint8Array,
+    forceType?: number,
+  ): NativeGamepadState;
   getGamepadType(vendorId: number, productId: number): number;
   isSupportedGamepad(vendorId: number, productId: number): boolean;
   getGamepadName(vendorId: number, productId: number): string;
-  createRumbleCommand(vendorId: number, productId: number, lowFreq: number, highFreq: number): Uint8Array | null;
+  createRumbleCommand(
+    vendorId: number,
+    productId: number,
+    lowFreq: number,
+    highFreq: number,
+  ): Uint8Array | null;
 }
 
 export class NativeHidParserService {
@@ -30,8 +40,7 @@ export class NativeHidParserService {
   private gamepadModule: NativeGamepadModule | null = null;
   private initialized: boolean = false;
 
-  private constructor() {
-  }
+  private constructor() {}
 
   static getInstance(): NativeHidParserService {
     if (!NativeHidParserService.instance) {
@@ -69,7 +78,12 @@ export class NativeHidParserService {
     return this.initialized;
   }
 
-  parseHidReport(vendorId: number, productId: number, data: Uint8Array, forceType?: number): NativeGamepadState | null {
+  parseHidReport(
+    vendorId: number,
+    productId: number,
+    data: Uint8Array,
+    forceType?: number,
+  ): NativeGamepadState | null {
     if (!this.gamepadModule) {
       console.warn(`${TAG} 服务未初始化`);
       return null;
@@ -109,17 +123,22 @@ export class NativeHidParserService {
 
   getGamepadName(vendorId: number, productId: number): string {
     if (!this.gamepadModule) {
-      return 'Unknown Gamepad';
+      return "Unknown Gamepad";
     }
 
     try {
       return this.gamepadModule.getGamepadName(vendorId, productId);
     } catch (err) {
-      return 'Unknown Gamepad';
+      return "Unknown Gamepad";
     }
   }
 
-  createRumbleCommand(vendorId: number, productId: number, lowFreq: number, highFreq: number): Uint8Array | null {
+  createRumbleCommand(
+    vendorId: number,
+    productId: number,
+    lowFreq: number,
+    highFreq: number,
+  ): Uint8Array | null {
     if (!this.gamepadModule) {
       return null;
     }
@@ -132,4 +151,4 @@ export class NativeHidParserService {
   }
 }
 
-export { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from './NativeGamepad';
+export { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from "./NativeGamepad";

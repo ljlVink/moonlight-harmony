@@ -8,29 +8,26 @@
  * (at your option) any later version.
  */
 
-
-
 export enum AddressType {
-
-  LAN_IPV4 = 'LAN_IPV4',
+  LAN_IPV4 = "LAN_IPV4",
   /* IPv6 link-local (fe80::/10) */
-  IPV6_LINK_LOCAL = 'IPV6_LINK_LOCAL',
+  IPV6_LINK_LOCAL = "IPV6_LINK_LOCAL",
 
-  IPV6_ULA = 'IPV6_ULA',
+  IPV6_ULA = "IPV6_ULA",
 
-  IPV6_GLOBAL = 'IPV6_GLOBAL',
+  IPV6_GLOBAL = "IPV6_GLOBAL",
 
-  IPV6_TUNNEL = 'IPV6_TUNNEL',
+  IPV6_TUNNEL = "IPV6_TUNNEL",
 
-  WAN = 'WAN',
+  WAN = "WAN",
 
-  LOOPBACK = 'LOOPBACK',
+  LOOPBACK = "LOOPBACK",
 
-  UNKNOWN = 'UNKNOWN',
+  UNKNOWN = "UNKNOWN",
 }
 
 function parseIPv4(address: string): number[] | null {
-  const parts = address.split('.');
+  const parts = address.split(".");
   if (parts.length !== 4) {
     return null;
   }
@@ -88,10 +85,10 @@ export function isIPv4Address(address: string): boolean {
 
 function normalizeIPv6(address: string): string {
   let addr = address;
-  if (addr.startsWith('[') && addr.includes(']')) {
-    addr = addr.substring(1, addr.indexOf(']'));
+  if (addr.startsWith("[") && addr.includes("]")) {
+    addr = addr.substring(1, addr.indexOf("]"));
   }
-  const pctIdx = addr.indexOf('%');
+  const pctIdx = addr.indexOf("%");
   if (pctIdx !== -1) {
     addr = addr.substring(0, pctIdx);
   }
@@ -104,7 +101,7 @@ export function isIPv6Address(address: string): boolean {
   }
   let colonCount = 0;
   for (const c of address) {
-    if (c === ':') {
+    if (c === ":") {
       colonCount++;
     }
   }
@@ -119,8 +116,14 @@ export function isIPv6LinkLocal(address: string): boolean {
     return false;
   }
   const addr = normalizeIPv6(address);
-  return addr.startsWith('fe80:') || addr.startsWith('fe80%') || addr === 'fe80' ||
-    addr.startsWith('fe9') || addr.startsWith('fea') || addr.startsWith('feb');
+  return (
+    addr.startsWith("fe80:") ||
+    addr.startsWith("fe80%") ||
+    addr === "fe80" ||
+    addr.startsWith("fe9") ||
+    addr.startsWith("fea") ||
+    addr.startsWith("feb")
+  );
 }
 
 export function isIPv6ULA(address: string): boolean {
@@ -128,16 +131,20 @@ export function isIPv6ULA(address: string): boolean {
     return false;
   }
   const addr = normalizeIPv6(address);
-  return addr.startsWith('fc') || addr.startsWith('fd');
+  return addr.startsWith("fc") || addr.startsWith("fd");
 }
-
 
 export function isIPv6SiteLocal(address: string): boolean {
   if (!isIPv6Address(address)) {
     return false;
   }
   const addr = normalizeIPv6(address);
-  return addr.startsWith('fec') || addr.startsWith('fed') || addr.startsWith('fee') || addr.startsWith('fef');
+  return (
+    addr.startsWith("fec") ||
+    addr.startsWith("fed") ||
+    addr.startsWith("fee") ||
+    addr.startsWith("fef")
+  );
 }
 
 export function isIPv6_6to4(address: string): boolean {
@@ -145,7 +152,7 @@ export function isIPv6_6to4(address: string): boolean {
     return false;
   }
   const addr = normalizeIPv6(address);
-  return addr.startsWith('2002:');
+  return addr.startsWith("2002:");
 }
 
 export function isIPv6Teredo(address: string): boolean {
@@ -153,7 +160,7 @@ export function isIPv6Teredo(address: string): boolean {
     return false;
   }
   const addr = normalizeIPv6(address);
-  return addr.startsWith('2001:0000:') || addr.startsWith('2001:0:');
+  return addr.startsWith("2001:0000:") || addr.startsWith("2001:0:");
 }
 
 export function isIPv6Loopback(address: string): boolean {
@@ -161,7 +168,7 @@ export function isIPv6Loopback(address: string): boolean {
     return false;
   }
   const addr = normalizeIPv6(address);
-  return addr === '::1' || addr === '0000:0000:0000:0000:0000:0000:0000:0001';
+  return addr === "::1" || addr === "0000:0000:0000:0000:0000:0000:0000:0001";
 }
 
 /*
@@ -179,7 +186,12 @@ export function isLanAddress(addressStr: string | undefined | null): boolean {
   }
 
   if (isIPv6Address(address)) {
-    return isIPv6LinkLocal(address) || isIPv6ULA(address) || isIPv6SiteLocal(address) || isIPv6Loopback(address);
+    return (
+      isIPv6LinkLocal(address) ||
+      isIPv6ULA(address) ||
+      isIPv6SiteLocal(address) ||
+      isIPv6Loopback(address)
+    );
   }
 
   return false;
@@ -196,13 +208,18 @@ export function isPublicAddress(addressStr: string | undefined | null): boolean 
   }
 
   if (isIPv6Address(address)) {
-    return !isIPv6LinkLocal(address) && !isIPv6ULA(address) && !isIPv6SiteLocal(address) &&
-      !isIPv6Loopback(address) && !isIPv6_6to4(address) && !isIPv6Teredo(address);
+    return (
+      !isIPv6LinkLocal(address) &&
+      !isIPv6ULA(address) &&
+      !isIPv6SiteLocal(address) &&
+      !isIPv6Loopback(address) &&
+      !isIPv6_6to4(address) &&
+      !isIPv6Teredo(address)
+    );
   }
 
   return false;
 }
-
 
 export function isLanIPv4Address(addressStr: string | undefined | null): boolean {
   if (!addressStr) {
@@ -256,24 +273,23 @@ export function getAddressTypeLabel(addressStr: string | undefined | null): stri
   const type = detectAddressType(addressStr);
   switch (type) {
     case AddressType.LAN_IPV4:
-      return '局域网';
+      return "局域网";
     case AddressType.IPV6_LINK_LOCAL:
-      return 'IPv6 链路本地';
+      return "IPv6 链路本地";
     case AddressType.IPV6_ULA:
-      return 'IPv6 局域网';
+      return "IPv6 局域网";
     case AddressType.IPV6_GLOBAL:
-      return 'IPv6 公网';
+      return "IPv6 公网";
     case AddressType.IPV6_TUNNEL:
-      return 'IPv6 隧道';
+      return "IPv6 隧道";
     case AddressType.WAN:
-      return '远程网络';
+      return "远程网络";
     case AddressType.LOOPBACK:
-      return '本机环回';
+      return "本机环回";
     default:
-      return '未知';
+      return "未知";
   }
 }
-
 
 export function getBestIpv6Address(addresses: string[]): string | undefined {
   for (const addr of addresses) {
@@ -297,25 +313,30 @@ export function isIPv6Global(address: string): boolean {
 function stripPort(addressStr: string): string {
   let addr = addressStr.trim();
 
-  if (addr.startsWith('[')) {
-    const closeBracket = addr.indexOf(']');
+  if (addr.startsWith("[")) {
+    const closeBracket = addr.indexOf("]");
     if (closeBracket !== -1) {
       addr = addr.substring(1, closeBracket);
     }
   } else if (isIPv6Address(addr)) {
     return normalizeIPv6(addr);
   } else {
-    const colonIdx = addr.lastIndexOf(':');
+    const colonIdx = addr.lastIndexOf(":");
     if (colonIdx !== -1) {
       const possiblePort = addr.substring(colonIdx + 1);
       const portNum = parseInt(possiblePort, 10);
-      if (!isNaN(portNum) && portNum > 0 && portNum <= 65535 && possiblePort === portNum.toString()) {
+      if (
+        !isNaN(portNum) &&
+        portNum > 0 &&
+        portNum <= 65535 &&
+        possiblePort === portNum.toString()
+      ) {
         addr = addr.substring(0, colonIdx);
       }
     }
   }
 
-  const pctIdx = addr.indexOf('%');
+  const pctIdx = addr.indexOf("%");
   if (pctIdx !== -1) {
     addr = addr.substring(0, pctIdx);
   }

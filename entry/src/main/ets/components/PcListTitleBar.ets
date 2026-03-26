@@ -8,42 +8,39 @@
  * (at your option) any later version.
  */
 
-import { AppColors, AppSizes, AppSpacing } from '../common/Theme';
+import { AppColors, AppSizes, AppSpacing } from "../common/Theme";
 
 export interface TitleBarConfig {
-
   onlineCount: number;
   totalCount: number;
   onAboutClick: () => void;
   onScanImport: () => void;
   onSettingsClick: () => void;
 }
-
 @Component
 export struct PcListTitleBar {
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
+  @StorageProp("topSafeHeight") topSafeHeight: number = 56;
   @Prop config: TitleBarConfig = {
     onlineCount: 0,
     totalCount: 0,
     onAboutClick: () => {},
     onScanImport: () => {},
-    onSettingsClick: () => {}
+    onSettingsClick: () => {},
   };
 
   build() {
     Row() {
       Column() {
         Row() {
-          Image($r('app.media.vplus'))
+          Image($r("app.media.vplus"))
             .width(44)
             .height(44)
             .borderRadius(12)
             .objectFit(ImageFit.Cover)
             .margin({ right: AppSpacing.Medium })
             .flexShrink(0)
-
           Column() {
-            Text('Moonlight V+')
+            Text("Moonlight V+")
               .fontSize(AppSizes.FontLargeTitle)
               .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.Primary)
@@ -67,7 +64,7 @@ export struct PcListTitleBar {
                   .fontSize(AppSizes.FontCaption)
                   .fontColor(AppColors.TextSecondary)
               }
-              .margin({ top: 4 })
+              .margin({ top: 4 });
             }
           }
           .alignItems(HorizontalAlign.Start)
@@ -77,9 +74,8 @@ export struct PcListTitleBar {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
       .margin({ right: AppSpacing.Small })
-
       Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ic_info'))
+        Image($r("app.media.ic_info"))
           .width(AppSizes.IconMedium)
           .height(AppSizes.IconMedium)
           .fillColor(AppColors.Primary)
@@ -94,9 +90,8 @@ export struct PcListTitleBar {
       .onClick(() => {
         this.config.onAboutClick();
       })
-
       Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ic_scan'))
+        Image($r("app.media.ic_scan"))
           .width(AppSizes.IconMedium)
           .height(AppSizes.IconMedium)
           .fillColor(AppColors.Primary)
@@ -111,9 +106,8 @@ export struct PcListTitleBar {
       .onClick(() => {
         this.config.onScanImport();
       })
-
       Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ic_settings'))
+        Image($r("app.media.ic_settings"))
           .width(AppSizes.IconMedium)
           .height(AppSizes.IconMedium)
           .fillColor(AppColors.Primary)
@@ -128,12 +122,12 @@ export struct PcListTitleBar {
         this.config.onSettingsClick();
       })
     }
-    .width('100%')
+    .width("100%")
     .padding({
       left: AppSpacing.Large,
       right: AppSpacing.Large,
       top: this.topSafeHeight,
-      bottom: AppSpacing.Large
-    })
+      bottom: AppSpacing.Large,
+    });
   }
 }

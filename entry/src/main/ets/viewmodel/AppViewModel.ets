@@ -8,25 +8,25 @@
  * (at your option) any later version.
  */
 
-import { AppEntry, NvHttp, SuperCmd } from '../service/NvHttp';
+import { AppEntry, NvHttp, SuperCmd } from "../service/NvHttp";
 
 @Observed
 export class ObservableApp {
   id: number = 0;
-  name: string = '';
+  name: string = "";
   isRunning: boolean = false;
   isHdrSupported: boolean = false;
-  iconUrl: string = '';
-  localIconPath: string = '';
+  iconUrl: string = "";
+  localIconPath: string = "";
   iconLoaded: boolean = false;
   cmdList: SuperCmd[] = [];
-  
+
   constructor(entry?: AppEntry, iconUrl?: string) {
     if (entry) {
       this.updateFrom(entry, iconUrl);
     }
   }
-  
+
   updateFrom(entry: AppEntry, iconUrl?: string): void {
     this.id = entry.id;
     this.name = entry.name;
@@ -47,32 +47,34 @@ export class ObservableApp {
 @Observed
 export class AppListViewModel {
   apps: ObservableApp[] = [];
-  
+
   filteredApps: ObservableApp[] = [];
-  
-  searchKeyword: string = '';
-  
+
+  searchKeyword: string = "";
+
   isLoading: boolean = false;
   isRefreshing: boolean = false;
-  
-  errorMessage: string = '';
-  
+
+  errorMessage: string = "";
+
   runningApp: ObservableApp | null = null;
-  
+
   selectedApp: ObservableApp | null = null;
-  
-  sortBy: 'name' | 'recent' = 'name';
+
+  sortBy: "name" | "recent" = "name";
 
   private iconLoadingCancelled: boolean = false;
-  
+
   setApps(entries: AppEntry[], nvHttp?: NvHttp): void {
     this.iconLoadingCancelled = true;
 
-    const runningApps = entries.filter(e => e.isRunning);
-    console.info(`AppListViewModel: 加载 ${entries.length} 个应用, 正在运行: ${runningApps.map(a => `${a.name}(${a.id})`).join(', ') || '无'}`);
+    const runningApps = entries.filter((e) => e.isRunning);
+    console.info(
+      `AppListViewModel: 加载 ${entries.length} 个应用, 正在运行: ${runningApps.map((a) => `${a.name}(${a.id})`).join(", ") || "无"}`,
+    );
 
-    this.apps = entries.map(entry => {
-      const iconUrl = nvHttp ? nvHttp.getBoxArtUrl(entry.id) : '';
+    this.apps = entries.map((entry) => {
+      const iconUrl = nvHttp ? nvHttp.getBoxArtUrl(entry.id) : "";
       return new ObservableApp(entry, iconUrl);
     });
     this.updateFilteredApps();
@@ -113,52 +115,50 @@ export class AppListViewModel {
       console.info(`AppListViewModel: 所有图标加载完成`);
     }
   }
-  
+
   updateFilteredApps(): void {
     if (this.searchKeyword.trim()) {
       const keyword = this.searchKeyword.toLowerCase().trim();
-      this.filteredApps = this.apps.filter(app => 
-        app.name.toLowerCase().includes(keyword)
-      );
+      this.filteredApps = this.apps.filter((app) => app.name.toLowerCase().includes(keyword));
     } else {
       this.filteredApps = [...this.apps];
     }
   }
-  
+
   setSearchKeyword(keyword: string): void {
     this.searchKeyword = keyword;
     this.updateFilteredApps();
   }
-  
+
   private updateRunningApp(): void {
-    this.runningApp = this.apps.find(app => app.isRunning) || null;
+    this.runningApp = this.apps.find((app) => app.isRunning) || null;
   }
-  
+
   selectApp(app: ObservableApp): void {
     this.selectedApp = app;
   }
-  
+
   clearSelection(): void {
     this.selectedApp = null;
   }
-  
+
   get appCount(): number {
     return this.apps.length;
   }
-  
+
   get filteredCount(): number {
     return this.filteredApps.length;
   }
-  
+
   get hasRunningApp(): boolean {
     return this.runningApp !== null;
   }
-  
+
   get isEmpty(): boolean {
     return this.apps.length === 0;
   }
-  
+
   get isSearchEmpty(): boolean {
-    return this.searchKeyword.trim() !== '' && this.filteredApps.length === 0;
+    return this.searchKeyword.trim() !== "" && this.filteredApps.length === 0;
   }
 }

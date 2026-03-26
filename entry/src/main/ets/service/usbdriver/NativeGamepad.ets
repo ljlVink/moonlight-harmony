@@ -9,7 +9,7 @@
  */
 
 /**
- * 
+ *
  */
 
 export interface NativeGamepadState {
@@ -55,10 +55,15 @@ export enum NativeGamepadType {
 }
 
 /**
- * 
+ *
  */
 export interface NativeGamepadInterface {
-  parseHidReport(vendorId: number, productId: number, data: Uint8Array, forceType?: number): NativeGamepadState;
+  parseHidReport(
+    vendorId: number,
+    productId: number,
+    data: Uint8Array,
+    forceType?: number,
+  ): NativeGamepadState;
 
   getGamepadType(vendorId: number, productId: number): number;
 
@@ -66,5 +71,10 @@ export interface NativeGamepadInterface {
 
   getGamepadName(vendorId: number, productId: number): string;
 
-  createRumbleCommand(vendorId: number, productId: number, lowFreq: number, highFreq: number): Uint8Array | null;
+  createRumbleCommand(
+    vendorId: number,
+    productId: number,
+    lowFreq: number,
+    highFreq: number,
+  ): Uint8Array | null;
 }

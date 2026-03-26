@@ -8,20 +8,28 @@
  * (at your option) any later version.
  */
 
-import { isLanIPv4Address, isLanAddress, isIPv6Address, isPublicAddress, detectAddressType, AddressType, getAddressTypeLabel } from '../utils/NetHelper';
+import {
+  isLanIPv4Address,
+  isLanAddress,
+  isIPv6Address,
+  isPublicAddress,
+  detectAddressType,
+  AddressType,
+  getAddressTypeLabel,
+} from "../utils/NetHelper";
 
 export enum ComputerState {
   UNKNOWN = 0,
   ONLINE = 1,
   OFFLINE = 2,
-  PAIRING = 3
+  PAIRING = 3,
 }
 
 export enum PairState {
   NOT_PAIRED = 0,
   PAIRED = 1,
   PIN_WRONG = 2,
-  FAILED = 3
+  FAILED = 3,
 }
 
 export interface Resolution {
@@ -74,7 +82,7 @@ export function selectBestAddress(computer: AddressHolder): string {
 
   if (computer.remoteAddress) return computer.remoteAddress;
 
-  return '';
+  return "";
 }
 
 export function getAddressNetworkLabel(address: string | undefined): string {
@@ -82,9 +90,11 @@ export function getAddressNetworkLabel(address: string | undefined): string {
 }
 
 export function hasLanAddress(computer: ComputerInfo): boolean {
-  return isLanAddress(computer.localAddress) ||
+  return (
+    isLanAddress(computer.localAddress) ||
     isLanAddress(computer.address) ||
-    isLanAddress(computer.manualAddress);
+    isLanAddress(computer.manualAddress)
+  );
 }
 
 export class ComputerInfoBuilder {
@@ -92,24 +102,24 @@ export class ComputerInfoBuilder {
 
   constructor() {
     this.info = {
-      uuid: '',
-      name: '',
-      address: '',
-      localAddress: '',
-      remoteAddress: '',
+      uuid: "",
+      name: "",
+      address: "",
+      localAddress: "",
+      remoteAddress: "",
       manualAddress: undefined,
       ipv6Address: undefined,
-      macAddress: '',
+      macAddress: "",
       state: ComputerState.UNKNOWN,
       pairState: PairState.NOT_PAIRED,
       runningGameId: 0,
-      serverCert: '',
-      pairName: '',
-      gpuType: '',
+      serverCert: "",
+      pairName: "",
+      gpuType: "",
       maxSupportedResolution: { width: 1920, height: 1080 },
       isNvidiaSoftware: false,
-      boxArtUrl: '',
-      httpPort: undefined
+      boxArtUrl: "",
+      httpPort: undefined,
     };
   }
 
@@ -221,11 +231,11 @@ export class ComputerInfoBuilder {
       gpuType: this.info.gpuType,
       maxSupportedResolution: {
         width: this.info.maxSupportedResolution.width,
-        height: this.info.maxSupportedResolution.height
+        height: this.info.maxSupportedResolution.height,
       },
       isNvidiaSoftware: this.info.isNvidiaSoftware,
       boxArtUrl: this.info.boxArtUrl,
-      httpPort: this.info.httpPort
+      httpPort: this.info.httpPort,
     };
     return result;
   }

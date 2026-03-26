@@ -9,10 +9,10 @@
  */
 
 /**
- * 
+ *
  */
 
-import { AbstractController } from './AbstractController';
+import { AbstractController } from "./AbstractController";
 
 export interface UsbDriverListener {
   reportControllerState(
@@ -23,7 +23,7 @@ export interface UsbDriverListener {
     rightStickX: number,
     rightStickY: number,
     leftTrigger: number,
-    rightTrigger: number
+    rightTrigger: number,
   ): void;
 
   reportControllerMotion(
@@ -31,15 +31,10 @@ export interface UsbDriverListener {
     motionType: number,
     x: number,
     y: number,
-    z: number
+    z: number,
   ): void;
 
-  reportTouchpadInput(
-    controllerId: number,
-    active: boolean,
-    x: number,
-    y: number
-  ): void;
+  reportTouchpadInput(controllerId: number, active: boolean, x: number, y: number): void;
 
   deviceRemoved(controller: AbstractController): void;
 

@@ -8,11 +8,11 @@
  * (at your option) any later version.
  */
 
-import { util } from '@kit.ArkTS';
-import { CryptoUtil } from './CryptoUtil';
+import { util } from "@kit.ArkTS";
+import { CryptoUtil } from "./CryptoUtil";
 
 /**
- * 
+ *
  */
 export class StringUtil {
   private static textDecoder: util.TextDecoder | null = null;
@@ -20,7 +20,7 @@ export class StringUtil {
 
   private static getTextDecoder(): util.TextDecoder {
     if (!StringUtil.textDecoder) {
-      StringUtil.textDecoder = util.TextDecoder.create('utf-8');
+      StringUtil.textDecoder = util.TextDecoder.create("utf-8");
     }
     return StringUtil.textDecoder;
   }
@@ -52,10 +52,10 @@ export class StringUtil {
 
   static generateUUID(): string {
     const randomBytes = CryptoUtil.generateRandomBytes(16);
-    
-    randomBytes[6] = (randomBytes[6] & 0x0f) | 0x40;  // version 4
-    randomBytes[8] = (randomBytes[8] & 0x3f) | 0x80;  // variant 1
-    
+
+    randomBytes[6] = (randomBytes[6] & 0x0f) | 0x40; // version 4
+    randomBytes[8] = (randomBytes[8] & 0x3f) | 0x80; // variant 1
+
     const hex = CryptoUtil.bytesToHex(randomBytes).toLowerCase();
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
   }

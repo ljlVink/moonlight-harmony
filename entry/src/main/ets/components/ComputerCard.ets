@@ -8,10 +8,16 @@
  * (at your option) any later version.
  */
 
-import { ObservableComputer } from '../viewmodel/ComputerViewModel';
-import { AppColors, AppSizes, AppSpacing, AppAnimation, AppShadows, StatusColors } from '../common/Theme';
-import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
-
+import { ObservableComputer } from "../viewmodel/ComputerViewModel";
+import {
+  AppColors,
+  AppSizes,
+  AppSpacing,
+  AppAnimation,
+  AppShadows,
+  StatusColors,
+} from "../common/Theme";
+import { LengthMetrics, ColorMetrics } from "@kit.ArkUI";
 @Component
 export struct ComputerCard {
   @ObjectLink computer: ObservableComputer;
@@ -37,9 +43,9 @@ export struct ComputerCard {
 
   private getBoxArtSource(): string {
     const url = this.computer.boxArtUrl;
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return 'file://' + url;
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    return "file://" + url;
   }
 
   private shouldShowBoxArt(): boolean {
@@ -64,7 +70,7 @@ export struct ComputerCard {
   @Builder
   private DefaultIcon() {
     Column() {
-      Image($r('app.media.ic_pc_default'))
+      Image($r("app.media.ic_pc_default"))
         .width(this.ICON_SIZE)
         .height(this.ICON_SIZE)
         .objectFit(ImageFit.Contain)
@@ -74,30 +80,29 @@ export struct ComputerCard {
     .height(this.AVATAR_SIZE)
     .borderRadius(AppSizes.RadiusLarge)
     .backgroundColor(AppColors.Surface)
-    .justifyContent(FlexAlign.Center)
+    .justifyContent(FlexAlign.Center);
   }
 
   @Builder
   private AvatarSection() {
     Stack() {
       if (this.shouldShowBoxArt()) {
-        this.BoxArtWithFallback()
+        this.BoxArtWithFallback();
       } else {
-        this.DefaultIcon()
+        this.DefaultIcon();
       }
     }
     .width(this.AVATAR_SIZE)
     .height(this.AVATAR_SIZE)
     .borderRadius(AppSizes.RadiusLarge)
     .clip(true)
-    .margin({ right: AppSpacing.Large })
+    .margin({ right: AppSpacing.Large });
   }
 
   @Builder
   private BoxArtWithFallback() {
     Stack() {
       this.DefaultIcon()
-
       Image(this.getBoxArtSource())
         .width(this.AVATAR_SIZE)
         .height(this.AVATAR_SIZE)
@@ -109,7 +114,7 @@ export struct ComputerCard {
         })
     }
     .width(this.AVATAR_SIZE)
-    .height(this.AVATAR_SIZE)
+    .height(this.AVATAR_SIZE);
   }
 
   private getStatusTextColor(): string {
@@ -128,14 +133,12 @@ export struct ComputerCard {
         .fontColor(this.computer.isOnline ? AppColors.Primary : AppColors.TextSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-
+        .width("100%")
       Text(this.computer.manualAddress || this.computer.address)
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
-        .fontFamily('monospace')
+        .fontFamily("monospace")
         .margin({ top: AppSpacing.XSmall })
-
       Row() {
         Circle()
           .width(8)
@@ -149,13 +152,13 @@ export struct ComputerCard {
       .margin({ top: AppSpacing.Small })
     }
     .alignItems(HorizontalAlign.Start)
-    .layoutWeight(1)
+    .layoutWeight(1);
   }
 
   @Builder
   private QuickStreamButton() {
     Column() {
-      Image($r('app.media.ic_play'))
+      Image($r("app.media.ic_play"))
         .width(20)
         .height(20)
         .fillColor(Color.White)
@@ -170,7 +173,7 @@ export struct ComputerCard {
       radius: this.quickStreamPressed ? 4 : 8,
       color: AppColors.GlowGreen,
       offsetX: 0,
-      offsetY: 2
+      offsetY: 2,
     })
     .scale({ x: this.quickStreamPressed ? 0.95 : 1, y: this.quickStreamPressed ? 0.95 : 1 })
     .animation({ duration: 100 })
@@ -185,7 +188,7 @@ export struct ComputerCard {
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
         this.quickStreamPressed = false;
       }
-    })
+    });
   }
 
   build() {
@@ -196,18 +199,18 @@ export struct ComputerCard {
         this.InfoSection()
 
         if (this.canQuickStream()) {
-          this.QuickStreamButton()
+          this.QuickStreamButton();
         } else {
-          Image($r('app.media.ic_arrow_right'))
+          Image($r("app.media.ic_arrow_right"))
             .width(AppSizes.IconMedium)
             .height(AppSizes.IconMedium)
-            .fillColor(this.computer.isOnline ? AppColors.Primary : AppColors.TextTertiary)
+            .fillColor(this.computer.isOnline ? AppColors.Primary : AppColors.TextTertiary);
         }
       }
-      .width('100%')
+      .width("100%")
       .padding(AppSpacing.Large)
     }
-    .width('100%')
+    .width("100%")
     .backgroundColor(AppColors.CardBackground)
     .borderRadius(AppSizes.RadiusLarge)
     .borderWidth(1)
@@ -216,14 +219,14 @@ export struct ComputerCard {
     .scale({ x: this.cardScale, y: this.cardScale })
     .animation({
       duration: AppAnimation.Fast,
-      curve: AppAnimation.Spring
+      curve: AppAnimation.Spring,
     })
     .focusable(true)
     .focusOnTouch(true)
     .focusBox({
       margin: LengthMetrics.vp(2),
       strokeColor: ColorMetrics.rgba(0, 212, 255, 1),
-      strokeWidth: LengthMetrics.vp(2)
+      strokeWidth: LengthMetrics.vp(2),
     })
     .onKeyEvent((event: KeyEvent) => {
       if (event.type === KeyType.Down) {
@@ -255,9 +258,6 @@ export struct ComputerCard {
         this.cardScale = 1;
       }
     })
-    .gesture(
-      LongPressGesture({ duration: 500 })
-        .onAction(() => this.onLongPress())
-    )
+    .gesture(LongPressGesture({ duration: 500 }).onAction(() => this.onLongPress()));
   }
 }

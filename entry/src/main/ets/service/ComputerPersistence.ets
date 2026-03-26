@@ -11,11 +11,10 @@
 /**
  *
  */
-import { ComputerInfo, ComputerInfoBuilder, ComputerState, PairState } from '../model/ComputerInfo';
-import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { NvHttp } from './NvHttp';
-import { MAX_PORT } from '../common/NetworkConstants';
-
+import { ComputerInfo, ComputerInfoBuilder, ComputerState, PairState } from "../model/ComputerInfo";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { NvHttp } from "./NvHttp";
+import { MAX_PORT } from "../common/NetworkConstants";
 
 interface SavedComputerData {
   uuid: string;
@@ -38,16 +37,11 @@ interface ExtractedHostPort {
   port: number;
 }
 
-
-const STORAGE_KEY = 'saved_computers';
-
+const STORAGE_KEY = "saved_computers";
 
 // ComputerPersistence
 
-
 export class ComputerPersistence {
-
-
   static cloneComputer(computer: ComputerInfo): ComputerInfo {
     return {
       uuid: computer.uuid,
@@ -66,11 +60,11 @@ export class ComputerPersistence {
       gpuType: computer.gpuType,
       maxSupportedResolution: {
         width: computer.maxSupportedResolution.width,
-        height: computer.maxSupportedResolution.height
+        height: computer.maxSupportedResolution.height,
       },
       isNvidiaSoftware: computer.isNvidiaSoftware,
       boxArtUrl: computer.boxArtUrl,
-      httpPort: computer.httpPort
+      httpPort: computer.httpPort,
     };
   }
 
@@ -81,13 +75,13 @@ export class ComputerPersistence {
     try {
       const computerList: SavedComputerData[] = [];
       computers.forEach((computer) => {
-        let pairStateStr: string = 'NOT_PAIRED';
+        let pairStateStr: string = "NOT_PAIRED";
         if (computer.pairState === PairState.PAIRED) {
-          pairStateStr = 'PAIRED';
+          pairStateStr = "PAIRED";
         } else if (computer.pairState === PairState.PIN_WRONG) {
-          pairStateStr = 'PIN_WRONG';
+          pairStateStr = "PIN_WRONG";
         } else if (computer.pairState === PairState.FAILED) {
-          pairStateStr = 'FAILED';
+          pairStateStr = "FAILED";
         }
 
         const savedData: SavedComputerData = {
@@ -102,8 +96,8 @@ export class ComputerPersistence {
           serverCert: computer.serverCert,
           pairState: pairStateStr,
           runningGameId: computer.runningGameId,
-          boxArtUrl: computer.boxArtUrl || '',
-          httpPort: computer.httpPort
+          boxArtUrl: computer.boxArtUrl || "",
+          httpPort: computer.httpPort,
         };
         computerList.push(savedData);
       });
@@ -111,7 +105,7 @@ export class ComputerPersistence {
       await PreferencesUtil.put(STORAGE_KEY, JSON.stringify(computerList));
       console.info(`ComputerPersistence: 保存 ${computerList.length} 台电脑`);
     } catch (err) {
-      console.error('ComputerPersistence: 保存电脑列表失败', err);
+      console.error("ComputerPersistence: 保存电脑列表失败", err);
     }
   }
 
@@ -122,9 +116,9 @@ export class ComputerPersistence {
     const computers = new Map<string, ComputerInfo>();
 
     try {
-      const savedJson = await PreferencesUtil.get<string>(STORAGE_KEY, '');
+      const savedJson = await PreferencesUtil.get<string>(STORAGE_KEY, "");
       if (!savedJson) {
-        console.info('ComputerPersistence: 没有保存的电脑');
+        console.info("ComputerPersistence: 没有保存的电脑");
         return computers;
       }
 
@@ -144,22 +138,24 @@ export class ComputerPersistence {
           }
         }
 
-        console.info(`ComputerPersistence: 加载 ${saved.name} (pairState=${pairState}, httpPort=${httpPort}, cert=${saved.serverCert ? '有' : '无'})`);
+        console.info(
+          `ComputerPersistence: 加载 ${saved.name} (pairState=${pairState}, httpPort=${httpPort}, cert=${saved.serverCert ? "有" : "无"})`,
+        );
 
         const computer = new ComputerInfoBuilder()
           .setUuid(saved.uuid)
           .setName(saved.name)
           .setAddress(addressHost)
           .setLocalAddress(saved.localAddress || addressHost)
-          .setRemoteAddress(saved.remoteAddress || '')
+          .setRemoteAddress(saved.remoteAddress || "")
           .setManualAddress(saved.manualAddress)
           .setIpv6Address(saved.ipv6Address)
-          .setMacAddress(saved.macAddress || '')
-          .setServerCert(saved.serverCert || '')
+          .setMacAddress(saved.macAddress || "")
+          .setServerCert(saved.serverCert || "")
           .setState(ComputerState.UNKNOWN)
           .setPairState(pairState)
           .setRunningGameId(saved.runningGameId || 0)
-          .setBoxArtUrl(saved.boxArtUrl || '')
+          .setBoxArtUrl(saved.boxArtUrl || "")
           .setHttpPort(httpPort)
           .build();
 
@@ -168,7 +164,7 @@ export class ComputerPersistence {
 
       console.info(`ComputerPersistence: 加载完成，共 ${computers.size} 台电脑`);
     } catch (err) {
-      console.error('ComputerPersistence: 加载电脑列表失败', err);
+      console.error("ComputerPersistence: 加载电脑列表失败", err);
     }
 
     return computers;
@@ -178,15 +174,15 @@ export class ComputerPersistence {
   // ---------------------------------------------------------------------------
 
   static parsePairState(stateStr: string): PairState {
-    if (stateStr === 'PAIRED' || stateStr === '1') return PairState.PAIRED;
-    if (stateStr === 'FAILED' || stateStr === '3') return PairState.FAILED;
-    if (stateStr === 'PIN_WRONG' || stateStr === '2') return PairState.PIN_WRONG;
+    if (stateStr === "PAIRED" || stateStr === "1") return PairState.PAIRED;
+    if (stateStr === "FAILED" || stateStr === "3") return PairState.FAILED;
+    if (stateStr === "PIN_WRONG" || stateStr === "2") return PairState.PIN_WRONG;
     return PairState.NOT_PAIRED;
   }
 
   static extractPortFromAddress(address: string): ExtractedHostPort | null {
-    const colonIndex = address.indexOf(':');
-    if (colonIndex > 0 && address.indexOf(':', colonIndex + 1) === -1) {
+    const colonIndex = address.indexOf(":");
+    if (colonIndex > 0 && address.indexOf(":", colonIndex + 1) === -1) {
       const portStr = address.substring(colonIndex + 1);
       const port = parseInt(portStr);
       if (port > 0 && port <= MAX_PORT && port !== NvHttp.DEFAULT_HTTP_PORT) {

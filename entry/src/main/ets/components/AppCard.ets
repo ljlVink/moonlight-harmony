@@ -8,14 +8,13 @@
  * (at your option) any later version.
  */
 
-import { ObservableApp } from '../viewmodel/AppViewModel';
-import { AppColors, AppSizes } from '../common/Theme';
-import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
+import { ObservableApp } from "../viewmodel/AppViewModel";
+import { AppColors, AppSizes } from "../common/Theme";
+import { LengthMetrics, ColorMetrics } from "@kit.ArkUI";
 
 const CARD_WIDTH = 160;
 const CARD_ICON_HEIGHT = 120;
 const CARD_TITLE_HEIGHT = 40;
-
 @Component
 export struct AppCard {
   @ObjectLink app: ObservableApp;
@@ -31,15 +30,15 @@ export struct AppCard {
     Column() {
       Stack({ alignContent: Alignment.TopStart }) {
         if (this.app.localIconPath && !this.imageLoadFailed) {
-          Image('file://' + this.app.localIconPath)
-            .width('100%')
+          Image("file://" + this.app.localIconPath)
+            .width("100%")
             .height(CARD_ICON_HEIGHT)
             .objectFit(ImageFit.Cover)
             .borderRadius({ topLeft: AppSizes.RadiusMedium, topRight: AppSizes.RadiusMedium })
             .draggable(false)
             .onError(() => {
               this.imageLoadFailed = true;
-            })
+            });
         } else if (!this.app.iconLoaded && this.app.iconUrl) {
           Column() {
             LoadingProgress()
@@ -47,22 +46,22 @@ export struct AppCard {
               .height(32)
               .color(AppColors.TextSecondary)
           }
-          .width('100%')
+          .width("100%")
           .height(CARD_ICON_HEIGHT)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(AppColors.SurfaceDark)
-          .borderRadius({ topLeft: AppSizes.RadiusMedium, topRight: AppSizes.RadiusMedium })
+          .borderRadius({ topLeft: AppSizes.RadiusMedium, topRight: AppSizes.RadiusMedium });
         } else {
           Column() {
-            SymbolGlyph($r('sys.symbol.gamecontroller_fill'))
+            SymbolGlyph($r("sys.symbol.gamecontroller_fill"))
               .fontSize(48)
               .fontColor([AppColors.TextSecondary])
           }
-          .width('100%')
+          .width("100%")
           .height(CARD_ICON_HEIGHT)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(AppColors.SurfaceDark)
-          .borderRadius({ topLeft: AppSizes.RadiusMedium, topRight: AppSizes.RadiusMedium })
+          .borderRadius({ topLeft: AppSizes.RadiusMedium, topRight: AppSizes.RadiusMedium });
         }
 
         if (this.app.isRunning) {
@@ -71,21 +70,20 @@ export struct AppCard {
               .width(6)
               .height(6)
               .fill(AppColors.Online)
-            Text('Running')
+            Text("Running")
               .fontSize(10)
               .fontWeight(FontWeight.Medium)
               .fontColor(AppColors.Online)
               .margin({ left: 4 })
           }
           .padding({ left: 8, right: 10, top: 4, bottom: 4 })
-          .backgroundColor('rgba(0, 0, 0, 0.7)')
+          .backgroundColor("rgba(0, 0, 0, 0.7)")
           .borderRadius(12)
-          .margin({ left: 6, top: 6 })
+          .margin({ left: 6, top: 6 });
         }
       }
-      .width('100%')
+      .width("100%")
       .height(CARD_ICON_HEIGHT)
-
       Text(this.app.name)
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
@@ -94,7 +92,7 @@ export struct AppCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center)
         .lineHeight(16)
-        .width('100%')
+        .width("100%")
         .height(CARD_TITLE_HEIGHT)
         .padding({ left: 6, right: 6, top: 4, bottom: 4 })
     }
@@ -105,21 +103,21 @@ export struct AppCard {
     .borderColor(this.app.isRunning ? AppColors.Online : AppColors.CardBorder)
     .shadow({
       radius: this.isFocused ? 16 : 8,
-      color: this.app.isRunning ? 'rgba(74, 222, 128, 0.25)' : 'rgba(0, 0, 0, 0.3)',
+      color: this.app.isRunning ? "rgba(74, 222, 128, 0.25)" : "rgba(0, 0, 0, 0.3)",
       offsetX: 0,
-      offsetY: this.isFocused ? 8 : 4
+      offsetY: this.isFocused ? 8 : 4,
     })
     .clip(true)
     .scale({
-      x: this.isPressed ? 0.96 : (this.isFocused ? 1.05 : 1),
-      y: this.isPressed ? 0.96 : (this.isFocused ? 1.05 : 1)
+      x: this.isPressed ? 0.96 : this.isFocused ? 1.05 : 1,
+      y: this.isPressed ? 0.96 : this.isFocused ? 1.05 : 1,
     })
     .animation({ duration: 150, curve: Curve.EaseOut })
     .focusable(true)
     .focusBox({
       margin: LengthMetrics.vp(2),
       strokeColor: ColorMetrics.rgba(74, 222, 128, 1),
-      strokeWidth: LengthMetrics.vp(2)
+      strokeWidth: LengthMetrics.vp(2),
     })
     .onFocus(() => {
       this.isFocused = true;
@@ -146,14 +144,13 @@ export struct AppCard {
       this.onTap();
     })
     .gesture(
-      LongPressGesture({ duration: 500 })
-        .onAction(() => {
-          this.onSelect();
-          this.onLongPress();
-        })
+      LongPressGesture({ duration: 500 }).onAction(() => {
+        this.onSelect();
+        this.onLongPress();
+      }),
     )
     .onTouch((event: TouchEvent) => {
-      this.isPressed = (event.type === TouchType.Down);
-    })
+      this.isPressed = event.type === TouchType.Down;
+    });
   }
 }

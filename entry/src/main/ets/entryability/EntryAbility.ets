@@ -8,13 +8,20 @@
  * (at your option) any later version.
  */
 
-import { AbilityConstant, ApplicationStateChangeCallback, Configuration, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { window, display } from '@kit.ArkUI';
-import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { AppStateService } from '../service/AppStateService';
+import {
+  AbilityConstant,
+  ApplicationStateChangeCallback,
+  Configuration,
+  ConfigurationConstant,
+  UIAbility,
+  Want,
+} from "@kit.AbilityKit";
+import { hilog } from "@kit.PerformanceAnalysisKit";
+import { window, display } from "@kit.ArkUI";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { AppStateService } from "../service/AppStateService";
 
-const TAG = 'EntryAbility';
+const TAG = "EntryAbility";
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
@@ -22,21 +29,27 @@ export default class EntryAbility extends UIAbility {
   private appStateCallback: ApplicationStateChangeCallback | null = null;
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
+    hilog.info(DOMAIN, TAG, "%{public}s", "Ability onCreate");
 
     PreferencesUtil.init(this.context);
 
-    AppStorage.setOrCreate('colorMode', this.context.config.colorMode);
-    hilog.info(DOMAIN, TAG, 'AppStorage colorMode set to: %{public}d', this.context.config.colorMode);
+    AppStorage.setOrCreate("colorMode", this.context.config.colorMode);
+    hilog.info(
+      DOMAIN,
+      TAG,
+      "AppStorage colorMode set to: %{public}d",
+      this.context.config.colorMode,
+    );
 
-    this.isDarkMode = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
-    hilog.info(DOMAIN, TAG, 'Initial color mode: %{public}s', this.isDarkMode ? 'dark' : 'light');
+    this.isDarkMode =
+      this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    hilog.info(DOMAIN, TAG, "Initial color mode: %{public}s", this.isDarkMode ? "dark" : "light");
 
     this.registerAppStateCallback();
   }
 
   onDestroy(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onDestroy');
+    hilog.info(DOMAIN, TAG, "%{public}s", "Ability onDestroy");
 
     this.unregisterAppStateCallback();
   }
@@ -45,19 +58,19 @@ export default class EntryAbility extends UIAbility {
     const applicationContext = this.context.getApplicationContext();
     this.appStateCallback = {
       onApplicationForeground: () => {
-        hilog.info(DOMAIN, TAG, '%{public}s', 'Application onForeground');
+        hilog.info(DOMAIN, TAG, "%{public}s", "Application onForeground");
         AppStateService.getInstance().onForeground();
       },
       onApplicationBackground: () => {
-        hilog.info(DOMAIN, TAG, '%{public}s', 'Application onBackground');
+        hilog.info(DOMAIN, TAG, "%{public}s", "Application onBackground");
         AppStateService.getInstance().onBackground();
-      }
+      },
     };
     try {
-      applicationContext.on('applicationStateChange', this.appStateCallback);
-      hilog.info(DOMAIN, TAG, '%{public}s', 'App state callback registered');
+      applicationContext.on("applicationStateChange", this.appStateCallback);
+      hilog.info(DOMAIN, TAG, "%{public}s", "App state callback registered");
     } catch (err) {
-      hilog.error(DOMAIN, TAG, 'Failed to register app state callback: %{public}s', String(err));
+      hilog.error(DOMAIN, TAG, "Failed to register app state callback: %{public}s", String(err));
     }
   }
 
@@ -65,23 +78,33 @@ export default class EntryAbility extends UIAbility {
     if (this.appStateCallback) {
       try {
         const applicationContext = this.context.getApplicationContext();
-        applicationContext.off('applicationStateChange', this.appStateCallback);
-        hilog.info(DOMAIN, TAG, '%{public}s', 'App state callback unregistered');
+        applicationContext.off("applicationStateChange", this.appStateCallback);
+        hilog.info(DOMAIN, TAG, "%{public}s", "App state callback unregistered");
       } catch (err) {
-        hilog.error(DOMAIN, TAG, 'Failed to unregister app state callback: %{public}s', String(err));
+        hilog.error(
+          DOMAIN,
+          TAG,
+          "Failed to unregister app state callback: %{public}s",
+          String(err),
+        );
       }
       this.appStateCallback = null;
     }
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
-    hilog.info(DOMAIN, TAG, 'Configuration updated: %{public}s', JSON.stringify(newConfig));
+    hilog.info(DOMAIN, TAG, "Configuration updated: %{public}s", JSON.stringify(newConfig));
 
     const newIsDarkMode = newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
-    AppStorage.setOrCreate('colorMode', newConfig.colorMode);
+    AppStorage.setOrCreate("colorMode", newConfig.colorMode);
     if (this.isDarkMode !== newIsDarkMode) {
       this.isDarkMode = newIsDarkMode;
-      hilog.info(DOMAIN, TAG, 'Color mode changed to: %{public}s', this.isDarkMode ? 'dark' : 'light');
+      hilog.info(
+        DOMAIN,
+        TAG,
+        "Color mode changed to: %{public}s",
+        this.isDarkMode ? "dark" : "light",
+      );
 
       this.updateSystemBarColors();
     }
@@ -91,31 +114,36 @@ export default class EntryAbility extends UIAbility {
     const windowStage = this.context.windowStage;
     if (windowStage) {
       windowStage.getMainWindow().then((win) => {
-        const statusBarContentColor = this.isDarkMode ? '#F5F0EB' : '#1A3A4A';
+        const statusBarContentColor = this.isDarkMode ? "#F5F0EB" : "#1A3A4A";
         const barProperties: window.SystemBarProperties = {
-          statusBarColor: '#00000000',
-          navigationBarColor: '#00000000',
+          statusBarColor: "#00000000",
+          navigationBarColor: "#00000000",
           statusBarContentColor: statusBarContentColor,
-          navigationBarContentColor: statusBarContentColor
+          navigationBarContentColor: statusBarContentColor,
         };
         try {
           win.setWindowSystemBarProperties(barProperties);
         } catch (e) {
-          hilog.warn(DOMAIN, TAG, 'Failed to set system bar properties: %{public}s', String(e));
+          hilog.warn(DOMAIN, TAG, "Failed to set system bar properties: %{public}s", String(e));
         }
       });
     }
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageCreate');
+    hilog.info(DOMAIN, TAG, "%{public}s", "Ability onWindowStageCreate");
 
-    windowStage.loadContent('pages/Index', (err) => {
+    windowStage.loadContent("pages/Index", (err) => {
       if (err.code) {
-        hilog.error(DOMAIN, TAG, 'Failed to load content. Cause: %{public}s', JSON.stringify(err) ?? '');
+        hilog.error(
+          DOMAIN,
+          TAG,
+          "Failed to load content. Cause: %{public}s",
+          JSON.stringify(err) ?? "",
+        );
         return;
       }
-      hilog.info(DOMAIN, TAG, 'Succeeded in loading content.');
+      hilog.info(DOMAIN, TAG, "Succeeded in loading content.");
     });
 
     windowStage.getMainWindow().then((win) => {
@@ -128,55 +156,66 @@ export default class EntryAbility extends UIAbility {
         const density = displayInfo.densityPixels;
         const topSafeHeight = Math.max(avoidArea.topRect.height / density, MIN_TOP_SAFE_HEIGHT);
         const bottomSafeHeight = avoidArea.bottomRect.height / density;
-        AppStorage.setOrCreate('topSafeHeight', topSafeHeight);
-        AppStorage.setOrCreate('bottomSafeHeight', bottomSafeHeight);
-        hilog.info(DOMAIN, TAG, 'Safe area: top=%{public}d vp, bottom=%{public}d vp', topSafeHeight, bottomSafeHeight);
+        AppStorage.setOrCreate("topSafeHeight", topSafeHeight);
+        AppStorage.setOrCreate("bottomSafeHeight", bottomSafeHeight);
+        hilog.info(
+          DOMAIN,
+          TAG,
+          "Safe area: top=%{public}d vp, bottom=%{public}d vp",
+          topSafeHeight,
+          bottomSafeHeight,
+        );
 
-        win.on('avoidAreaChange', (data) => {
+        win.on("avoidAreaChange", (data) => {
           if (data.type === window.AvoidAreaType.TYPE_SYSTEM) {
             const newTopHeight = Math.max(data.area.topRect.height / density, MIN_TOP_SAFE_HEIGHT);
             const newBottomHeight = data.area.bottomRect.height / density;
-            AppStorage.setOrCreate('topSafeHeight', newTopHeight);
-            AppStorage.setOrCreate('bottomSafeHeight', newBottomHeight);
-            hilog.info(DOMAIN, TAG, 'Safe area updated: top=%{public}d vp, bottom=%{public}d vp',
-              newTopHeight, newBottomHeight);
+            AppStorage.setOrCreate("topSafeHeight", newTopHeight);
+            AppStorage.setOrCreate("bottomSafeHeight", newBottomHeight);
+            hilog.info(
+              DOMAIN,
+              TAG,
+              "Safe area updated: top=%{public}d vp, bottom=%{public}d vp",
+              newTopHeight,
+              newBottomHeight,
+            );
           }
         });
       } catch (e) {
-        AppStorage.setOrCreate('topSafeHeight', 56);
-        AppStorage.setOrCreate('bottomSafeHeight', 0);
-        hilog.warn(DOMAIN, TAG, 'Failed to get avoid area, using default: %{public}s', String(e));
+        AppStorage.setOrCreate("topSafeHeight", 56);
+        AppStorage.setOrCreate("bottomSafeHeight", 0);
+        hilog.warn(DOMAIN, TAG, "Failed to get avoid area, using default: %{public}s", String(e));
       }
 
       try {
-        win.setSpecificSystemBarEnabled('navigationIndicator', false);
+        win.setSpecificSystemBarEnabled("navigationIndicator", false);
       } catch (e) {
-        hilog.info(DOMAIN, TAG, 'setSpecificSystemBarEnabled(navigationIndicator) not available');
+        hilog.info(DOMAIN, TAG, "setSpecificSystemBarEnabled(navigationIndicator) not available");
       }
-      const contentColor = this.isDarkMode ? '#F5F0EB' : '#1A3A4A';
+      const contentColor = this.isDarkMode ? "#F5F0EB" : "#1A3A4A";
       const barProperties: window.SystemBarProperties = {
-        statusBarColor: '#00000000',
-        navigationBarColor: '#00000000',
+        statusBarColor: "#00000000",
+        navigationBarColor: "#00000000",
         statusBarContentColor: contentColor,
-        navigationBarContentColor: contentColor
+        navigationBarContentColor: contentColor,
       };
       try {
         win.setWindowSystemBarProperties(barProperties);
       } catch (e) {
-        hilog.warn(DOMAIN, TAG, 'Failed to set system bar properties: %{public}s', String(e));
+        hilog.warn(DOMAIN, TAG, "Failed to set system bar properties: %{public}s", String(e));
       }
     });
   }
 
   onWindowStageDestroy(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageDestroy');
+    hilog.info(DOMAIN, TAG, "%{public}s", "Ability onWindowStageDestroy");
   }
 
   onForeground(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onForeground');
+    hilog.info(DOMAIN, TAG, "%{public}s", "Ability onForeground");
   }
 
   onBackground(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onBackground');
+    hilog.info(DOMAIN, TAG, "%{public}s", "Ability onBackground");
   }
 }

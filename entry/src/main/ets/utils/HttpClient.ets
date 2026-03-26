@@ -8,11 +8,10 @@
  * (at your option) any later version.
  */
 
-import { rcp } from '@kit.RemoteCommunicationKit';
-import { StringUtil } from './StringUtil';
+import { rcp } from "@kit.RemoteCommunicationKit";
+import { StringUtil } from "./StringUtil";
 
 export interface HttpClientConfig {
-
   connectTimeout?: number;
   transferTimeout?: number;
   skipServerValidation?: boolean;
@@ -24,7 +23,6 @@ export interface HttpResponse {
   statusCode: number;
   body: string;
 }
-
 
 export class HttpClient {
   static readonly DEFAULT_CONNECT_TIMEOUT = 5000;
@@ -40,17 +38,19 @@ export class HttpClient {
     const connectTimeout = config?.connectTimeout ?? HttpClient.DEFAULT_CONNECT_TIMEOUT;
     const transferTimeout = config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT;
 
-    console.debug(`HttpClient: 请求 ${url} (connect=${connectTimeout}ms, transfer=${transferTimeout}ms)`);
+    console.debug(
+      `HttpClient: 请求 ${url} (connect=${connectTimeout}ms, transfer=${transferTimeout}ms)`,
+    );
 
     const securityConfig: rcp.SecurityConfiguration = {
-      remoteValidation: config?.skipServerValidation !== false ? 'skip' : 'system'
+      remoteValidation: config?.skipServerValidation !== false ? "skip" : "system",
     };
 
     if (config?.clientCertPath && config?.clientKeyPath) {
       securityConfig.certificate = {
-        type: 'PEM',
+        type: "PEM",
         filePath: config.clientCertPath,
-        key: config.clientKeyPath
+        key: config.clientKeyPath,
       };
       console.info(`HttpClient: 使用客户端证书: ${config.clientCertPath}`);
     }
@@ -61,10 +61,10 @@ export class HttpClient {
         transfer: {
           timeout: {
             connectMs: connectTimeout,
-            transferMs: transferTimeout
-          }
-        }
-      }
+            transferMs: transferTimeout,
+          },
+        },
+      },
     };
 
     const session = rcp.createSession(sessionConfig);
@@ -78,7 +78,7 @@ export class HttpClient {
       }
 
       if (!response.body) {
-        throw new Error('响应体为空');
+        throw new Error("响应体为空");
       }
 
       const body = StringUtil.arrayBufferToString(response.body);
@@ -86,11 +86,11 @@ export class HttpClient {
 
       return {
         statusCode: response.statusCode,
-        body: body
+        body: body,
       };
     } catch (err) {
       const error = err as Error;
-      const isTimeout = error.message?.includes('Timeout');
+      const isTimeout = error.message?.includes("Timeout");
       if (isTimeout) {
         console.warn(`HttpClient: 请求超时 - ${url}`);
       } else {
@@ -106,17 +106,16 @@ export class HttpClient {
     url: string,
     certPath: string,
     keyPath: string,
-    config?: HttpClientConfig
+    config?: HttpClientConfig,
   ): Promise<string> {
     return HttpClient.get(url, {
       skipServerValidation: true,
       clientCertPath: certPath,
       clientKeyPath: keyPath,
       connectTimeout: config?.connectTimeout ?? HttpClient.DEFAULT_CONNECT_TIMEOUT,
-      transferTimeout: config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT
+      transferTimeout: config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT,
     });
   }
-
 
   static async getBinary(url: string, config?: HttpClientConfig): Promise<ArrayBuffer> {
     const connectTimeout = config?.connectTimeout ?? HttpClient.DEFAULT_CONNECT_TIMEOUT;
@@ -125,14 +124,14 @@ export class HttpClient {
     console.info(`HttpClient: 二进制请求 ${url}`);
 
     const securityConfig: rcp.SecurityConfiguration = {
-      remoteValidation: config?.skipServerValidation !== false ? 'skip' : 'system'
+      remoteValidation: config?.skipServerValidation !== false ? "skip" : "system",
     };
 
     if (config?.clientCertPath && config?.clientKeyPath) {
       securityConfig.certificate = {
-        type: 'PEM',
+        type: "PEM",
         filePath: config.clientCertPath,
-        key: config.clientKeyPath
+        key: config.clientKeyPath,
       };
     }
 
@@ -142,10 +141,10 @@ export class HttpClient {
         transfer: {
           timeout: {
             connectMs: connectTimeout,
-            transferMs: transferTimeout
-          }
-        }
-      }
+            transferMs: transferTimeout,
+          },
+        },
+      },
     };
 
     const session = rcp.createSession(sessionConfig);
@@ -158,7 +157,7 @@ export class HttpClient {
       }
 
       if (!response.body) {
-        throw new Error('响应体为空');
+        throw new Error("响应体为空");
       }
 
       console.info(`HttpClient: 二进制响应大小 = ${response.body.byteLength} 字节`);
@@ -172,19 +171,18 @@ export class HttpClient {
     }
   }
 
-
   static async getBinaryWithClientCert(
     url: string,
     certPath: string,
     keyPath: string,
-    config?: HttpClientConfig
+    config?: HttpClientConfig,
   ): Promise<ArrayBuffer> {
     return HttpClient.getBinary(url, {
       skipServerValidation: true,
       clientCertPath: certPath,
       clientKeyPath: keyPath,
       connectTimeout: config?.connectTimeout ?? HttpClient.DEFAULT_CONNECT_TIMEOUT,
-      transferTimeout: config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT
+      transferTimeout: config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT,
     });
   }
 }

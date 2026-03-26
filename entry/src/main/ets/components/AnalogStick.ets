@@ -8,7 +8,14 @@
  * (at your option) any later version.
  */
 
-import { ControllerAxis, ControllerAxisEvent, InputType, ControllerButton, ControllerButtonEvent, InputEvent } from '../model/InputEvent';
+import {
+  ControllerAxis,
+  ControllerAxisEvent,
+  InputType,
+  ControllerButton,
+  ControllerButtonEvent,
+  InputEvent,
+} from "../model/InputEvent";
 
 export interface AnalogStickConfig {
   isLeftStick: boolean;
@@ -18,12 +25,16 @@ export interface AnalogStickConfig {
   opacity?: number;
   enableClick?: boolean;
 }
-
 @Component
 export struct AnalogStick {
   @Prop config: AnalogStickConfig = { isLeftStick: true };
 
-  onAxisChange: (xAxis: ControllerAxis, xValue: number, yAxis: ControllerAxis, yValue: number) => void = () => {};
+  onAxisChange: (
+    xAxis: ControllerAxis,
+    xValue: number,
+    yAxis: ControllerAxis,
+    yValue: number,
+  ) => void = () => {};
   onStickClick: (button: ControllerButton) => void = () => {};
   onInput: (event: InputEvent) => void = () => {};
 
@@ -62,56 +73,54 @@ export struct AnalogStick {
       Circle()
         .width(this.stickOuterRadius * 2)
         .height(this.stickOuterRadius * 2)
-        .fill('transparent')
-        .stroke('#FFFFFF')
+        .fill("transparent")
+        .stroke("#FFFFFF")
         .strokeWidth(1)
         .strokeOpacity(0.15)
-
       Circle()
         .width(this.stickInnerRadius * 2)
         .height(this.stickInnerRadius * 2)
-        .fill(this.isPressed ? '#005090FF' : 'transparent')
-        .stroke(this.isPressed ? '#5090FF' : '#FFFFFF')
+        .fill(this.isPressed ? "#005090FF" : "transparent")
+        .stroke(this.isPressed ? "#5090FF" : "#FFFFFF")
         .strokeWidth(1.5)
         .strokeOpacity(this.isPressed ? 0.7 : 0.35)
         .translate({
           x: this.stickX * (this.stickOuterRadius - this.stickInnerRadius),
-          y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius)
+          y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius),
         })
         .animation({
           duration: this.isPressed ? 0 : 100,
-          curve: Curve.EaseOut
+          curve: Curve.EaseOut,
         })
 
       if (this.showClickFeedback) {
         Circle()
           .width(this.stickInnerRadius * 2 + 16)
           .height(this.stickInnerRadius * 2 + 16)
-          .fill('transparent')
-          .stroke('#5090FF')
+          .fill("transparent")
+          .stroke("#5090FF")
           .strokeWidth(2)
           .strokeOpacity(0.6)
           .translate({
             x: this.stickX * (this.stickOuterRadius - this.stickInnerRadius),
-            y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius)
-          })
+            y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius),
+          });
       }
-
-      Text(this.config.isLeftStick ? 'L' : 'R')
+      Text(this.config.isLeftStick ? "L" : "R")
         .fontSize(11)
-        .fontColor('#FFFFFF')
+        .fontColor("#FFFFFF")
         .fontWeight(FontWeight.Medium)
         .opacity(0.3)
         .translate({
           x: this.stickX * (this.stickOuterRadius - this.stickInnerRadius),
-          y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius)
+          y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius),
         })
     }
     .width(this.stickOuterRadius * 2)
     .height(this.stickOuterRadius * 2)
     .opacity(this.stickOpacity)
     .hitTestBehavior(HitTestMode.Block)
-    .onTouch((event) => this.handleTouch(event))
+    .onTouch((event) => this.handleTouch(event));
   }
 
   private handleTouch(event: TouchEvent): void {
@@ -142,7 +151,7 @@ export struct AnalogStick {
       case TouchType.Up:
       case TouchType.Cancel: {
         const changed = event.changedTouches;
-        const isOurFinger = changed.some(t => t.id === this.trackingTouchId);
+        const isOurFinger = changed.some((t) => t.id === this.trackingTouchId);
         if (isOurFinger) {
           this.trackingTouchId = -1;
           this.isPressed = false;
@@ -202,14 +211,14 @@ export struct AnalogStick {
       timestamp: Date.now(),
       controllerIndex: 0,
       axis: xAxis,
-      value: xValue
+      value: xValue,
     };
     const yEvent: ControllerAxisEvent = {
       type: InputType.CONTROLLER_AXIS,
       timestamp: Date.now(),
       controllerIndex: 0,
       axis: yAxis,
-      value: yValue
+      value: yValue,
     };
     this.onInput(xEvent);
     this.onInput(yEvent);
@@ -229,14 +238,14 @@ export struct AnalogStick {
       timestamp: Date.now(),
       controllerIndex: 0,
       axis: xAxis,
-      value: 0
+      value: 0,
     };
     const yEvent: ControllerAxisEvent = {
       type: InputType.CONTROLLER_AXIS,
       timestamp: Date.now(),
       controllerIndex: 0,
       axis: yAxis,
-      value: 0
+      value: 0,
     };
     this.onInput(xEvent);
     this.onInput(yEvent);
@@ -255,7 +264,7 @@ export struct AnalogStick {
         timestamp: Date.now(),
         controllerIndex: 0,
         button: button,
-        isPressed: true
+        isPressed: true,
       };
       this.onInput(pressEvent);
 
@@ -265,7 +274,7 @@ export struct AnalogStick {
           timestamp: Date.now(),
           controllerIndex: 0,
           button: button,
-          isPressed: false
+          isPressed: false,
         };
         this.onInput(releaseEvent);
       }, 50);

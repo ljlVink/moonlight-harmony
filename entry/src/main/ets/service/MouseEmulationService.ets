@@ -8,9 +8,7 @@
  * (at your option) any later version.
  */
 
-
-import { GamepadState, MoonlightButton } from './GamepadTypes';
-
+import { GamepadState, MoonlightButton } from "./GamepadTypes";
 
 const MOUSE_EMULATION_REPORT_PERIOD = 50;
 
@@ -21,7 +19,6 @@ export interface MouseEmulationCallback {
   sendMouseHighResScroll(scrollAmount: number): void;
   sendMouseHighResHScroll(scrollAmount: number): void;
 }
-
 
 class StickMovement {
   x: number = 0;
@@ -35,7 +32,6 @@ class StickMovement {
   }
 }
 
-
 export class MouseEmulationService {
   private active = false;
   private callback: MouseEmulationCallback | null = null;
@@ -46,8 +42,7 @@ export class MouseEmulationService {
   private rightStickX: number = 0;
   private rightStickY: number = 0;
 
-  constructor() {
-  }
+  constructor() {}
 
   setCallback(callback: MouseEmulationCallback | null): void {
     this.callback = callback;
@@ -64,7 +59,6 @@ export class MouseEmulationService {
   isActive(): boolean {
     return this.active;
   }
-
 
   intercept(state: GamepadState, onSendZeroState: () => void): boolean {
     if (!this.active) {
@@ -100,7 +94,7 @@ export class MouseEmulationService {
       this.tick();
     }, MOUSE_EMULATION_REPORT_PERIOD);
 
-    console.info('[MOUSE-EMU] 鼠标模拟模式已启动');
+    console.info("[MOUSE-EMU] 鼠标模拟模式已启动");
   }
 
   private stop(): void {
@@ -110,7 +104,7 @@ export class MouseEmulationService {
       this.timerId = -1;
     }
     this.lastButtons = 0;
-    console.info('[MOUSE-EMU] 鼠标模拟模式已停止');
+    console.info("[MOUSE-EMU] 鼠标模拟模式已停止");
   }
 
   private convertStickToPixelMovement(stickX: number, stickY: number): StickMovement {
@@ -135,9 +129,7 @@ export class MouseEmulationService {
 
     const move = this.convertStickToPixelMovement(this.leftStickX, this.leftStickY);
     if (move.mag >= 1) {
-      this.callback.sendMouseMove(
-        Math.round(move.x), Math.round(-move.y)
-      );
+      this.callback.sendMouseMove(Math.round(move.x), Math.round(-move.y));
     }
 
     const scroll = this.convertStickToPixelMovement(this.rightStickX, this.rightStickY);
@@ -169,16 +161,16 @@ export class MouseEmulationService {
       }
     }
 
-    if ((changed & MoonlightButton.UP) && (buttons & MoonlightButton.UP)) {
+    if (changed & MoonlightButton.UP && buttons & MoonlightButton.UP) {
       this.callback.sendMouseHighResScroll(1);
     }
-    if ((changed & MoonlightButton.DOWN) && (buttons & MoonlightButton.DOWN)) {
+    if (changed & MoonlightButton.DOWN && buttons & MoonlightButton.DOWN) {
       this.callback.sendMouseHighResScroll(-1);
     }
-    if ((changed & MoonlightButton.RIGHT) && (buttons & MoonlightButton.RIGHT)) {
+    if (changed & MoonlightButton.RIGHT && buttons & MoonlightButton.RIGHT) {
       this.callback.sendMouseHighResHScroll(1);
     }
-    if ((changed & MoonlightButton.LEFT) && (buttons & MoonlightButton.LEFT)) {
+    if (changed & MoonlightButton.LEFT && buttons & MoonlightButton.LEFT) {
       this.callback.sendMouseHighResHScroll(-1);
     }
   }

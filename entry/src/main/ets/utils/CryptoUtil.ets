@@ -8,14 +8,13 @@
  * (at your option) any later version.
  */
 
-import { cryptoFramework } from '@kit.CryptoArchitectureKit';
-import { util } from '@kit.ArkTS';
+import { cryptoFramework } from "@kit.CryptoArchitectureKit";
+import { util } from "@kit.ArkTS";
 
 interface Asn1ElementInfo {
   length: number;
   totalLength: number;
 }
-
 
 export class CryptoUtil {
   static generateRandomBytes(length: number): Uint8Array {
@@ -30,17 +29,17 @@ export class CryptoUtil {
   }
 
   static bytesToHex(bytes: Uint8Array): string {
-    let result = '';
+    let result = "";
     for (let i = 0; i < bytes.length; i++) {
-      const v = bytes[i] & 0xFF;
-      result += v.toString(16).toUpperCase().padStart(2, '0');
+      const v = bytes[i] & 0xff;
+      result += v.toString(16).toUpperCase().padStart(2, "0");
     }
     return result;
   }
 
   static hexToBytes(hex: string): Uint8Array {
     if (hex.length % 2 !== 0) {
-      throw new Error('Invalid hex string length');
+      throw new Error("Invalid hex string length");
     }
     const bytes = new Uint8Array(hex.length / 2);
     for (let i = 0; i < bytes.length; i++) {
@@ -58,13 +57,13 @@ export class CryptoUtil {
 
   private static createDataBlob(data: Uint8Array): cryptoFramework.DataBlob {
     const blob: cryptoFramework.DataBlob = {
-      data: data
+      data: data,
     };
     return blob;
   }
 
   static async sha256(data: Uint8Array): Promise<Uint8Array> {
-    const md = cryptoFramework.createMd('SHA256');
+    const md = cryptoFramework.createMd("SHA256");
     const blob = CryptoUtil.createDataBlob(data);
     await md.update(blob);
     const result = await md.digest();
@@ -72,7 +71,7 @@ export class CryptoUtil {
   }
 
   static async sha1(data: Uint8Array): Promise<Uint8Array> {
-    const md = cryptoFramework.createMd('SHA1');
+    const md = cryptoFramework.createMd("SHA1");
     const blob = CryptoUtil.createDataBlob(data);
     await md.update(blob);
     const result = await md.digest();
@@ -87,7 +86,10 @@ export class CryptoUtil {
     const random = cryptoFramework.createRandom();
     const dataBlob = random.generateRandomSync(16);
     const uint8Array = new Uint8Array(dataBlob.data);
-    return uint8Array.buffer.slice(uint8Array.byteOffset, uint8Array.byteOffset + uint8Array.byteLength);
+    return uint8Array.buffer.slice(
+      uint8Array.byteOffset,
+      uint8Array.byteOffset + uint8Array.byteLength,
+    );
   }
 
   static async aesEncrypt(plaintext: Uint8Array, key: Uint8Array): Promise<Uint8Array> {
@@ -96,11 +98,11 @@ export class CryptoUtil {
     const paddedData = new Uint8Array(paddedLength);
     paddedData.set(plaintext);
 
-    const symKeyGenerator = cryptoFramework.createSymKeyGenerator('AES128');
+    const symKeyGenerator = cryptoFramework.createSymKeyGenerator("AES128");
     const keyBlob = CryptoUtil.createDataBlob(key);
     const symKey = await symKeyGenerator.convertKey(keyBlob);
 
-    const cipher = cryptoFramework.createCipher('AES128|ECB|NoPadding');
+    const cipher = cryptoFramework.createCipher("AES128|ECB|NoPadding");
     await cipher.init(cryptoFramework.CryptoMode.ENCRYPT_MODE, symKey, null);
 
     const inputBlob = CryptoUtil.createDataBlob(paddedData);
@@ -109,11 +111,11 @@ export class CryptoUtil {
   }
 
   static async aesDecrypt(ciphertext: Uint8Array, key: Uint8Array): Promise<Uint8Array> {
-    const symKeyGenerator = cryptoFramework.createSymKeyGenerator('AES128');
+    const symKeyGenerator = cryptoFramework.createSymKeyGenerator("AES128");
     const keyBlob = CryptoUtil.createDataBlob(key);
     const symKey = await symKeyGenerator.convertKey(keyBlob);
 
-    const cipher = cryptoFramework.createCipher('AES128|ECB|NoPadding');
+    const cipher = cryptoFramework.createCipher("AES128|ECB|NoPadding");
     await cipher.init(cryptoFramework.CryptoMode.DECRYPT_MODE, symKey, null);
 
     const inputBlob = CryptoUtil.createDataBlob(ciphertext);
@@ -122,12 +124,12 @@ export class CryptoUtil {
   }
 
   static async generateRsaKeyPair(): Promise<cryptoFramework.KeyPair> {
-    const generator = cryptoFramework.createAsyKeyGenerator('RSA2048|PRIMES_2');
+    const generator = cryptoFramework.createAsyKeyGenerator("RSA2048|PRIMES_2");
     return await generator.generateKeyPair();
   }
 
   static async rsaSign(data: Uint8Array, privateKey: cryptoFramework.PriKey): Promise<Uint8Array> {
-    const signer = cryptoFramework.createSign('RSA2048|PKCS1|SHA256');
+    const signer = cryptoFramework.createSign("RSA2048|PKCS1|SHA256");
     await signer.init(privateKey);
     const dataBlob = CryptoUtil.createDataBlob(data);
     await signer.update(dataBlob);
@@ -135,8 +137,12 @@ export class CryptoUtil {
     return new Uint8Array(signData.data);
   }
 
-  static async rsaVerify(data: Uint8Array, signature: Uint8Array, publicKey: cryptoFramework.PubKey): Promise<boolean> {
-    const verifier = cryptoFramework.createVerify('RSA2048|PKCS1|SHA256');
+  static async rsaVerify(
+    data: Uint8Array,
+    signature: Uint8Array,
+    publicKey: cryptoFramework.PubKey,
+  ): Promise<boolean> {
+    const verifier = cryptoFramework.createVerify("RSA2048|PKCS1|SHA256");
     await verifier.init(publicKey);
     const dataBlob = CryptoUtil.createDataBlob(data);
     await verifier.update(dataBlob);
@@ -145,20 +151,24 @@ export class CryptoUtil {
     return result;
   }
 
-  static async verifyWithCert(data: Uint8Array, signature: Uint8Array, certDer: Uint8Array): Promise<boolean> {
+  static async verifyWithCert(
+    data: Uint8Array,
+    signature: Uint8Array,
+    certDer: Uint8Array,
+  ): Promise<boolean> {
     try {
       const pubKeyDer = CryptoUtil.extractSubjectPublicKeyInfo(certDer);
       if (!pubKeyDer) {
-        console.error('CryptoUtil: Failed to extract public key from certificate');
+        console.error("CryptoUtil: Failed to extract public key from certificate");
         return false;
       }
 
-      const generator = cryptoFramework.createAsyKeyGenerator('RSA2048');
+      const generator = cryptoFramework.createAsyKeyGenerator("RSA2048");
       const keyPair = await generator.convertKey({ data: pubKeyDer }, null);
 
       return await CryptoUtil.rsaVerify(data, signature, keyPair.pubKey);
     } catch (err) {
-      console.error('CryptoUtil: verifyWithCert failed', err);
+      console.error("CryptoUtil: verifyWithCert failed", err);
       return false;
     }
   }
@@ -173,7 +183,7 @@ export class CryptoUtil {
   static extractCertSignature(certDer: Uint8Array): Uint8Array {
     try {
       if (certDer[0] !== 0x30) {
-        console.error('CryptoUtil: 证书不是以 SEQUENCE 开始');
+        console.error("CryptoUtil: 证书不是以 SEQUENCE 开始");
         return certDer;
       }
 
@@ -184,7 +194,7 @@ export class CryptoUtil {
         outerLen = certDer[pos];
         pos++;
       } else {
-        const lenBytes = certDer[pos] & 0x7F;
+        const lenBytes = certDer[pos] & 0x7f;
         pos++;
         outerLen = 0;
         for (let i = 0; i < lenBytes; i++) {
@@ -194,7 +204,7 @@ export class CryptoUtil {
       }
 
       if (certDer[pos] !== 0x30) {
-        console.error('CryptoUtil: TBSCertificate 不是 SEQUENCE');
+        console.error("CryptoUtil: TBSCertificate 不是 SEQUENCE");
         return certDer;
       }
       pos++;
@@ -204,7 +214,7 @@ export class CryptoUtil {
         tbsLen = certDer[pos];
         pos++;
       } else {
-        const lenBytes = certDer[pos] & 0x7F;
+        const lenBytes = certDer[pos] & 0x7f;
         pos++;
         tbsLen = 0;
         for (let i = 0; i < lenBytes; i++) {
@@ -215,7 +225,7 @@ export class CryptoUtil {
       pos += tbsLen;
 
       if (certDer[pos] !== 0x30) {
-        console.error('CryptoUtil: signatureAlgorithm 不是 SEQUENCE');
+        console.error("CryptoUtil: signatureAlgorithm 不是 SEQUENCE");
         return certDer;
       }
       pos++;
@@ -225,7 +235,7 @@ export class CryptoUtil {
         sigAlgLen = certDer[pos];
         pos++;
       } else {
-        const lenBytes = certDer[pos] & 0x7F;
+        const lenBytes = certDer[pos] & 0x7f;
         pos++;
         sigAlgLen = 0;
         for (let i = 0; i < lenBytes; i++) {
@@ -236,7 +246,7 @@ export class CryptoUtil {
       pos += sigAlgLen;
 
       if (certDer[pos] !== 0x03) {
-        console.error('CryptoUtil: signatureValue 不是 BIT STRING');
+        console.error("CryptoUtil: signatureValue 不是 BIT STRING");
         return certDer;
       }
       pos++;
@@ -246,7 +256,7 @@ export class CryptoUtil {
         bitStringLen = certDer[pos];
         pos++;
       } else {
-        const lenBytes = certDer[pos] & 0x7F;
+        const lenBytes = certDer[pos] & 0x7f;
         pos++;
         bitStringLen = 0;
         for (let i = 0; i < lenBytes; i++) {
@@ -262,34 +272,30 @@ export class CryptoUtil {
       console.info(`CryptoUtil: 提取签名成功，长度 = ${signature.length}`);
       return signature;
     } catch (err) {
-      console.error('CryptoUtil: 提取签名失败', err);
+      console.error("CryptoUtil: 提取签名失败", err);
       return certDer;
     }
   }
-
 
   private static skipAsn1Tag(data: Uint8Array, pos: number, expectedTag: number): number {
     if (pos >= data.length || data[pos] !== expectedTag) return -1;
     return pos + 1;
   }
 
-
   private static skipAsn1Length(data: Uint8Array, pos: number): number {
     if (pos >= data.length) return -1;
     if ((data[pos] & 0x80) === 0) {
       return pos + 1;
     }
-    const lenBytes = data[pos] & 0x7F;
+    const lenBytes = data[pos] & 0x7f;
     return pos + 1 + lenBytes;
   }
-
 
   private static skipAsn1Element(data: Uint8Array, pos: number): number {
     const result = CryptoUtil.readAsn1Element(data, pos);
     if (!result) return -1;
     return pos + result.totalLength;
   }
-
 
   private static readAsn1Element(data: Uint8Array, pos: number): Asn1ElementInfo | null {
     if (pos >= data.length) return null;
@@ -302,7 +308,7 @@ export class CryptoUtil {
       contentLength = data[offset];
       offset++;
     } else {
-      const lenBytes = data[offset] & 0x7F;
+      const lenBytes = data[offset] & 0x7f;
       offset++;
       contentLength = 0;
       for (let i = 0; i < lenBytes; i++) {
@@ -333,14 +339,14 @@ export class CryptoUtil {
     const notAfter = CryptoUtil.dateToUtcTime(expiry);
 
     // Common Name: "NVIDIA GameStream Client"
-    const cn = 'NVIDIA GameStream Client';
+    const cn = "NVIDIA GameStream Client";
 
     const tbsCert = CryptoUtil.buildTbsCertificate(
       serialNumber,
       notBefore,
       notAfter,
       cn,
-      pubKeyDer
+      pubKeyDer,
     );
 
     const signature = await CryptoUtil.rsaSign(tbsCert, keyPair.priKey);
@@ -352,12 +358,12 @@ export class CryptoUtil {
 
   private static dateToUtcTime(date: Date): string {
     const year = date.getUTCFullYear() % 100;
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-    const day = date.getUTCDate().toString().padStart(2, '0');
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-    return `${year.toString().padStart(2, '0')}${month}${day}${hours}${minutes}${seconds}Z`;
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+    const day = date.getUTCDate().toString().padStart(2, "0");
+    const hours = date.getUTCHours().toString().padStart(2, "0");
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+    const seconds = date.getUTCSeconds().toString().padStart(2, "0");
+    return `${year.toString().padStart(2, "0")}${month}${day}${hours}${minutes}${seconds}Z`;
   }
 
   private static encodeAsn1Length(length: number): Uint8Array {
@@ -366,9 +372,9 @@ export class CryptoUtil {
     } else if (length < 256) {
       return new Uint8Array([0x81, length]);
     } else if (length < 65536) {
-      return new Uint8Array([0x82, (length >> 8) & 0xFF, length & 0xFF]);
+      return new Uint8Array([0x82, (length >> 8) & 0xff, length & 0xff]);
     } else {
-      return new Uint8Array([0x83, (length >> 16) & 0xFF, (length >> 8) & 0xFF, length & 0xFF]);
+      return new Uint8Array([0x83, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff]);
     }
   }
 
@@ -449,9 +455,7 @@ export class CryptoUtil {
 
   private static getSha256WithRsaAlgorithm(): Uint8Array {
     // AlgorithmIdentifier for sha256WithRSAEncryption (1.2.840.113549.1.1.11)
-    const oid = new Uint8Array([
-      0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B
-    ]);
+    const oid = new Uint8Array([0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b]);
     const nullParam = new Uint8Array([0x05, 0x00]);
     return CryptoUtil.asn1Sequence(CryptoUtil.concatBytes(oid, nullParam));
   }
@@ -461,12 +465,14 @@ export class CryptoUtil {
     notBefore: string,
     notAfter: string,
     cn: string,
-    pubKeyDer: Uint8Array
+    pubKeyDer: Uint8Array,
   ): Uint8Array {
     // Version (v3 = 2)
     const versionInner = CryptoUtil.asn1Integer(new Uint8Array([2]));
-    const version = new Uint8Array(1 + CryptoUtil.encodeAsn1Length(versionInner.length).length + versionInner.length);
-    version[0] = 0xA0; // Context tag [0]
+    const version = new Uint8Array(
+      1 + CryptoUtil.encodeAsn1Length(versionInner.length).length + versionInner.length,
+    );
+    version[0] = 0xa0; // Context tag [0]
     const vLen = CryptoUtil.encodeAsn1Length(versionInner.length);
     version.set(vLen, 1);
     version.set(versionInner, 1 + vLen.length);
@@ -483,7 +489,7 @@ export class CryptoUtil {
     // Validity
     const validityContent = CryptoUtil.concatBytes(
       CryptoUtil.asn1UtcTime(notBefore),
-      CryptoUtil.asn1UtcTime(notAfter)
+      CryptoUtil.asn1UtcTime(notAfter),
     );
     const validity = CryptoUtil.asn1Sequence(validityContent);
 
@@ -545,7 +551,7 @@ export class CryptoUtil {
         return null;
       }
 
-      if (certDer[pos] === 0xA0) {
+      if (certDer[pos] === 0xa0) {
         pos = CryptoUtil.skipAsn1Element(certDer, pos);
         if (pos < 0) {
           return null;
@@ -589,7 +595,7 @@ export class CryptoUtil {
       console.info(`CryptoUtil: 提取 SubjectPublicKeyInfo 成功，长度 = ${spkiResult.length}`);
       return certDer.slice(pos, pos + spkiResult.totalLength);
     } catch (err) {
-      console.error('CryptoUtil: extractSubjectPublicKeyInfo 失败', err);
+      console.error("CryptoUtil: extractSubjectPublicKeyInfo 失败", err);
       return null;
     }
   }
@@ -597,26 +603,26 @@ export class CryptoUtil {
   static derToPem(der: Uint8Array): string {
     const base64 = CryptoUtil.base64Encode(der);
     const lines: string[] = [];
-    lines.push('-----BEGIN CERTIFICATE-----');
+    lines.push("-----BEGIN CERTIFICATE-----");
     for (let i = 0; i < base64.length; i += 64) {
       lines.push(base64.substring(i, Math.min(i + 64, base64.length)));
     }
-    lines.push('-----END CERTIFICATE-----');
-    return lines.join('\n');
+    lines.push("-----END CERTIFICATE-----");
+    return lines.join("\n");
   }
 
   static pemToDer(pem: string): Uint8Array {
-    const lines = pem.split('\n');
-    let base64 = '';
-    
+    const lines = pem.split("\n");
+    let base64 = "";
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed.length === 0) continue;
-      if (trimmed.startsWith('-----BEGIN')) continue;
-      if (trimmed.startsWith('-----END')) continue;
+      if (trimmed.startsWith("-----BEGIN")) continue;
+      if (trimmed.startsWith("-----END")) continue;
       base64 += trimmed;
     }
-    
+
     return CryptoUtil.base64Decode(base64);
   }
 
@@ -638,7 +644,7 @@ export class CryptoUtil {
 
   static generatePin(): string {
     const bytes = CryptoUtil.generateRandomBytes(4);
-    let pin = '';
+    let pin = "";
     for (let i = 0; i < 4; i++) {
       pin += (bytes[i] % 10).toString();
     }

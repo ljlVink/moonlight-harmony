@@ -20,7 +20,7 @@
  * Output direction bitmask (consistent with VirtualDPad/GamepadButton)
  */
 
-import { DPAD_LEFT, DPAD_UP, DPAD_RIGHT, DPAD_DOWN } from './VirtualDPad';
+import { DPAD_LEFT, DPAD_UP, DPAD_RIGHT, DPAD_DOWN } from "./VirtualDPad";
 
 /** Direction change callback, parameter is direction bitmask combination (0 = no direction) */
 export type InvisibleDPadDirectionCallback = (direction: number) => void;
@@ -33,7 +33,6 @@ export type InvisibleDPadRevokeCallback = () => void;
 
 /** Whether in edit mode */
 export type InvisibleDPadEditModeGetter = () => boolean;
-
 @Component
 export struct InvisibleDPad {
   /** Touch area width (vp) */
@@ -43,15 +42,15 @@ export struct InvisibleDPad {
   /** Joystick visible radius (vp) */
   @Prop stickRadius: number = 60;
   /** Direction threshold ratio (0-1), above this ratio counts as that direction */
-  @Prop directionThreshold: number = 0.30;
+  @Prop directionThreshold: number = 0.3;
   /** Outer ring color */
-  @Prop ringColor: string = '#6050C080';
+  @Prop ringColor: string = "#6050C080";
   /** Inner joystick color */
-  @Prop stickColor: string = '#A050C080';
+  @Prop stickColor: string = "#A050C080";
   /** Pressed color */
-  @Prop pressedColor: string = '#C070E090';
+  @Prop pressedColor: string = "#C070E090";
   /** Border color in edit mode */
-  @Prop editBorderColor: string = '#80FFFFFF';
+  @Prop editBorderColor: string = "#80FFFFFF";
   /** Opacity 0-100 */
   @Prop opacity_: number = 80;
 
@@ -97,33 +96,33 @@ export struct InvisibleDPad {
     Stack() {
       // Transparent touch area
       Rect()
-        .width('100%')
-        .height('100%')
-        .fill('#01000000')
+        .width("100%")
+        .height("100%")
+        .fill("#01000000")
 
       // Edit mode shows dashed border
       if (this.isEditMode()) {
         Rect()
-          .width('100%')
-          .height('100%')
-          .fill('transparent')
+          .width("100%")
+          .height("100%")
+          .fill("transparent")
           .stroke(this.editBorderColor)
           .strokeWidth(1.5)
           .strokeDashArray([6, 4])
-          .borderRadius(4)
+          .borderRadius(4);
 
         // Edit mode draws preview joystick outline at center
         Circle()
           .width(this.stickRadius * 2)
           .height(this.stickRadius * 2)
-          .fill('transparent')
+          .fill("transparent")
           .stroke(this.ringColor)
           .strokeWidth(1)
           .strokeOpacity(0.3)
           .position({
             x: this.areaWidth / 2 - this.stickRadius,
-            y: this.areaHeight / 2 - this.stickRadius
-          })
+            y: this.areaHeight / 2 - this.stickRadius,
+          });
       }
 
       // On press, show joystick at touch point
@@ -132,13 +131,13 @@ export struct InvisibleDPad {
         Circle()
           .width(this.stickRadius * 2)
           .height(this.stickRadius * 2)
-          .fill('transparent')
+          .fill("transparent")
           .stroke(this.ringColor)
           .strokeWidth(1.5)
           .position({
             x: this.centerX - this.stickRadius,
-            y: this.centerY - this.stickRadius
-          })
+            y: this.centerY - this.stickRadius,
+          });
 
         // Direction indicator lines (cross)
         Rect()
@@ -148,8 +147,8 @@ export struct InvisibleDPad {
           .fillOpacity(0.5)
           .position({
             x: this.centerX - 0.5,
-            y: this.centerY - this.stickRadius * 0.8
-          })
+            y: this.centerY - this.stickRadius * 0.8,
+          });
         Rect()
           .width(1)
           .height(this.stickRadius * 0.3)
@@ -157,8 +156,8 @@ export struct InvisibleDPad {
           .fillOpacity(0.5)
           .position({
             x: this.centerX - 0.5,
-            y: this.centerY + this.stickRadius * 0.5
-          })
+            y: this.centerY + this.stickRadius * 0.5,
+          });
         Rect()
           .width(this.stickRadius * 0.3)
           .height(1)
@@ -166,8 +165,8 @@ export struct InvisibleDPad {
           .fillOpacity(0.5)
           .position({
             x: this.centerX - this.stickRadius * 0.8,
-            y: this.centerY - 0.5
-          })
+            y: this.centerY - 0.5,
+          });
         Rect()
           .width(this.stickRadius * 0.3)
           .height(1)
@@ -175,8 +174,8 @@ export struct InvisibleDPad {
           .fillOpacity(0.5)
           .position({
             x: this.centerX + this.stickRadius * 0.5,
-            y: this.centerY - 0.5
-          })
+            y: this.centerY - 0.5,
+          });
 
         // Inner joystick head
         Circle()
@@ -187,8 +186,8 @@ export struct InvisibleDPad {
           .strokeWidth(1.5)
           .position({
             x: this.centerX - this.innerRadius + this.stickOffsetX,
-            y: this.centerY - this.innerRadius + this.stickOffsetY
-          })
+            y: this.centerY - this.innerRadius + this.stickOffsetY,
+          });
       }
     }
     .width(this.areaWidth)
@@ -199,7 +198,7 @@ export struct InvisibleDPad {
     .onTouch((event: TouchEvent): void => {
       if (this.isEditMode()) return;
       this.handleTouch(event);
-    })
+    });
   }
 
   private handleTouch(event: TouchEvent): void {
@@ -289,7 +288,10 @@ export struct InvisibleDPad {
     const magnitude: number = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
     // Dead zone timeout check
-    if (this.deadzoneActive && Date.now() - this.touchDownTime > InvisibleDPad.DEADZONE_TIMEOUT_MS) {
+    if (
+      this.deadzoneActive &&
+      Date.now() - this.touchDownTime > InvisibleDPad.DEADZONE_TIMEOUT_MS
+    ) {
       this.deadzoneActive = false;
     }
     if (magnitude > this.deadzone) {

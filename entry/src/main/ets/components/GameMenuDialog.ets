@@ -11,24 +11,29 @@
 /**
  * Streaming game menu dialog - Cream style + transparent glass effect
  */
-import { ColorMetrics, display, LengthMetrics, promptAction } from '@kit.ArkUI';
-import { ConfigurationConstant } from '@kit.AbilityKit';
-import { deviceInfo } from '@kit.BasicServicesKit';
-import { StreamViewModel } from '../viewmodel/StreamViewModel';
-import { sendShortcutKeys, VirtualKey } from '../service/CustomKeyTypes';
-import { CustomKeyStore } from '../service/CustomKeyStore';
-import { Shortcut, ShortcutManager } from './ShortcutManager';
-import { ActionDialog, ActionDialogConfig, ConfirmDialog, ConfirmDialogConfig } from './ConfirmDialog';
-import { SuperCmd } from '../service/NvHttp';
+import { ColorMetrics, display, LengthMetrics, promptAction } from "@kit.ArkUI";
+import { ConfigurationConstant } from "@kit.AbilityKit";
+import { deviceInfo } from "@kit.BasicServicesKit";
+import { StreamViewModel } from "../viewmodel/StreamViewModel";
+import { sendShortcutKeys, VirtualKey } from "../service/CustomKeyTypes";
+import { CustomKeyStore } from "../service/CustomKeyStore";
+import { Shortcut, ShortcutManager } from "./ShortcutManager";
+import {
+  ActionDialog,
+  ActionDialogConfig,
+  ConfirmDialog,
+  ConfirmDialogConfig,
+} from "./ConfirmDialog";
+import { SuperCmd } from "../service/NvHttp";
 import {
   GYRO_ACTIVATION_ALWAYS,
   GYRO_ACTIVATION_LT,
   GYRO_ACTIVATION_RT,
-  GyroAssistService
-} from '../service/GyroAssistService';
-import { SettingsKeys } from '../service/SettingsService';
-import { PreferencesUtil } from '../utils/PreferencesUtil';
-import { DeviceSensorService } from '../service/DeviceSensorService';
+  GyroAssistService,
+} from "../service/GyroAssistService";
+import { SettingsKeys } from "../service/SettingsService";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { DeviceSensorService } from "../service/DeviceSensorService";
 import {
   OV_ACCENT_BLUE,
   OV_ACCENT_PINK,
@@ -54,8 +59,8 @@ import {
   OV_TEXT_FAINT,
   OV_TEXT_MEDIUM,
   OV_TEXT_ULTRA,
-  OV_TEXT_WHITE
-} from '../common/OverlayConstants';
+  OV_TEXT_WHITE,
+} from "../common/OverlayConstants";
 
 /** Menu callbacks interface */
 export interface GameMenuCallbacks {
@@ -117,31 +122,30 @@ const BITRATE_DEBOUNCE_MS = 500;
 const MENU_ITEM_COUNT = 7;
 
 // Card IDs (for usage frequency sorting)
-const CARD_SHORTCUT = 'shortcut';
-const CARD_SUPERCMD = 'supercmd';
-const CARD_BITRATE = 'bitrate';
-const CARD_CUSTOMKEY = 'customkey';
-const CARD_UNLOCK = 'unlock';
-const CARD_MIC = 'mic';
-const CARD_USAGE_KEY = 'game_menu_card_usage';
+const CARD_SHORTCUT = "shortcut";
+const CARD_SUPERCMD = "supercmd";
+const CARD_BITRATE = "bitrate";
+const CARD_CUSTOMKEY = "customkey";
+const CARD_UNLOCK = "unlock";
+const CARD_MIC = "mic";
+const CARD_USAGE_KEY = "game_menu_card_usage";
 
 // Macaroon color menu config
 const MENU_ITEMS: MenuItem[] = [
-  { icon: '✦', label: 'HDR', bgColor: '#F7EBC7', borderColor: '#D0A850' },
-  { icon: '◎', label: 'USB Driver', bgColor: '#F7D1D1', borderColor: '#D87070' },
-  { icon: '⌨', label: '键盘', bgColor: '#C7F7E0', borderColor: '#50C080' },
-  { icon: '☝', label: '触控', bgColor: '#E0D4F7', borderColor: '#9080C0' },
-  { icon: '🎮', label: '手柄', bgColor: '#D4E8F7', borderColor: '#6098C0' },
-  { icon: '🖱', label: '鼠标', bgColor: '#F7E0C7', borderColor: '#C08050' },
-  { icon: '✕', label: '退出', bgColor: '#F7CFCF', borderColor: '#D06060' }
+  { icon: "✦", label: "HDR", bgColor: "#F7EBC7", borderColor: "#D0A850" },
+  { icon: "◎", label: "USB Driver", bgColor: "#F7D1D1", borderColor: "#D87070" },
+  { icon: "⌨", label: "键盘", bgColor: "#C7F7E0", borderColor: "#50C080" },
+  { icon: "☝", label: "触控", bgColor: "#E0D4F7", borderColor: "#9080C0" },
+  { icon: "🎮", label: "手柄", bgColor: "#D4E8F7", borderColor: "#6098C0" },
+  { icon: "🖱", label: "鼠标", bgColor: "#F7E0C7", borderColor: "#C08050" },
+  { icon: "✕", label: "退出", bgColor: "#F7CFCF", borderColor: "#D06060" },
 ];
 
 const MENU_OFFSETS: number[] = [25, 55, 70, 35, 45, 30, 50];
 
 // Activation colors
-const ACTIVE_BG_COLOR = '#C7F7D4';
-const ACTIVE_BORDER_COLOR = '#50A860';
-
+const ACTIVE_BG_COLOR = "#C7F7D4";
+const ACTIVE_BORDER_COLOR = "#50A860";
 @CustomDialog
 export struct GameMenuDialog {
   controller: CustomDialogController;
@@ -150,7 +154,7 @@ export struct GameMenuDialog {
     onDismiss: () => {},
     onDisconnect: () => {},
     onQuitGame: () => {},
-    onTouchModeChanged: () => {}
+    onTouchModeChanged: () => {},
   };
   superCmds: SuperCmd[] = [];
   isUsbDriverMode: boolean = false;
@@ -198,7 +202,8 @@ export struct GameMenuDialog {
   // Layout decision: whether screen 2/3 width can fit two columns of cards
   @State private useTwoColumns: boolean = true;
   // Light/Dark theme (automatically follows system switching)
-  @StorageProp('colorMode') currentColorMode: number = ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+  @StorageProp("colorMode") currentColorMode: number =
+    ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
 
   // Card usage frequency sorting
   @State private sortedMainCards: string[] = [];
@@ -206,7 +211,7 @@ export struct GameMenuDialog {
   @State private micActive: boolean = false;
   // Custom key config profiles
   @State private customKeyProfileNames: string[] = [];
-  @State private customKeyActiveProfile: string = '';
+  @State private customKeyActiveProfile: string = "";
 
   // Virtual controller settings local state (real-time callback when dragging Slider)
   @State private controllerOpacityLocal: number = 0.75;
@@ -224,7 +229,11 @@ export struct GameMenuDialog {
     .backdropBlur(OV_CARD_BLUR)
     .borderRadius(OV_CARD_RADIUS)
     .border({ width: 1, color: this.isCurrentDark() ? OV_BG_CARD_DARKER : OV_BG_CARD_LIGHTER })
-    .shadow({ radius: 12, color: this.isCurrentDark() ? OV_SHADOW_MEDIUM : OV_SHADOW_LIGHT, offsetY: 2 })
+    .shadow({
+      radius: 12,
+      color: this.isCurrentDark() ? OV_SHADOW_MEDIUM : OV_SHADOW_LIGHT,
+      offsetY: 2,
+    });
   }
 
   aboutToAppear(): void {
@@ -250,8 +259,8 @@ export struct GameMenuDialog {
     try {
       const displayInfo = display.getDefaultDisplaySync();
       const vpWidth = displayInfo.width / displayInfo.densityPixels;
-      const twoColumnMinWidth = (OV_CARD_WIDTH * 2 + 12 + 32); // Two columns + gap + left/right padding
-      this.useTwoColumns = (vpWidth * 2 / 3) >= twoColumnMinWidth;
+      const twoColumnMinWidth = OV_CARD_WIDTH * 2 + 12 + 32; // Two columns + gap + left/right padding
+      this.useTwoColumns = (vpWidth * 2) / 3 >= twoColumnMinWidth;
     } catch (_) {}
   }
 
@@ -264,12 +273,15 @@ export struct GameMenuDialog {
   private animateIn(): void {
     for (let i = 0; i < MENU_ITEM_COUNT; i++) {
       setTimeout(() => {
-        animateTo({
-          duration: ANIMATION_DURATION_IN,
-          curve: Curve.FastOutSlowIn,
-        }, () => {
-          this.positions[i] = 0;
-        });
+        animateTo(
+          {
+            duration: ANIMATION_DURATION_IN,
+            curve: Curve.FastOutSlowIn,
+          },
+          () => {
+            this.positions[i] = 0;
+          },
+        );
       }, i * ANIMATION_STAGGER_DELAY);
     }
   }
@@ -280,14 +292,17 @@ export struct GameMenuDialog {
 
     const callbacks = this.callbacks;
 
-    animateTo({
-      duration: ANIMATION_DURATION_OUT,
-      curve: Curve.FastOutLinearIn
-    }, () => {
-      for (let i = 0; i < MENU_ITEM_COUNT; i++) {
-        this.positions[i] = 200;
-      }
-    });
+    animateTo(
+      {
+        duration: ANIMATION_DURATION_OUT,
+        curve: Curve.FastOutLinearIn,
+      },
+      () => {
+        for (let i = 0; i < MENU_ITEM_COUNT; i++) {
+          this.positions[i] = 200;
+        }
+      },
+    );
 
     setTimeout(() => {
       callbacks.onClose?.();
@@ -302,7 +317,11 @@ export struct GameMenuDialog {
   private sendShortcut(shortcut: Shortcut): void {
     const session = this.viewModel.getSession();
     if (session) {
-      sendShortcutKeys((keys: number[]) => session.sendKeys(keys), shortcut.keys, shortcut.keySequence);
+      sendShortcutKeys(
+        (keys: number[]) => session.sendKeys(keys),
+        shortcut.keys,
+        shortcut.keySequence,
+      );
     }
   }
 
@@ -313,46 +332,53 @@ export struct GameMenuDialog {
       return;
     }
     const buttons: promptAction.Button[] = [
-      { text: 'New Shortcut', color: '#10B981' },
-      { text: 'Restore Preset', color: '#5BA3D0' },
-      { text: 'Cancel', color: '#6B7280' }
+      { text: "New Shortcut", color: "#10B981" },
+      { text: "Restore Preset", color: "#5BA3D0" },
+      { text: "Cancel", color: "#6B7280" },
     ];
-    promptAction.showDialog({
-      title: 'Add Shortcut',
-      message: `${deletedBuiltins.length} preset shortcuts can be restored`,
-      buttons: buttons
-    }).then((result) => {
-      if (result.index === 0) {
-        this.callbacks.onOpenShortcutEditor?.();
-      } else if (result.index === 1) {
-        this.showRestoreBuiltinMenu(deletedBuiltins);
-      }
-    });
+    promptAction
+      .showDialog({
+        title: "Add Shortcut",
+        message: `${deletedBuiltins.length} preset shortcuts can be restored`,
+        buttons: buttons,
+      })
+      .then((result) => {
+        if (result.index === 0) {
+          this.callbacks.onOpenShortcutEditor?.();
+        } else if (result.index === 1) {
+          this.showRestoreBuiltinMenu(deletedBuiltins);
+        }
+      });
   }
 
   private showRestoreBuiltinMenu(deletedBuiltins: Shortcut[]): void {
-    const buttons: promptAction.Button[] = deletedBuiltins.map(s => {
-      const btn: promptAction.Button = { text: `${s.icon || ''} ${s.name}`, color: s.color || '#5BA3D0' };
+    const buttons: promptAction.Button[] = deletedBuiltins.map((s) => {
+      const btn: promptAction.Button = {
+        text: `${s.icon || ""} ${s.name}`,
+        color: s.color || "#5BA3D0",
+      };
       return btn;
     });
-    buttons.push({ text: 'Restore All', color: '#10B981' });
-    buttons.push({ text: '取消', color: '#6B7280' });
-    promptAction.showDialog({
-      title: 'Restore Preset Shortcuts',
-      message: 'Select shortcut to restore',
-      buttons: buttons
-    }).then(async (result) => {
-      if (result.index < deletedBuiltins.length) {
-        await this.shortcutManager.restoreBuiltinShortcut(deletedBuiltins[result.index].id);
-        this.shortcuts = this.shortcutManager.getShortcuts();
-      } else if (result.index === deletedBuiltins.length) {
-        // Restore all
-        for (const s of deletedBuiltins) {
-          await this.shortcutManager.restoreBuiltinShortcut(s.id);
+    buttons.push({ text: "Restore All", color: "#10B981" });
+    buttons.push({ text: "取消", color: "#6B7280" });
+    promptAction
+      .showDialog({
+        title: "Restore Preset Shortcuts",
+        message: "Select shortcut to restore",
+        buttons: buttons,
+      })
+      .then(async (result) => {
+        if (result.index < deletedBuiltins.length) {
+          await this.shortcutManager.restoreBuiltinShortcut(deletedBuiltins[result.index].id);
+          this.shortcuts = this.shortcutManager.getShortcuts();
+        } else if (result.index === deletedBuiltins.length) {
+          // Restore all
+          for (const s of deletedBuiltins) {
+            await this.shortcutManager.restoreBuiltinShortcut(s.id);
+          }
+          this.shortcuts = this.shortcutManager.getShortcuts();
         }
-        this.shortcuts = this.shortcutManager.getShortcuts();
-      }
-    });
+      });
   }
 
   // Bitrate helper methods
@@ -382,14 +408,20 @@ export struct GameMenuDialog {
         const success = await this.viewModel.setBitrate(newBitrate);
         if (success) {
           this.currentBitrate = newBitrate;
-          promptAction.showToast({ message: `Bitrate adjusted to ${this.formatBitrate(newBitrate)}`, duration: 2000 });
+          promptAction.showToast({
+            message: `Bitrate adjusted to ${this.formatBitrate(newBitrate)}`,
+            duration: 2000,
+          });
         } else {
           this.bitrateSliderValue = this.bitrateToSliderValue(this.currentBitrate);
-          promptAction.showToast({ message: 'Bitrate adjustment failed', duration: 2000 });
+          promptAction.showToast({ message: "Bitrate adjustment failed", duration: 2000 });
         }
       } catch (err) {
         this.bitrateSliderValue = this.bitrateToSliderValue(this.currentBitrate);
-        promptAction.showToast({ message: `Bitrate adjustment failed: ${(err as Error).message}`, duration: 2000 });
+        promptAction.showToast({
+          message: `Bitrate adjustment failed: ${(err as Error).message}`,
+          duration: 2000,
+        });
       } finally {
         this.isAdjustingBitrate = false;
         this.bitrateDebounceTimer = -1;
@@ -402,53 +434,55 @@ export struct GameMenuDialog {
     const actions: ActionItem[] = [];
 
     // Window/Fullscreen toggle - only show on 2in1 devices (support free window mode)
-    if (deviceInfo.deviceType === '2in1') {
+    if (deviceInfo.deviceType === "2in1") {
       actions.push({
-        text: this.isFullscreen ? 'Windowed Mode' : 'Fullscreen Mode',
-        subtitle: this.isFullscreen ? 'Switch to floating window for multitasking' : 'Switch to immersive fullscreen',
-        color: '#8B5CF6',
-        backgroundColor: '#F5F3FF',
+        text: this.isFullscreen ? "Windowed Mode" : "Fullscreen Mode",
+        subtitle: this.isFullscreen
+          ? "Switch to floating window for multitasking"
+          : "Switch to immersive fullscreen",
+        color: "#8B5CF6",
+        backgroundColor: "#F5F3FF",
         onClick: () => {
           callbacks.onToggleWindowMode?.();
           callbacks.onClose?.();
-        }
+        },
       });
     }
 
     actions.push(
       {
-        text: 'Disconnect',
-        subtitle: 'Game continues on host',
-        color: '#3B82F6',
-        backgroundColor: '#EFF6FF',
+        text: "Disconnect",
+        subtitle: "Game continues on host",
+        color: "#3B82F6",
+        backgroundColor: "#EFF6FF",
         onClick: () => {
           callbacks.onDisconnect();
           callbacks.onClose?.();
-        }
+        },
       },
       {
-        text: 'Quit Game',
-        subtitle: 'Close game on host',
-        color: '#EF4444',
-        backgroundColor: '#FEF2F2',
+        text: "Quit Game",
+        subtitle: "Close game on host",
+        color: "#EF4444",
+        backgroundColor: "#FEF2F2",
         onClick: () => {
           callbacks.onQuitGame();
           callbacks.onClose?.();
-        }
-      }
+        },
+      },
     );
     const config: ActionDialogConfig = {
-      title: 'Leave Stream',
+      title: "Leave Stream",
       actions: actions,
-      cancelText: 'Continue Playing',
-      onCancel: () => {}
+      cancelText: "Continue Playing",
+      onCancel: () => {},
     };
 
     this.exitDialogController = new CustomDialogController({
       builder: ActionDialog({ config }),
       alignment: DialogAlignment.Center,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.exitDialogController.open();
   }
@@ -456,58 +490,59 @@ export struct GameMenuDialog {
   private showTouchModeDialog(): void {
     const currentMode = this.viewModel.touchMode;
     const modes: TouchModeOption[] = [
-      { key: 'trackpad', text: 'Trackpad', subtitle: 'Operate like laptop trackpad' },
-      { key: 'direct', text: 'Multi-touch', subtitle: 'Direct touch on screen' },
-      { key: 'mouse', text: 'Mouse Mode', subtitle: 'Simulate mouse movement and clicks' }
+      { key: "trackpad", text: "Trackpad", subtitle: "Operate like laptop trackpad" },
+      { key: "direct", text: "Multi-touch", subtitle: "Direct touch on screen" },
+      { key: "mouse", text: "Mouse Mode", subtitle: "Simulate mouse movement and clicks" },
     ];
 
     const actions: ActionItem[] = modes.map((mode: TouchModeOption): ActionItem => {
       const item: ActionItem = {
         text: mode.text,
-        subtitle: currentMode === mode.key ? '✓ Current Mode' : mode.subtitle,
-        color: currentMode === mode.key ? '#10B981' : undefined,
-        backgroundColor: currentMode === mode.key ? '#D1FAE5' : undefined,
-        onClick: () => this.callbacks.onTouchModeChanged(mode.key)
+        subtitle: currentMode === mode.key ? "✓ Current Mode" : mode.subtitle,
+        color: currentMode === mode.key ? "#10B981" : undefined,
+        backgroundColor: currentMode === mode.key ? "#D1FAE5" : undefined,
+        onClick: () => this.callbacks.onTouchModeChanged(mode.key),
       };
       return item;
     });
 
     const config: ActionDialogConfig = {
-      title: 'Select Touch Mode',
+      title: "Select Touch Mode",
       actions: actions,
-      cancelText: 'Cancel',
-      onCancel: () => {}
+      cancelText: "Cancel",
+      onCancel: () => {},
     };
 
     this.touchModeDialogController = new CustomDialogController({
       builder: ActionDialog({ config }),
       alignment: DialogAlignment.Center,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.touchModeDialogController.open();
   }
 
   private showUsbDriverDialog(): void {
     const config: ConfirmDialogConfig = {
-      title: 'Force USB Driver Takeover',
-      message: 'Abandon system gamepad interface (GCK), use USB driver to directly handle gamepad input.\n\nOnly use when gamepad input is abnormal or USB low latency is needed. Bluetooth gamepads are not affected.\n\nCurrently connected USB gamepads will briefly disconnect and reconnect.',
-      cancelButton: { text: 'Cancel', onClick: () => {} },
+      title: "Force USB Driver Takeover",
+      message:
+        "Abandon system gamepad interface (GCK), use USB driver to directly handle gamepad input.\n\nOnly use when gamepad input is abnormal or USB low latency is needed. Bluetooth gamepads are not affected.\n\nCurrently connected USB gamepads will briefly disconnect and reconnect.",
+      cancelButton: { text: "Cancel", onClick: () => {} },
       confirmButton: {
-        text: 'Take Over',
-        color: '#3B82F6',
+        text: "Take Over",
+        color: "#3B82F6",
         onClick: () => {
           this.callbacks.onForceUsbDriver?.();
           this.animateOut();
-        }
-      }
+        },
+      },
     };
 
     this.usbDriverDialogController = new CustomDialogController({
       builder: ConfirmDialog({ config }),
       alignment: DialogAlignment.Center,
       customStyle: true,
-      backgroundColor: Color.Transparent
+      backgroundColor: Color.Transparent,
     });
     this.usbDriverDialogController.open();
   }
@@ -520,7 +555,7 @@ export struct GameMenuDialog {
         break;
       case 1:
         if (this.isUsbDriverMode) {
-          promptAction.showToast({ message: 'Already in USB driver mode', duration: 2000 });
+          promptAction.showToast({ message: "Already in USB driver mode", duration: 2000 });
         } else {
           this.showUsbDriverDialog();
         }
@@ -547,8 +582,8 @@ export struct GameMenuDialog {
   }
 
   private getMenuLabel(index: number): string {
-    if (index === 1 && this.isUsbDriverMode) return 'USB驱动 ✓';
-    if (index === 5 && this.isMouseEmulationActive) return '鼠标 ✓';
+    if (index === 1 && this.isUsbDriverMode) return "USB驱动 ✓";
+    if (index === 5 && this.isMouseEmulationActive) return "鼠标 ✓";
     return MENU_ITEMS[index].label;
   }
 
@@ -578,7 +613,7 @@ export struct GameMenuDialog {
 
   private async loadCardUsageCounts(): Promise<void> {
     try {
-      const json = await PreferencesUtil.get<string>(CARD_USAGE_KEY, '{}');
+      const json = await PreferencesUtil.get<string>(CARD_USAGE_KEY, "{}");
       const parsed = JSON.parse(json) as Record<string, number>;
       const entries = Object.entries(parsed);
       for (let i = 0; i < entries.length; i++) {
@@ -603,15 +638,19 @@ export struct GameMenuDialog {
   }
 
   private hasButtonCards(): boolean {
-    return this.viewModel.overlayState.config.isLocked ||
-      (this.viewModel.getSession()?.isMicrophoneEnabled() ?? false);
+    return (
+      this.viewModel.overlayState.config.isLocked ||
+      (this.viewModel.getSession()?.isMicrophoneEnabled() ?? false)
+    );
   }
 
   private recordCardUsage(cardId: string): void {
     const count = (this.cardUsageCounts.get(cardId) || 0) + 1;
     this.cardUsageCounts.set(cardId, count);
     const obj: Record<string, number> = {};
-    this.cardUsageCounts.forEach((v: number, k: string) => { obj[k] = v; });
+    this.cardUsageCounts.forEach((v: number, k: string) => {
+      obj[k] = v;
+    });
     PreferencesUtil.put(CARD_USAGE_KEY, JSON.stringify(obj)).catch(() => {});
   }
 
@@ -627,7 +666,7 @@ export struct GameMenuDialog {
     try {
       await PreferencesUtil.put(key, value);
     } catch (error) {
-      console.error('[GyroAssist] Failed to save setting:', error);
+      console.error("[GyroAssist] Failed to save setting:", error);
     }
   }
 
@@ -635,8 +674,8 @@ export struct GameMenuDialog {
     Stack({ alignContent: Alignment.Center }) {
       // Background clickable to close
       Column()
-        .width('100%')
-        .height('100%')
+        .width("100%")
+        .height("100%")
         .onClick(() => {
           this.animateOut();
         })
@@ -644,30 +683,39 @@ export struct GameMenuDialog {
       // Right side menu buttons
       Column() {
         this.SockButton(0)
-        if (this.hasUsbGamepad) this.SockButton(1)
+        if (this.hasUsbGamepad) this.SockButton(1);
         this.SockButton(2)
         this.SockButton(3)
-        if (this.viewModel.inputSettings?.enableOnscreenControls) this.SockButton(4)
-        if (this.hasConnectedGamepad) this.SockButton(5)
+        if (this.viewModel.inputSettings?.enableOnscreenControls) this.SockButton(4);
+        if (this.hasConnectedGamepad) this.SockButton(5);
         this.SockButton(6)
       }
       .alignItems(HorizontalAlign.End)
       .justifyContent(FlexAlign.Center)
       .padding({ top: 20, bottom: 20 })
-      .position({ x: '100%', y: '50%' })
-      .translate({ x: '-100%', y: '-50%' })
+      .position({ x: "100%", y: "50%" })
+      .translate({ x: "-100%", y: "-50%" })
 
       // Left side panel
       if (this.useTwoColumns) {
-        this.TwoColumnLayout()
+        this.TwoColumnLayout();
       } else {
-        this.SingleColumnLayout()
+        this.SingleColumnLayout();
       }
     }
-    .width('100%')
-    .height('100%')
-    .transition(TransitionEffect.OPACITY.animation({ duration: ANIMATION_DURATION_IN, curve: Curve.EaseOut })
-      .combine(TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({ duration: ANIMATION_DURATION_IN, curve: Curve.EaseOut })))
+    .width("100%")
+    .height("100%")
+    .transition(
+      TransitionEffect.OPACITY.animation({
+        duration: ANIMATION_DURATION_IN,
+        curve: Curve.EaseOut,
+      }).combine(
+        TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({
+          duration: ANIMATION_DURATION_IN,
+          curve: Curve.EaseOut,
+        }),
+      ),
+    );
   }
 
   @Builder
@@ -676,41 +724,46 @@ export struct GameMenuDialog {
       Row({ space: 12 }) {
         Column({ space: 12 }) {
           // Left column: odd-positioned cards (index 0, 2, 4...)
-          ForEach(this.sortedMainCards.filter((_: string, i: number) => i % 2 === 0),
-            (cardId: string) => { this.RenderCardById(cardId) },
-            (cardId: string) => cardId)
+          ForEach(
+            this.sortedMainCards.filter((_: string, i: number) => i % 2 === 0),
+            (cardId: string) => {
+              this.RenderCardById(cardId);
+            },
+            (cardId: string) => cardId,
+          )
           // Quick button row (unlock, mic, etc. small cards)
           if (this.hasButtonCards()) {
-            this.ButtonCardsRow()
+            this.ButtonCardsRow();
           }
           // "More Settings" collapse area (below left column)
           if (this.hasMoreCards()) {
-            this.MoreCardsToggle()
+            this.MoreCardsToggle();
             if (this.showMoreCards) {
-              if (this.viewModel.inputSettings?.enableOnscreenControls) this.VirtualControllerCard()
-              if (this.hasGyroscope) this.GyroAssistCard()
+              if (this.viewModel.inputSettings?.enableOnscreenControls)
+                this.VirtualControllerCard();
+              if (this.hasGyroscope) this.GyroAssistCard();
             }
           }
-        }
-        .alignItems(HorizontalAlign.Start)
-
+        }.alignItems(HorizontalAlign.Start)
         Column({ space: 12 }) {
           // Right column: even-positioned cards (index 1, 3, 5...)
-          ForEach(this.sortedMainCards.filter((_: string, i: number) => i % 2 === 1),
-            (cardId: string) => { this.RenderCardById(cardId) },
-            (cardId: string) => cardId)
-        }
-        .alignItems(HorizontalAlign.Start)
-      }
-      .alignItems(VerticalAlign.Top)
+          ForEach(
+            this.sortedMainCards.filter((_: string, i: number) => i % 2 === 1),
+            (cardId: string) => {
+              this.RenderCardById(cardId);
+            },
+            (cardId: string) => cardId,
+          )
+        }.alignItems(HorizontalAlign.Start)
+      }.alignItems(VerticalAlign.Top)
     }
     .scrollBar(BarState.Off)
     .scrollable(ScrollDirection.Vertical)
     .edgeEffect(EdgeEffect.Spring)
     .padding({ top: 20, bottom: 20, left: 16, right: 16 })
-    .constraintSize({ maxHeight: '85%' })
-    .position({ x: 16, y: '50%' })
-    .translate({ y: '-50%' })
+    .constraintSize({ maxHeight: "85%" })
+    .position({ x: 16, y: "50%" })
+    .translate({ y: "-50%" });
   }
 
   @Builder
@@ -718,43 +771,46 @@ export struct GameMenuDialog {
     Scroll() {
       Column({ space: 12 }) {
         // By usage frequency sorted main cards
-        ForEach(this.sortedMainCards,
-          (cardId: string) => { this.RenderCardById(cardId) },
-          (cardId: string) => cardId)
+        ForEach(
+          this.sortedMainCards,
+          (cardId: string) => {
+            this.RenderCardById(cardId);
+          },
+          (cardId: string) => cardId,
+        )
         // Quick button row (unlock, mic, etc. small cards)
         if (this.hasButtonCards()) {
-          this.ButtonCardsRow()
+          this.ButtonCardsRow();
         }
         // "More Settings" collapse area
         if (this.hasMoreCards()) {
-          this.MoreCardsToggle()
+          this.MoreCardsToggle();
           if (this.showMoreCards) {
-            if (this.viewModel.inputSettings?.enableOnscreenControls) this.VirtualControllerCard()
-            if (this.hasGyroscope) this.GyroAssistCard()
+            if (this.viewModel.inputSettings?.enableOnscreenControls) this.VirtualControllerCard();
+            if (this.hasGyroscope) this.GyroAssistCard();
           }
         }
-      }
-      .alignItems(HorizontalAlign.Start)
+      }.alignItems(HorizontalAlign.Start)
     }
     .scrollBar(BarState.Off)
     .scrollable(ScrollDirection.Vertical)
     .edgeEffect(EdgeEffect.Spring)
     .padding({ top: 20, bottom: 20, left: 16, right: 16 })
-    .constraintSize({ maxHeight: '85%' })
-    .position({ x: 16, y: '50%' })
-    .translate({ y: '-50%' })
+    .constraintSize({ maxHeight: "85%" })
+    .position({ x: 16, y: "50%" })
+    .translate({ y: "-50%" });
   }
 
   @Builder
   RenderCardById(cardId: string) {
     if (cardId === CARD_SHORTCUT) {
-      this.ShortcutCard()
+      this.ShortcutCard();
     } else if (cardId === CARD_SUPERCMD) {
-      this.SuperCmdCard()
+      this.SuperCmdCard();
     } else if (cardId === CARD_BITRATE) {
-      this.BitrateCard()
+      this.BitrateCard();
     } else if (cardId === CARD_CUSTOMKEY) {
-      this.CustomKeyCard()
+      this.CustomKeyCard();
     }
   }
 
@@ -763,21 +819,21 @@ export struct GameMenuDialog {
   ButtonCardsRow() {
     Row({ space: 8 }) {
       if (this.viewModel.overlayState.config.isLocked) {
-        this.UnlockOverlayCard()
+        this.UnlockOverlayCard();
       }
       if (this.viewModel.getSession()?.isMicrophoneEnabled()) {
-        this.MicCard()
+        this.MicCard();
       }
-    }
+    };
   }
 
   @Builder
   UnlockOverlayCard() {
     Column() {
-      SymbolGlyph($r('sys.symbol.lock_open'))
+      SymbolGlyph($r("sys.symbol.lock_open"))
         .fontSize(22)
         .fontColor([OV_TEXT_BRIGHT])
-      Text('Unlock')
+      Text("Unlock")
         .fontSize(OV_FONT_MD)
         .fontWeight(FontWeight.Medium)
         .fontColor(OV_TEXT_BRIGHT)
@@ -791,16 +847,16 @@ export struct GameMenuDialog {
       this.recordCardUsage(CARD_UNLOCK);
       this.callbacks.onUnlockOverlay?.();
       this.callbacks.onClose?.();
-    })
+    });
   }
 
   @Builder
   MicCard() {
     Column() {
-      SymbolGlyph(this.micActive ? $r('sys.symbol.mic') : $r('sys.symbol.mic_slash'))
+      SymbolGlyph(this.micActive ? $r("sys.symbol.mic") : $r("sys.symbol.mic_slash"))
         .fontSize(22)
         .fontColor([this.micActive ? OV_TEXT_BRIGHT : OV_TEXT_DIM])
-      Text(this.micActive ? 'Microphone' : 'Muted')
+      Text(this.micActive ? "Microphone" : "Muted")
         .fontSize(OV_FONT_MD)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.micActive ? OV_TEXT_BRIGHT : OV_TEXT_DIM)
@@ -814,35 +870,35 @@ export struct GameMenuDialog {
       this.recordCardUsage(CARD_MIC);
       const session = this.viewModel.getSession();
       if (!session?.hasMicrophoneStream()) {
-        promptAction.showToast({ message: 'Host did not request microphone', duration: 1500 });
+        promptAction.showToast({ message: "Host did not request microphone", duration: 1500 });
         return;
       }
       session.toggleMicrophone().then((active: boolean) => {
         this.micActive = active;
         promptAction.showToast({
-          message: active ? 'Microphone on' : 'Microphone off',
-          duration: 1500
+          message: active ? "Microphone on" : "Microphone off",
+          duration: 1500,
         });
       });
-    })
+    });
   }
 
   /** Whether has collapsible low-frequency cards */
   private hasMoreCards(): boolean {
-    return !!(this.viewModel.inputSettings?.enableOnscreenControls) || this.hasGyroscope;
+    return !!this.viewModel.inputSettings?.enableOnscreenControls || this.hasGyroscope;
   }
 
   @Builder
   MoreCardsToggle() {
     Row() {
-      Text(this.showMoreCards ? '▾' : '▸')
+      Text(this.showMoreCards ? "▾" : "▸")
         .fontSize(12)
         .fontColor(OV_TEXT_DIM)
         .margin({ right: 6 })
-      Text('More Settings')
+      Text("More Settings")
         .fontSize(OV_FONT_MD)
         .fontColor(OV_TEXT_DIM)
-      Text(` · Virtual Controller${this.hasGyroscope ? ', Gyro Assist' : ''}`)
+      Text(` · Virtual Controller${this.hasGyroscope ? ", Gyro Assist" : ""}`)
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
     }
@@ -850,22 +906,23 @@ export struct GameMenuDialog {
     .height(36)
     .padding({ left: 14, right: 14 })
     .borderRadius(OV_CARD_RADIUS)
-    .backgroundColor(this.isCurrentDark() ? '#08FFFFFF' : '#08000000')
+    .backgroundColor(this.isCurrentDark() ? "#08FFFFFF" : "#08000000")
     .alignItems(VerticalAlign.Center)
     .onClick(() => {
       animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
         this.showMoreCards = !this.showMoreCards;
       });
-    })
+    });
   }
 
   @Builder
   CustomKeyCard() {
     Column() {
       Row() {
-        SymbolGlyph($r('sys.symbol.crown'))
-          .fontSize(14).fontColor([Color.Orange])
-        Text('Custom Keys')
+        SymbolGlyph($r("sys.symbol.crown"))
+          .fontSize(14)
+          .fontColor([Color.Orange])
+        Text("Custom Keys")
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -883,112 +940,123 @@ export struct GameMenuDialog {
             }
           })
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
-
-      Text('Freely placed on-screen virtual keys')
+      Text("Freely placed on-screen virtual keys")
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
-        .width('100%')
+        .width("100%")
         .padding({ left: 16, right: 16, bottom: 6 })
 
       // Config profile selector
       if (this.customKeyProfileNames.length > 1) {
         Scroll() {
           Row({ space: 6 }) {
-            ForEach(this.customKeyProfileNames, (name: string) => {
-              Text(name)
-                .fontSize(11)
-                .fontWeight(name === this.customKeyActiveProfile ? FontWeight.Bold : FontWeight.Medium)
-                .fontColor(name === this.customKeyActiveProfile ? OV_TEXT_WHITE : OV_TEXT_MEDIUM)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-                .borderRadius(12)
-                .backgroundColor(name === this.customKeyActiveProfile ? OV_ACCENT_BLUE : '#15FFFFFF')
-                .border({ width: 1, color: name === this.customKeyActiveProfile ? OV_BLUE_40 : '#10FFFFFF' })
-                .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
-                .onClick(() => {
-                  if (name !== this.customKeyActiveProfile) {
-                    this.customKeyActiveProfile = name;
-                    this.callbacks.onSwitchCustomKeyProfile?.(name);
-                  }
-                })
-            }, (name: string) => name)
+            ForEach(
+              this.customKeyProfileNames,
+              (name: string) => {
+                Text(name)
+                  .fontSize(11)
+                  .fontWeight(
+                    name === this.customKeyActiveProfile ? FontWeight.Bold : FontWeight.Medium,
+                  )
+                  .fontColor(name === this.customKeyActiveProfile ? OV_TEXT_WHITE : OV_TEXT_MEDIUM)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                  .borderRadius(12)
+                  .backgroundColor(
+                    name === this.customKeyActiveProfile ? OV_ACCENT_BLUE : "#15FFFFFF",
+                  )
+                  .border({
+                    width: 1,
+                    color: name === this.customKeyActiveProfile ? OV_BLUE_40 : "#10FFFFFF",
+                  })
+                  .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
+                  .onClick(() => {
+                    if (name !== this.customKeyActiveProfile) {
+                      this.customKeyActiveProfile = name;
+                      this.callbacks.onSwitchCustomKeyProfile?.(name);
+                    }
+                  });
+              },
+              (name: string) => name,
+            )
           }
           .padding({ left: 16, right: 16 })
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
-        .width('100%')
-        .padding({ bottom: 8 })
+        .width("100%")
+        .padding({ bottom: 8 });
       }
-
       Row({ space: 8 }) {
-        Text('Edit Layout')
+        Text("Edit Layout")
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_PINK)
           .padding({ left: 14, right: 14, top: 7, bottom: 7 })
           .borderRadius(14)
-          .backgroundColor('#20FFB7C5')
-          .border({ width: 1, color: '#40FFB7C5' })
+          .backgroundColor("#20FFB7C5")
+          .border({ width: 1, color: "#40FFB7C5" })
           .onClick(() => {
             this.callbacks.onEditCustomKeys?.();
             this.animateOut();
           })
-        Text('Export')
+        Text("Export")
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_BLUE)
           .padding({ left: 14, right: 14, top: 7, bottom: 7 })
           .borderRadius(14)
-          .backgroundColor('#20A8D8EA')
+          .backgroundColor("#20A8D8EA")
           .border({ width: 1, color: OV_BLUE_40 })
           .onClick(() => {
             this.callbacks.onExportCustomKeys?.();
             this.animateOut();
           })
-        Text('Import')
+        Text("Import")
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_BLUE)
           .padding({ left: 14, right: 14, top: 7, bottom: 7 })
           .borderRadius(14)
-          .backgroundColor('#20A8D8EA')
+          .backgroundColor("#20A8D8EA")
           .border({ width: 1, color: OV_BLUE_40 })
           .onClick(() => {
             this.callbacks.onImportCustomKeys?.();
             this.animateOut();
           })
       }
-      .width('100%')
+      .width("100%")
       .justifyContent(FlexAlign.Center)
       .padding({ bottom: 10 })
 
       // ── Pan/Zoom (merged in custom key card) ──
-      Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
-
+      Row()
+        .width("85%")
+        .height(1)
+        .backgroundColor(OV_BG_DIVIDER)
       Row() {
-        Text('🔎').fontSize(OV_FONT_LG)
-        Text(' Pan/Zoom')
+        Text("🔎").fontSize(OV_FONT_LG)
+        Text(" Pan/Zoom")
           .fontSize(OV_FONT_MD)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_MEDIUM)
         Blank()
         if (this.isPanZoomActive) {
-          Text('Reset')
+          Text("Reset")
             .fontSize(11)
             .fontColor(OV_ACCENT_BLUE)
             .fontWeight(FontWeight.Medium)
             .padding({ left: 10, right: 10, top: 4, bottom: 4 })
             .borderRadius(10)
-            .backgroundColor('#20A8D8EA')
+            .backgroundColor("#20A8D8EA")
             .border({ width: 1, color: OV_BLUE_40 })
             .margin({ right: 8 })
             .onClick(() => {
               this.callbacks.onResetPanZoom?.();
-            })
+            });
         }
         Toggle({ type: ToggleType.Switch, isOn: this.isPanZoomActive })
           .selectedColor(OV_ACCENT_BLUE)
@@ -1003,25 +1071,24 @@ export struct GameMenuDialog {
             }
           })
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 12, top: 10, bottom: 4 })
-
-      Text('Pinch to zoom, max 10x')
+      Text("Pinch to zoom, max 10x")
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
-        .width('100%')
+        .width("100%")
         .padding({ left: 16, right: 16, bottom: 14 })
     }
     .width(OV_CARD_WIDTH)
-    .cardStyle()
+    .cardStyle();
   }
 
   @Builder
   VirtualControllerCard() {
     Column() {
       Row() {
-        Text('🎮').fontSize(OV_FONT_LG)
-        Text(' Virtual Controller')
+        Text("🎮").fontSize(OV_FONT_LG)
+        Text(" Virtual Controller")
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1037,21 +1104,22 @@ export struct GameMenuDialog {
             }
           })
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
-
-      Text('On-screen virtual controller overlay')
+      Text("On-screen virtual controller overlay")
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
-        .width('100%')
+        .width("100%")
         .padding({ left: 16, right: 16, bottom: this.viewModel.showController ? 8 : 14 })
 
       if (this.viewModel.showController) {
-        Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
+        Row().width("85%").height(1).backgroundColor(OV_BG_DIVIDER);
 
         // Touch passthrough toggle
         Row() {
-          Text('Touch Passthrough').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+          Text("Touch Passthrough")
+            .fontSize(OV_FONT_MD)
+            .fontColor(OV_TEXT_MEDIUM)
           Blank()
           Toggle({ type: ToggleType.Switch, isOn: this.touchPassthroughLocal })
             .selectedColor(OV_ACCENT_BLUE)
@@ -1063,38 +1131,39 @@ export struct GameMenuDialog {
               this.callbacks.onTouchPassthroughChange?.(isOn);
             })
         }
-        .width('100%')
-        .padding({ left: 16, right: 12, top: 10, bottom: 4 })
+        .width("100%")
+        .padding({ left: 16, right: 12, top: 10, bottom: 4 });
 
-        Text('Allow touch through controller to control screen')
+        Text("Allow touch through controller to control screen")
           .fontSize(OV_FONT_XS)
-          .fontColor('#50FFFFFF')
-          .width('100%')
-          .padding({ left: 16, right: 16, bottom: 4 })
+          .fontColor("#50FFFFFF")
+          .width("100%")
+          .padding({ left: 16, right: 16, bottom: 4 });
 
-        Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
+        Row().width("85%").height(1).backgroundColor(OV_BG_DIVIDER);
 
         // Opacity
         Column() {
           Row() {
-            Text('Opacity').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+            Text("Opacity")
+              .fontSize(OV_FONT_MD)
+              .fontColor(OV_TEXT_MEDIUM)
             Blank()
             Text(`${Math.round(this.controllerOpacityLocal * 100)}%`)
               .fontSize(OV_FONT_MD)
               .fontColor(OV_ACCENT_BLUE)
               .fontWeight(FontWeight.Medium)
           }
-          .width('100%')
+          .width("100%")
           .padding({ bottom: 4 })
-
           Slider({
             value: this.controllerOpacityLocal * 100,
             min: 20,
             max: 100,
             step: 5,
-            style: SliderStyle.OutSet
+            style: SliderStyle.OutSet,
           })
-            .width('100%')
+            .width("100%")
             .blockColor(OV_ACCENT_BLUE)
             .blockSize({ width: 12, height: 12 })
             .trackColor(OV_BG_TRACK)
@@ -1106,40 +1175,43 @@ export struct GameMenuDialog {
               this.controllerOpacityLocal = value / 100;
               this.callbacks.onControllerOpacityChange?.(this.controllerOpacityLocal);
             })
-
           Row() {
-            Text('20%').fontSize(OV_FONT_XS).fontColor(OV_TEXT_FAINT)
+            Text("20%")
+              .fontSize(OV_FONT_XS)
+              .fontColor(OV_TEXT_FAINT)
             Blank()
-            Text('100%').fontSize(OV_FONT_XS).fontColor(OV_TEXT_FAINT)
-          }
-          .width('100%')
+            Text("100%")
+              .fontSize(OV_FONT_XS)
+              .fontColor(OV_TEXT_FAINT)
+          }.width("100%")
         }
-        .width('100%')
-        .padding({ left: 14, right: 14, top: 10, bottom: 4 })
+        .width("100%")
+        .padding({ left: 14, right: 14, top: 10, bottom: 4 });
 
-        Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
+        Row().width("85%").height(1).backgroundColor(OV_BG_DIVIDER);
 
         // Size adjustment
         Column() {
           Row() {
-            Text('Size').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+            Text("Size")
+              .fontSize(OV_FONT_MD)
+              .fontColor(OV_TEXT_MEDIUM)
             Blank()
             Text(`${Math.round(this.controllerScaleLocal * 100)}%`)
               .fontSize(OV_FONT_MD)
               .fontColor(OV_ACCENT_BLUE)
               .fontWeight(FontWeight.Medium)
           }
-          .width('100%')
+          .width("100%")
           .padding({ bottom: 4 })
-
           Slider({
             value: this.controllerScaleLocal * 100,
             min: 50,
             max: 200,
             step: 10,
-            style: SliderStyle.OutSet
+            style: SliderStyle.OutSet,
           })
-            .width('100%')
+            .width("100%")
             .blockColor(OV_ACCENT_BLUE)
             .blockSize({ width: 12, height: 12 })
             .trackColor(OV_BG_TRACK)
@@ -1151,28 +1223,30 @@ export struct GameMenuDialog {
               this.controllerScaleLocal = Math.round(value) / 100;
               this.callbacks.onControllerScaleChange?.(this.controllerScaleLocal);
             })
-
           Row() {
-            Text('50%').fontSize(OV_FONT_XS).fontColor(OV_TEXT_FAINT)
+            Text("50%")
+              .fontSize(OV_FONT_XS)
+              .fontColor(OV_TEXT_FAINT)
             Blank()
-            Text('200%').fontSize(OV_FONT_XS).fontColor(OV_TEXT_FAINT)
-          }
-          .width('100%')
+            Text("200%")
+              .fontSize(OV_FONT_XS)
+              .fontColor(OV_TEXT_FAINT)
+          }.width("100%")
         }
-        .width('100%')
-        .padding({ left: 14, right: 14, top: 10, bottom: 12 })
+        .width("100%")
+        .padding({ left: 14, right: 14, top: 10, bottom: 12 });
       }
     }
     .width(OV_CARD_WIDTH)
-    .cardStyle()
+    .cardStyle();
   }
 
   @Builder
   BitrateCard() {
     Column() {
       Row() {
-        Text('📊').fontSize(OV_FONT_LG)
-        Text(' Bitrate Adjust')
+        Text("📊").fontSize(OV_FONT_LG)
+        Text(" Bitrate Adjust")
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1182,24 +1256,22 @@ export struct GameMenuDialog {
           .fontColor(OV_ACCENT_PINK)
           .fontWeight(FontWeight.Medium)
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 16, top: 14, bottom: 4 })
-
-      Text('Real-time stream quality adjustment, requires Foundation Sunshine support')
+      Text("Real-time stream quality adjustment, requires Foundation Sunshine support")
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
-        .width('100%')
+        .width("100%")
         .padding({ left: 16, right: 16, bottom: 8 })
-
       Column() {
         Slider({
           value: this.bitrateSliderValue,
           min: 0,
           max: 1995,
           step: 1,
-          style: SliderStyle.OutSet
+          style: SliderStyle.OutSet,
         })
-          .width('100%')
+          .width("100%")
           .blockColor(OV_ACCENT_PINK)
           .trackColor(OV_BG_TRACK)
           .selectedColor(OV_ACCENT_PINK)
@@ -1212,32 +1284,38 @@ export struct GameMenuDialog {
               this.applyBitrateChange();
             }
           })
-
         Row() {
-          Text('0.5').fontSize(OV_FONT_SM).fontColor(OV_TEXT_DIM)
+          Text("0.5")
+            .fontSize(OV_FONT_SM)
+            .fontColor(OV_TEXT_DIM)
           Blank()
-          Text(this.isAdjustingBitrate ? 'Adjusting...' : this.formatBitrate(this.sliderValueToBitrate(this.bitrateSliderValue)))
+          Text(
+            this.isAdjustingBitrate
+              ? "Adjusting..."
+              : this.formatBitrate(this.sliderValueToBitrate(this.bitrateSliderValue)),
+          )
             .fontSize(OV_FONT_MD)
             .fontColor(this.isAdjustingBitrate ? OV_TEXT_DIM : OV_ACCENT_PINK)
             .fontWeight(FontWeight.Bold)
           Blank()
-          Text('200').fontSize(OV_FONT_SM).fontColor(OV_TEXT_DIM)
-        }
-        .width('100%')
+          Text("200")
+            .fontSize(OV_FONT_SM)
+            .fontColor(OV_TEXT_DIM)
+        }.width("100%")
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 14, right: 14, bottom: 12 })
     }
     .width(OV_CARD_WIDTH)
-    .cardStyle()
+    .cardStyle();
   }
 
   @Builder
   GyroAssistCard() {
     Column() {
       Row() {
-        Text('🎮').fontSize(OV_FONT_LG)
-        Text(' Gyro Assist')
+        Text("🎮").fontSize(OV_FONT_LG)
+        Text(" Gyro Assist")
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1253,38 +1331,38 @@ export struct GameMenuDialog {
             this.saveGyroSetting(SettingsKeys.GYRO_ASSIST_ENABLED, isOn);
           })
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
-
-      Text(this.hasGyroscope ? 'Gyroscope → Right Stick mapping' : '⚠ Device has no gyroscope')
+      Text(this.hasGyroscope ? "Gyroscope → Right Stick mapping" : "⚠ Device has no gyroscope")
         .fontSize(OV_FONT_SM)
         .fontColor(this.hasGyroscope ? OV_TEXT_FAINT : OV_ACCENT_PINK)
-        .width('100%')
+        .width("100%")
         .padding({ left: 16, right: 16, bottom: this.gyroEnabled ? 8 : 14 })
 
       if (this.gyroEnabled) {
-        Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
+        Row().width("85%").height(1).backgroundColor(OV_BG_DIVIDER);
 
         Column() {
           Row() {
-            Text('Sensitivity').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+            Text("Sensitivity")
+              .fontSize(OV_FONT_MD)
+              .fontColor(OV_TEXT_MEDIUM)
             Blank()
             Text(`${this.gyroSensitivity.toFixed(1)}x`)
               .fontSize(OV_FONT_MD)
               .fontColor(OV_ACCENT_BLUE)
               .fontWeight(FontWeight.Medium)
           }
-          .width('100%')
+          .width("100%")
           .padding({ bottom: 4 })
-
           Slider({
             value: this.gyroSensitivity,
             min: 0.5,
             max: 10.0,
             step: 0.1,
-            style: SliderStyle.OutSet
+            style: SliderStyle.OutSet,
           })
-            .width('100%')
+            .width("100%")
             .blockColor(OV_ACCENT_BLUE)
             .trackColor(OV_BG_TRACK)
             .selectedColor(OV_ACCENT_BLUE)
@@ -1298,53 +1376,61 @@ export struct GameMenuDialog {
                 this.saveGyroSetting(SettingsKeys.GYRO_SENSITIVITY, this.gyroSensitivity);
               }
             })
-
           Row() {
-            Text('0.5x').fontSize(OV_FONT_XS).fontColor(OV_TEXT_FAINT)
+            Text("0.5x")
+              .fontSize(OV_FONT_XS)
+              .fontColor(OV_TEXT_FAINT)
             Blank()
-            Text('3.0x').fontSize(OV_FONT_XS).fontColor(OV_TEXT_FAINT)
-          }
-          .width('100%')
+            Text("3.0x")
+              .fontSize(OV_FONT_XS)
+              .fontColor(OV_TEXT_FAINT)
+          }.width("100%")
         }
-        .width('100%')
-        .padding({ left: 14, right: 14, top: 10, bottom: 4 })
+        .width("100%")
+        .padding({ left: 14, right: 14, top: 10, bottom: 4 });
 
-        this.GyroToggleRow('Invert X Axis', this.gyroInvertX, (isOn: boolean) => {
+        this.GyroToggleRow("Invert X Axis", this.gyroInvertX, (isOn: boolean) => {
           this.gyroInvertX = isOn;
           GyroAssistService.getInstance().setInvertX(isOn);
           this.saveGyroSetting(SettingsKeys.GYRO_INVERT_X, isOn);
-        })
+        });
 
-        this.GyroToggleRow('Invert Y Axis', this.gyroInvertY, (isOn: boolean) => {
+        this.GyroToggleRow("Invert Y Axis", this.gyroInvertY, (isOn: boolean) => {
           this.gyroInvertY = isOn;
           GyroAssistService.getInstance().setInvertY(isOn);
           this.saveGyroSetting(SettingsKeys.GYRO_INVERT_Y, isOn);
-        })
+        });
 
-        Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
+        Row().width("85%").height(1).backgroundColor(OV_BG_DIVIDER);
 
         Column() {
-          Text('Activation').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM).width('100%').padding({ bottom: 6 })
+          Text("Activation")
+            .fontSize(OV_FONT_MD)
+            .fontColor(OV_TEXT_MEDIUM)
+            .width("100%")
+            .padding({ bottom: 6 })
           Row({ space: 8 }) {
-            this.ActivationButton('Always', GYRO_ACTIVATION_ALWAYS)
-            this.ActivationButton('LT', GYRO_ACTIVATION_LT)
-            this.ActivationButton('RT', GYRO_ACTIVATION_RT)
+            this.ActivationButton("Always", GYRO_ACTIVATION_ALWAYS)
+            this.ActivationButton("LT", GYRO_ACTIVATION_LT)
+            this.ActivationButton("RT", GYRO_ACTIVATION_RT)
           }
-          .width('100%')
+          .width("100%")
           .justifyContent(FlexAlign.Center)
         }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 8, bottom: 14 })
+        .width("100%")
+        .padding({ left: 16, right: 16, top: 8, bottom: 14 });
       }
     }
     .width(OV_CARD_WIDTH)
-    .cardStyle()
+    .cardStyle();
   }
 
   @Builder
   GyroToggleRow(label: string, isOn: boolean, onChange: (isOn: boolean) => void) {
     Row() {
-      Text(label).fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+      Text(label)
+        .fontSize(OV_FONT_MD)
+        .fontColor(OV_TEXT_MEDIUM)
       Blank()
       Toggle({ type: ToggleType.Switch, isOn: isOn })
         .selectedColor(OV_ACCENT_BLUE)
@@ -1353,8 +1439,8 @@ export struct GameMenuDialog {
         .height(20)
         .onChange(onChange)
     }
-    .width('100%')
-    .padding({ left: 16, right: 12, top: 4, bottom: 4 })
+    .width("100%")
+    .padding({ left: 16, right: 12, top: 4, bottom: 4 });
   }
 
   @Builder
@@ -1362,78 +1448,97 @@ export struct GameMenuDialog {
     Text(label)
       .fontSize(OV_FONT_MD)
       .fontWeight(this.gyroActivationKey === key ? FontWeight.Bold : FontWeight.Normal)
-      .fontColor(this.gyroActivationKey === key ? '#FFFFFF' : (this.isCurrentDark() ? '#80000000' : OV_TEXT_DIM))
+      .fontColor(
+        this.gyroActivationKey === key
+          ? "#FFFFFF"
+          : this.isCurrentDark()
+            ? "#80000000"
+            : OV_TEXT_DIM,
+      )
       .padding({ left: 16, right: 16, top: 6, bottom: 6 })
       .borderRadius(14)
-      .backgroundColor(this.gyroActivationKey === key ? OV_BLUE_50 : (this.isCurrentDark() ? OV_SHADOW_MEDIUM : OV_BG_DIVIDER))
-      .border({ width: 1, color: this.gyroActivationKey === key ? OV_ACCENT_BLUE : (this.isCurrentDark() ? OV_BG_CARD_DARKER : OV_BG_CARD_LIGHTER) })
+      .backgroundColor(
+        this.gyroActivationKey === key
+          ? OV_BLUE_50
+          : this.isCurrentDark()
+            ? OV_SHADOW_MEDIUM
+            : OV_BG_DIVIDER,
+      )
+      .border({
+        width: 1,
+        color:
+          this.gyroActivationKey === key
+            ? OV_ACCENT_BLUE
+            : this.isCurrentDark()
+              ? OV_BG_CARD_DARKER
+              : OV_BG_CARD_LIGHTER,
+      })
       .onClick(() => {
         this.gyroActivationKey = key;
         GyroAssistService.getInstance().setActivationKey(key);
         this.saveGyroSetting(SettingsKeys.GYRO_ACTIVATION_KEY, key);
-      })
+      });
   }
 
   @Builder
   SuperCmdCard() {
     Column() {
       Row() {
-        Text('🎯').fontSize(OV_FONT_LG)
-        Text(' Server Commands')
+        Text("🎯").fontSize(OV_FONT_LG)
+        Text(" Server Commands")
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
-
-      Text('Execute Sunshine preset scripts')
+      Text("Execute Sunshine preset scripts")
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
-        .width('100%')
+        .width("100%")
         .padding({ left: 16, right: 16, bottom: 6 })
-
       Scroll() {
         Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center }) {
           ForEach(this.superCmds, (cmd: SuperCmd) => {
-            this.SuperCmdPill(cmd)
+            this.SuperCmdPill(cmd);
           })
-        }
-        .width('100%')
+        }.width("100%")
       }
-      .width('100%')
+      .width("100%")
       .constraintSize({ maxHeight: 100 })
       .scrollBar(BarState.Off)
       .padding({ left: 14, right: 14, top: 10, bottom: 14 })
     }
     .width(OV_CARD_WIDTH)
-    .cardStyle()
+    .cardStyle();
   }
 
   @Builder
   ShortcutCard() {
     Column() {
       Row() {
-        Text('⚡').fontSize(OV_FONT_LG)
-        Text(' Shortcuts')
+        Text("⚡").fontSize(OV_FONT_LG)
+        Text(" Shortcuts")
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
         Blank()
         // Edit mode toggle button
-        Text(this.isEditMode ? '✓' : '✎')
+        Text(this.isEditMode ? "✓" : "✎")
           .fontSize(this.isEditMode ? 14 : 12)
-          .fontColor(this.isEditMode ? '#4ADE80' : OV_TEXT_WHITE)
+          .fontColor(this.isEditMode ? "#4ADE80" : OV_TEXT_WHITE)
           .fontWeight(FontWeight.Bold)
           .width(24)
           .height(24)
           .textAlign(TextAlign.Center)
           .borderRadius(12)
-          .backgroundColor(this.isEditMode ? '#404ADE80' : '#40A8E8B0')
+          .backgroundColor(this.isEditMode ? "#404ADE80" : "#40A8E8B0")
           .margin({ right: 6 })
-          .onClick(() => { this.isEditMode = !this.isEditMode; })
+          .onClick(() => {
+            this.isEditMode = !this.isEditMode;
+          })
         // Add button
-        Text('＋')
+        Text("＋")
           .fontSize(14)
           .fontColor(OV_TEXT_WHITE)
           .fontWeight(FontWeight.Bold)
@@ -1441,27 +1546,25 @@ export struct GameMenuDialog {
           .height(24)
           .textAlign(TextAlign.Center)
           .borderRadius(12)
-          .backgroundColor('#40A8E8B0')
+          .backgroundColor("#40A8E8B0")
           .onClick(() => this.showAddShortcutMenu())
       }
-      .width('100%')
+      .width("100%")
       .padding({ left: 16, right: 12, top: 14 })
-
       Scroll() {
         Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center }) {
           ForEach(this.shortcuts, (shortcut: Shortcut) => {
-            this.ShortcutPill(shortcut)
+            this.ShortcutPill(shortcut);
           })
-        }
-        .width('100%')
+        }.width("100%")
       }
-      .width('100%')
+      .width("100%")
       .constraintSize({ maxHeight: 120 })
       .scrollBar(BarState.Off)
       .padding({ left: 14, right: 14, top: 10, bottom: 14 })
     }
     .width(OV_CARD_WIDTH)
-    .cardStyle()
+    .cardStyle();
   }
 
   @Builder
@@ -1472,7 +1575,6 @@ export struct GameMenuDialog {
         .height(36)
         .backgroundColor(this.getMenuBorderColor(index))
         .borderRadius({ topLeft: 18, bottomLeft: 18 })
-
       Row() {
         Text(this.getMenuLabel(index))
           .fontSize(12)
@@ -1484,7 +1586,6 @@ export struct GameMenuDialog {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
       .backgroundColor(this.getMenuBgColor(index))
-
       Column() {
         ForEach([0, 1, 2, 3, 4], () => {
           Row()
@@ -1492,7 +1593,7 @@ export struct GameMenuDialog {
             .height(5)
             .backgroundColor(this.getMenuBorderColor(index))
             .borderRadius({ topLeft: 5, topRight: 5 })
-            .margin({ top: 2 })
+            .margin({ top: 2 });
         })
       }
       .height(36)
@@ -1509,7 +1610,7 @@ export struct GameMenuDialog {
     .focusBox({
       margin: LengthMetrics.vp(2),
       strokeColor: ColorMetrics.rgba(74, 222, 128, 1),
-      strokeWidth: LengthMetrics.vp(2)
+      strokeWidth: LengthMetrics.vp(2),
     })
     .onKeyEvent((event: KeyEvent) => {
       if (event.type === KeyType.Down) {
@@ -1524,7 +1625,7 @@ export struct GameMenuDialog {
       }
       return false;
     })
-    .onClick(() => this.handleMenuClick(index))
+    .onClick(() => this.handleMenuClick(index));
   }
 
   @Builder
@@ -1532,40 +1633,45 @@ export struct GameMenuDialog {
     Stack({ alignContent: Alignment.TopEnd }) {
       Row() {
         if (shortcut.icon) {
-          Text(shortcut.icon).fontSize(OV_FONT_MD).margin({ right: 4 })
+          Text(shortcut.icon).fontSize(OV_FONT_MD).margin({ right: 4 });
         }
-        Text(shortcut.name).fontSize(OV_FONT_MD).fontColor(OV_TEXT_ULTRA)
+        Text(shortcut.name)
+          .fontSize(OV_FONT_MD)
+          .fontColor(OV_TEXT_ULTRA)
       }
       .height(28)
       .alignItems(VerticalAlign.Center)
       .padding({ left: 12, right: this.isEditMode ? 16 : 12 })
-      .backgroundColor(`#50${(shortcut.color || '#9DABB2').replace('#', '')}`)
+      .backgroundColor(`#50${(shortcut.color || "#9DABB2").replace("#", "")}`)
       .border({
         width: this.isEditMode && this.dragOverIndex === this.shortcuts.indexOf(shortcut) ? 2 : 1,
-        color: this.isEditMode && this.dragOverIndex === this.shortcuts.indexOf(shortcut)
-          ? '#4ADE80'
-          : `#80${(shortcut.color || '#9DABB2').replace('#', '')}`
+        color:
+          this.isEditMode && this.dragOverIndex === this.shortcuts.indexOf(shortcut)
+            ? "#4ADE80"
+            : `#80${(shortcut.color || "#9DABB2").replace("#", "")}`,
       })
       .borderRadius(14)
-      .opacity(this.isEditMode && this.dragFromIndex === this.shortcuts.indexOf(shortcut) ? 0.4 : 1.0)
+      .opacity(
+        this.isEditMode && this.dragFromIndex === this.shortcuts.indexOf(shortcut) ? 0.4 : 1.0,
+      )
 
       // Edit mode delete badge
       if (this.isEditMode) {
-        Text('×')
+        Text("×")
           .fontSize(10)
-          .fontColor('#FFF')
+          .fontColor("#FFF")
           .fontWeight(FontWeight.Bold)
           .width(16)
           .height(16)
           .textAlign(TextAlign.Center)
-          .backgroundColor('#EF4444')
+          .backgroundColor("#EF4444")
           .borderRadius(8)
           .offset({ x: 4, y: -4 })
           .onClick(async () => {
             await this.shortcutManager.deleteShortcut(shortcut.id);
             this.shortcuts = this.shortcutManager.getShortcuts();
             this.callbacks.onDeleteShortcut?.(shortcut);
-          })
+          });
       }
     }
     .margin({ right: 6, bottom: 6 })
@@ -1574,7 +1680,7 @@ export struct GameMenuDialog {
     .focusBox({
       margin: LengthMetrics.vp(1),
       strokeColor: ColorMetrics.rgba(74, 222, 128, 0.8),
-      strokeWidth: LengthMetrics.vp(1.5)
+      strokeWidth: LengthMetrics.vp(1.5),
     })
     .onKeyEvent((event: KeyEvent) => {
       if (event.type === KeyType.Down) {
@@ -1595,12 +1701,11 @@ export struct GameMenuDialog {
       this.animateOut();
     })
     .gesture(
-      LongPressGesture({ duration: 500 })
-        .onAction(() => {
-          if (this.isEditMode || this.dragFromIndex >= 0) return;
-          // Long press opens editor
-          this.callbacks.onEditShortcut?.(shortcut);
-        })
+      LongPressGesture({ duration: 500 }).onAction(() => {
+        if (this.isEditMode || this.dragFromIndex >= 0) return;
+        // Long press opens editor
+        this.callbacks.onEditShortcut?.(shortcut);
+      }),
     )
     .onDragStart(() => {
       if (!this.isEditMode) return;
@@ -1629,23 +1734,25 @@ export struct GameMenuDialog {
       }
       this.dragFromIndex = -1;
       this.dragOverIndex = -1;
-    })
+    });
   }
 
   @Builder
   SuperCmdPill(cmd: SuperCmd) {
     Row() {
-      Text(cmd.name.charAt(0) || '?')
+      Text(cmd.name.charAt(0) || "?")
         .fontSize(OV_FONT_MD)
         .fontWeight(FontWeight.Bold)
         .fontColor(OV_TEXT_WHITE)
         .width(20)
         .height(20)
         .textAlign(TextAlign.Center)
-        .backgroundColor('#60A5FA')
+        .backgroundColor("#60A5FA")
         .borderRadius(10)
         .margin({ right: 6 })
-      Text(cmd.name).fontSize(OV_FONT_MD).fontColor(OV_TEXT_ULTRA)
+      Text(cmd.name)
+        .fontSize(OV_FONT_MD)
+        .fontColor(OV_TEXT_ULTRA)
     }
     .padding({ left: 6, right: 12, top: 6, bottom: 6 })
     .backgroundColor(this.isCurrentDark() ? OV_BG_CARD_DARKER : OV_BG_CARD_LIGHTER)
@@ -1657,7 +1764,7 @@ export struct GameMenuDialog {
     .focusBox({
       margin: LengthMetrics.vp(1),
       strokeColor: ColorMetrics.rgba(96, 165, 250, 0.8),
-      strokeWidth: LengthMetrics.vp(1.5)
+      strokeWidth: LengthMetrics.vp(1.5),
     })
     .onKeyEvent((event: KeyEvent) => {
       if (event.type === KeyType.Down && (event.keyCode === 2054 || event.keyCode === 2050)) {
@@ -1671,6 +1778,6 @@ export struct GameMenuDialog {
       this.recordCardUsage(CARD_SUPERCMD);
       this.callbacks.onSendSuperCmd?.(cmd.id);
       this.animateOut();
-    })
+    });
   }
 }

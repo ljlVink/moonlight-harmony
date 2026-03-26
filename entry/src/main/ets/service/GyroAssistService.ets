@@ -8,10 +8,13 @@
  * (at your option) any later version.
  */
 
+import {
+  DeviceSensorService,
+  LI_MOTION_TYPE_GYRO,
+  SensorDataCallback,
+} from "./DeviceSensorService";
 
-import { DeviceSensorService, LI_MOTION_TYPE_GYRO, SensorDataCallback } from './DeviceSensorService';
-
-const STICK_MAX: number = 0x7FFE; // 32766
+const STICK_MAX: number = 0x7ffe; // 32766
 
 export const GYRO_ACTIVATION_ALWAYS: number = -1;
 export const GYRO_ACTIVATION_LT: number = 0;
@@ -19,9 +22,7 @@ export const GYRO_ACTIVATION_RT: number = 1;
 
 const TRIGGER_ACTIVATE_THRESHOLD: number = 51; // 255 * 0.2
 
-
 const DEFAULT_SENSITIVITY: number = 2.0;
-
 
 const GYRO_REPORT_RATE_HZ: number = 120;
 
@@ -36,7 +37,7 @@ export type GyroSendCallback = (
   rightStickY: number,
   leftTrigger: number,
   rightTrigger: number,
-  controllerType: number
+  controllerType: number,
 ) => void;
 
 export class GyroAssistService {
@@ -123,7 +124,6 @@ export class GyroAssistService {
     this._invertY = invert;
   }
 
-
   setActivationKey(key: number): void {
     this._activationKey = key;
     if (key === GYRO_ACTIVATION_ALWAYS) {
@@ -146,9 +146,13 @@ export class GyroAssistService {
     }
   }
 
-
-  private onGyroData(controllerNumber: number, motionType: number,
-    gx: number, gy: number, gz: number): void {
+  private onGyroData(
+    controllerNumber: number,
+    motionType: number,
+    gx: number,
+    gy: number,
+    gz: number,
+  ): void {
     if (motionType !== LI_MOTION_TYPE_GYRO) return;
     if (!this._enabled || !this.holdActive) {
       this.gyroStickX = 0;
@@ -181,7 +185,7 @@ export class GyroAssistService {
         fusedY,
         this.lastLeftTrigger,
         this.lastRightTrigger,
-        this.lastControllerType
+        this.lastControllerType,
       );
     }
   }
@@ -206,7 +210,6 @@ export class GyroAssistService {
     }
   }
 
-
   fuseRightStick(physRsX: number, physRsY: number): StickXY {
     const result: StickXY = { x: physRsX, y: physRsY };
     if (!this._enabled || !this.holdActive) {
@@ -227,7 +230,7 @@ export class GyroAssistService {
     physRightStickY: number,
     leftTrigger: number,
     rightTrigger: number,
-    controllerType: number
+    controllerType: number,
   ): void {
     this.lastDeviceId = deviceId;
     this.lastButtons = buttons;
@@ -256,7 +259,7 @@ export class GyroAssistService {
   private startListening(): void {
     if (this.sensorListening) return;
     if (!this.sensorService.hasGyroscope()) {
-      console.warn('[GyroAssist] 设备没有陀螺仪');
+      console.warn("[GyroAssist] 设备没有陀螺仪");
       return;
     }
 
@@ -267,7 +270,7 @@ export class GyroAssistService {
         if (this.originalSensorCallback) {
           this.originalSensorCallback(cn, mt, x, y, z);
         }
-      }
+      },
     );
 
     this.sensorService.setMotionEventState(LI_MOTION_TYPE_GYRO, GYRO_REPORT_RATE_HZ);
@@ -277,9 +280,16 @@ export class GyroAssistService {
       this.holdActive = true;
     }
 
-    console.info(`[GyroAssist] 体感助手已启动 (灵敏度: ${this._sensitivityMultiplier}x, ` +
-      `激活键: ${this._activationKey === GYRO_ACTIVATION_ALWAYS ? '始终' :
-        this._activationKey === GYRO_ACTIVATION_LT ? 'LT' : 'RT'})`);
+    console.info(
+      `[GyroAssist] 体感助手已启动 (灵敏度: ${this._sensitivityMultiplier}x, ` +
+        `激活键: ${
+          this._activationKey === GYRO_ACTIVATION_ALWAYS
+            ? "始终"
+            : this._activationKey === GYRO_ACTIVATION_LT
+              ? "LT"
+              : "RT"
+        })`,
+    );
   }
 
   private stopListening(): void {
@@ -291,7 +301,7 @@ export class GyroAssistService {
     this.gyroStickX = 0;
     this.gyroStickY = 0;
 
-    console.info('[GyroAssist] 体感助手已停止');
+    console.info("[GyroAssist] 体感助手已停止");
   }
 
   setOriginalSensorCallback(callback: SensorDataCallback | null): void {
@@ -327,7 +337,6 @@ export interface GyroAssistSettings {
   invertY: boolean;
   activationKey: number;
 }
-
 
 export interface StickXY {
   x: number;

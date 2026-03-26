@@ -11,10 +11,10 @@
 /**
  *
  */
-import { display, window, promptAction } from '@kit.ArkUI';
-import { common } from '@kit.AbilityKit';
-import { StreamViewModel } from '../viewmodel/StreamViewModel';
-import { GamepadManager } from '../service/GamepadManager';
+import { display, window, promptAction } from "@kit.ArkUI";
+import { common } from "@kit.AbilityKit";
+import { StreamViewModel } from "../viewmodel/StreamViewModel";
+import { GamepadManager } from "../service/GamepadManager";
 
 import {
   MoonBridge,
@@ -30,10 +30,13 @@ import {
   MODIFIER_SHIFT,
   MODIFIER_CTRL,
   MODIFIER_ALT,
-  MODIFIER_META
-} from '../service/MoonBridge';
-import { KeyboardTranslator } from '../service/KeyboardTranslator';
-import { InputInterceptorService, MouseInterceptorService } from '../service/InputInterceptorService';
+  MODIFIER_META,
+} from "../service/MoonBridge";
+import { KeyboardTranslator } from "../service/KeyboardTranslator";
+import {
+  InputInterceptorService,
+  MouseInterceptorService,
+} from "../service/InputInterceptorService";
 
 export class StreamInputHandler {
   private modifierFlags: number = 0;
@@ -74,13 +77,13 @@ export class StreamInputHandler {
 
   setMenuKey(keyName: string): void {
     switch (keyName) {
-      case 'F1':
+      case "F1":
         this.menuKeyCode = 2090;
         break;
-      case 'F12':
+      case "F12":
         this.menuKeyCode = 2101;
         break;
-      case '~':
+      case "~":
         this.menuKeyCode = 2056;
         break;
       default:
@@ -131,21 +134,32 @@ export class StreamInputHandler {
 
     const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
 
-    mouseInterceptor.configure(0, 0, screenWidthPx, screenHeightPx,
-                                screenWidthPx, screenHeightPx, relativeMode);
+    mouseInterceptor.configure(
+      0,
+      0,
+      screenWidthPx,
+      screenHeightPx,
+      screenWidthPx,
+      screenHeightPx,
+      relativeMode,
+    );
 
     const result = mouseInterceptor.start();
     if (result === 0) {
       this.mouseInterceptorActive = true;
-      const modeLabel = relativeMode ? 'relative/game' : 'absolute/desktop';
-      console.info(`StreamInputHandler: C++ mouse Monitor started (${screenWidthPx}x${screenHeightPx}px, ${modeLabel})`);
+      const modeLabel = relativeMode ? "relative/game" : "absolute/desktop";
+      console.info(
+        `StreamInputHandler: C++ mouse Monitor started (${screenWidthPx}x${screenHeightPx}px, ${modeLabel})`,
+      );
 
       this.fetchAndUpdateWindowRect();
       return true;
     }
 
     this.mouseInterceptorActive = false;
-    console.info(`StreamInputHandler: C++ Monitor unavailable (${result}), will use keepalive animation for .onMouse`);
+    console.info(
+      `StreamInputHandler: C++ Monitor unavailable (${result}), will use keepalive animation for .onMouse`,
+    );
     return false;
   }
 
@@ -163,19 +177,29 @@ export class StreamInputHandler {
   private fetchAndUpdateWindowRect(): void {
     try {
       const context = getContext() as common.UIAbilityContext;
-      window.getLastWindow(context).then((win: window.Window) => {
-        const rect = win.getWindowProperties().windowRect;
-        if (rect && this.mouseInterceptorActive) {
-          const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
-          MouseInterceptorService.getInstance().configure(
-            rect.left, rect.top, rect.width, rect.height,
-            this.screenWidthPx, this.screenHeightPx, relativeMode
-          );
-          console.info(`StreamInputHandler: Window rect updated (${rect.left},${rect.top},${rect.width}x${rect.height})`);
-        }
-      }).catch((err: Error) => {
-        console.warn(`StreamInputHandler: Failed to get window rect: ${err?.message}`);
-      });
+      window
+        .getLastWindow(context)
+        .then((win: window.Window) => {
+          const rect = win.getWindowProperties().windowRect;
+          if (rect && this.mouseInterceptorActive) {
+            const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
+            MouseInterceptorService.getInstance().configure(
+              rect.left,
+              rect.top,
+              rect.width,
+              rect.height,
+              this.screenWidthPx,
+              this.screenHeightPx,
+              relativeMode,
+            );
+            console.info(
+              `StreamInputHandler: Window rect updated (${rect.left},${rect.top},${rect.width}x${rect.height})`,
+            );
+          }
+        })
+        .catch((err: Error) => {
+          console.warn(`StreamInputHandler: Failed to get window rect: ${err?.message}`);
+        });
     } catch (_) {}
   }
 
@@ -206,15 +230,17 @@ export class StreamInputHandler {
         }
       } else {
         MoonBridge.sendMousePosition(
-          Math.round(event.x), Math.round(event.y),
-          this.viewWidthVp, this.viewHeightVp
+          Math.round(event.x),
+          Math.round(event.y),
+          this.viewWidthVp,
+          this.viewHeightVp,
         );
       }
     } else if (event.action === MouseAction.Press || event.action === MouseAction.Release) {
       const button = this.mapMouseButton(event.button);
       if (button > 0) {
-        const action = event.action === MouseAction.Press
-          ? BUTTON_ACTION_PRESS : BUTTON_ACTION_RELEASE;
+        const action =
+          event.action === MouseAction.Press ? BUTTON_ACTION_PRESS : BUTTON_ACTION_RELEASE;
         MoonBridge.sendMouseButton(action, button);
       }
     }
@@ -226,16 +252,18 @@ export class StreamInputHandler {
     const vertical = event.getVerticalAxisValue();
     const horizontal = event.getHorizontalAxisValue();
 
-    const scrollStep = (event.scrollStep && event.scrollStep > 0) ? event.scrollStep : 1;
+    const scrollStep = event.scrollStep && event.scrollStep > 0 ? event.scrollStep : 1;
 
     if (vertical !== 0) {
-      const scrollAmount = Math.round(-vertical / scrollStep * 8);
-      console.info(`Scroll: vertical=${vertical.toFixed(2)}, scrollStep=${scrollStep}, send=${scrollAmount}`);
+      const scrollAmount = Math.round((-vertical / scrollStep) * 8);
+      console.info(
+        `Scroll: vertical=${vertical.toFixed(2)}, scrollStep=${scrollStep}, send=${scrollAmount}`,
+      );
       MoonBridge.sendMouseHighResScroll(scrollAmount);
     }
 
     if (horizontal !== 0) {
-      MoonBridge.sendMouseHighResHScroll(Math.round(-horizontal / scrollStep * 8));
+      MoonBridge.sendMouseHighResHScroll(Math.round((-horizontal / scrollStep) * 8));
     }
   }
 
@@ -255,11 +283,7 @@ export class StreamInputHandler {
       if (deviceId > 0) {
         this.knownGamepadDeviceIds.add(deviceId);
       }
-      this.gamepadManager?.handleKeyEvent(
-        deviceId,
-        keyCode,
-        event.type === KeyType.Down
-      );
+      this.gamepadManager?.handleKeyEvent(deviceId, keyCode, event.type === KeyType.Down);
       return true;
     }
 
@@ -349,8 +373,13 @@ export class StreamInputHandler {
       }
 
       const SYSTEM_HIJACKED_KEYS: Set<number> = new Set([
-        1, 2, 3,                   // Home, Back, Recent
-        10, 11, 12, 13             // Media keys
+        1,
+        2,
+        3, // Home, Back, Recent
+        10,
+        11,
+        12,
+        13, // Media keys
       ]);
 
       if (SYSTEM_HIJACKED_KEYS.has(keyCode)) {
@@ -365,37 +394,52 @@ export class StreamInputHandler {
       }
     });
     if (result !== 0) {
-      console.warn(`StreamPage: Key interceptor start failed (${result}), gamepad Home key may be hijacked by system`);
+      console.warn(
+        `StreamPage: Key interceptor start failed (${result}), gamepad Home key may be hijacked by system`,
+      );
       promptAction.showToast({
-        message: 'Key anti-hijack failed: Bluetooth gamepad Home key may cause exit (requires system-level signature)',
-        duration: 3500
+        message:
+          "Key anti-hijack failed: Bluetooth gamepad Home key may cause exit (requires system-level signature)",
+        duration: 3500,
       });
     }
   }
 
   private mapSystemKeyToVK(keyCode: number): number {
     switch (keyCode) {
-      case 1: return 0;
-      case 2: return 0x1B; // Back → VK_ESCAPE
-      case 3: return 0;
-      case 10: return 0xB3; // Media Play/Pause → VK_MEDIA_PLAY_PAUSE
-      case 11: return 0xB2; // Media Stop → VK_MEDIA_STOP
-      case 12: return 0xB0; // Media Next → VK_MEDIA_NEXT_TRACK
-      case 13: return 0xB1; // Media Previous → VK_MEDIA_PREV_TRACK
-      default: return 0;
+      case 1:
+        return 0;
+      case 2:
+        return 0x1b; // Back → VK_ESCAPE
+      case 3:
+        return 0;
+      case 10:
+        return 0xb3; // Media Play/Pause → VK_MEDIA_PLAY_PAUSE
+      case 11:
+        return 0xb2; // Media Stop → VK_MEDIA_STOP
+      case 12:
+        return 0xb0; // Media Next → VK_MEDIA_NEXT_TRACK
+      case 13:
+        return 0xb1; // Media Previous → VK_MEDIA_PREV_TRACK
+      default:
+        return 0;
     }
   }
 
   private mapMouseButton(button: MouseButton): number {
     switch (button) {
-      case MouseButton.Left: return BUTTON_LEFT;       // 0x01
-      case MouseButton.Middle: return BUTTON_MIDDLE;   // 0x02
-      case MouseButton.Right: return BUTTON_RIGHT;     // 0x03
+      case MouseButton.Left:
+        return BUTTON_LEFT; // 0x01
+      case MouseButton.Middle:
+        return BUTTON_MIDDLE; // 0x02
+      case MouseButton.Right:
+        return BUTTON_RIGHT; // 0x03
       case MouseButton.Back:
         return this.viewModel?.inputSettings?.mouseNavButtons ? BUTTON_X1 : 0;
       case MouseButton.Forward:
         return this.viewModel?.inputSettings?.mouseNavButtons ? BUTTON_X2 : 0;
-      default: return 0;
+      default:
+        return 0;
     }
   }
 
@@ -405,20 +449,20 @@ export class StreamInputHandler {
   private updateModifierFlags(vkCode: number, isDown: boolean): void {
     let mask = 0;
     switch (vkCode) {
-      case 0xA0: // VK_LSHIFT
-      case 0xA1: // VK_RSHIFT
+      case 0xa0: // VK_LSHIFT
+      case 0xa1: // VK_RSHIFT
         mask = MODIFIER_SHIFT;
         break;
-      case 0xA2: // VK_LCONTROL
-      case 0xA3: // VK_RCONTROL
+      case 0xa2: // VK_LCONTROL
+      case 0xa3: // VK_RCONTROL
         mask = MODIFIER_CTRL;
         break;
-      case 0xA4: // VK_LMENU (Alt Left)
-      case 0xA5: // VK_RMENU (Alt Right)
+      case 0xa4: // VK_LMENU (Alt Left)
+      case 0xa5: // VK_RMENU (Alt Right)
         mask = MODIFIER_ALT;
         break;
-      case 0x5B: // VK_LWIN
-      case 0x5C: // VK_RWIN
+      case 0x5b: // VK_LWIN
+      case 0x5c: // VK_RWIN
         mask = MODIFIER_META;
         break;
     }
@@ -436,14 +480,20 @@ export class StreamInputHandler {
    */
   private checkEscDoubleTap(isDown: boolean): boolean {
     if (isDown) {
-      if (this.hasShownEscHint && Date.now() - this.lastEscUpTime <= StreamInputHandler.ESC_DOUBLE_TAP_INTERVAL) {
+      if (
+        this.hasShownEscHint &&
+        Date.now() - this.lastEscUpTime <= StreamInputHandler.ESC_DOUBLE_TAP_INTERVAL
+      ) {
         return true;
       }
       return false;
     }
 
     const now = Date.now();
-    if (this.hasShownEscHint && now - this.lastEscUpTime <= StreamInputHandler.ESC_DOUBLE_TAP_INTERVAL) {
+    if (
+      this.hasShownEscHint &&
+      now - this.lastEscUpTime <= StreamInputHandler.ESC_DOUBLE_TAP_INTERVAL
+    ) {
       this.lastEscUpTime = 0;
       this.hasShownEscHint = false;
       this.releaseAllKeys();
@@ -454,16 +504,23 @@ export class StreamInputHandler {
     this.lastEscUpTime = now;
     this.hasShownEscHint = true;
     const keyLabel = this.getMenuKeyLabel();
-    promptAction.showToast({ message: `Press ${keyLabel} again to open stream menu`, duration: 1500 });
+    promptAction.showToast({
+      message: `Press ${keyLabel} again to open stream menu`,
+      duration: 1500,
+    });
     return false;
   }
 
   private getMenuKeyLabel(): string {
     switch (this.menuKeyCode) {
-      case 2090: return 'F1';
-      case 2101: return 'F12';
-      case 2056: return '~';
-      default: return 'ESC';
+      case 2090:
+        return "F1";
+      case 2101:
+        return "F12";
+      case 2056:
+        return "~";
+      default:
+        return "ESC";
     }
   }
 
@@ -490,10 +547,10 @@ export class StreamInputHandler {
     session.setAudioVolume(this.appVolume);
 
     const percent = Math.round(this.appVolume * 100);
-    const icon = this.appVolume === 0 ? '🔇' : (this.appVolume < 0.5 ? '🔉' : '🔊');
+    const icon = this.appVolume === 0 ? "🔇" : this.appVolume < 0.5 ? "🔉" : "🔊";
     promptAction.showToast({
       message: `${icon} Volume ${percent}%`,
-      duration: 1000
+      duration: 1000,
     });
   }
 }

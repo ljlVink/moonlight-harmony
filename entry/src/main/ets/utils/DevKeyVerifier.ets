@@ -8,13 +8,13 @@
  * (at your option) any later version.
  */
 
-import { util } from '@kit.ArkTS';
-import { fileIo } from '@kit.CoreFileKit';
-import { common } from '@kit.AbilityKit';
+import { util } from "@kit.ArkTS";
+import { fileIo } from "@kit.CoreFileKit";
+import { common } from "@kit.AbilityKit";
 
 export class DevKeyVerifier {
   static getDeviceId(context: common.Context): string {
-    const uniqueIdPath = context.filesDir + '/unique_id.txt';
+    const uniqueIdPath = context.filesDir + "/unique_id.txt";
     try {
       if (fileIo.accessSync(uniqueIdPath)) {
         const file = fileIo.openSync(uniqueIdPath, fileIo.OpenMode.READ_ONLY);
@@ -22,13 +22,13 @@ export class DevKeyVerifier {
         const buffer = new ArrayBuffer(stat.size);
         fileIo.readSync(file.fd, buffer);
         fileIo.closeSync(file);
-        const textDecoder = util.TextDecoder.create('utf-8');
+        const textDecoder = util.TextDecoder.create("utf-8");
         return textDecoder.decodeToString(new Uint8Array(buffer)).trim();
       }
     } catch (err) {
       console.error(`DevKeyVerifier: Failed to read device ID: ${err}`);
     }
-    return '';
+    return "";
   }
 
   static verify(deviceId: string, inputKey: string): boolean {

@@ -12,4 +12,4 @@
  * Moonlight Native Library Entry
  */
 
-export { default as nativeLib } from 'libmoonlight_nativelib.so';
+export { default as nativeLib } from "libmoonlight_nativelib.so";

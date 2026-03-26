@@ -15,29 +15,34 @@
  * Used for DualShock 4 and DualSense controllers
  */
 
-import { usbManager } from '@kit.BasicServicesKit';
-import { AbstractController } from './AbstractController';
-import { UsbDriverListener } from './UsbDriverListener';
-import { ButtonFlags, ControllerCapabilities, ControllerType, MotionType } from './ControllerConstants';
-import { analyzeErrorPattern, createUsbError, isHardwareError, UsbError } from './UsbErrorCodes';
-import { DdkUsbPoller } from './DdkUsbPoller';
+import { usbManager } from "@kit.BasicServicesKit";
+import { AbstractController } from "./AbstractController";
+import { UsbDriverListener } from "./UsbDriverListener";
+import {
+  ButtonFlags,
+  ControllerCapabilities,
+  ControllerType,
+  MotionType,
+} from "./ControllerConstants";
+import { analyzeErrorPattern, createUsbError, isHardwareError, UsbError } from "./UsbErrorCodes";
+import { DdkUsbPoller } from "./DdkUsbPoller";
 
-const TAG = '[USB-DS]';
+const TAG = "[USB-DS]";
 
 export abstract class AbstractDualSenseController extends AbstractController {
   protected device: usbManager.USBDevice;
   protected pipe: usbManager.USBDevicePipe | null = null;
-  
+
   protected inEndpoint: usbManager.USBEndpoint | null = null;
   protected outEndpoint: usbManager.USBEndpoint | null = null;
   protected usbInterface: usbManager.USBInterface | null = null;
-  
+
   private stopped: boolean = false;
-  
+
   // DDK high-speed poller (bypasses usbManager IPC)
   private ddkPoller: DdkUsbPoller | null = null;
   private useDdkPolling: boolean = false;
-  
+
   // IMU data
   protected gyroX: number = 0;
   protected gyroY: number = 0;
@@ -45,52 +50,64 @@ export abstract class AbstractDualSenseController extends AbstractController {
   protected accelX: number = 0;
   protected accelY: number = 0;
   protected accelZ: number = 0;
-  
+
   constructor(
     device: usbManager.USBDevice,
     pipe: usbManager.USBDevicePipe,
     deviceId: number,
-    listener: UsbDriverListener
+    listener: UsbDriverListener,
   ) {
     super(deviceId, listener, device.vendorId, device.productId);
     this.device = device;
     this.pipe = pipe;
     this.type = ControllerType.PS;
-    this.capabilities = 
-      ControllerCapabilities.ANALOG_TRIGGERS | 
+    this.capabilities =
+      ControllerCapabilities.ANALOG_TRIGGERS |
       ControllerCapabilities.RUMBLE |
       ControllerCapabilities.TOUCHPAD |
       ControllerCapabilities.GYRO |
       ControllerCapabilities.ACCEL;
-    
+
     // Supported buttons
     this.supportedButtonFlags =
-      ButtonFlags.A_FLAG | ButtonFlags.B_FLAG | ButtonFlags.X_FLAG | ButtonFlags.Y_FLAG |
-      ButtonFlags.UP_FLAG | ButtonFlags.DOWN_FLAG | ButtonFlags.LEFT_FLAG | ButtonFlags.RIGHT_FLAG |
-      ButtonFlags.LB_FLAG | ButtonFlags.RB_FLAG |
-      ButtonFlags.LS_CLK_FLAG | ButtonFlags.RS_CLK_FLAG |
-      ButtonFlags.BACK_FLAG | ButtonFlags.PLAY_FLAG | ButtonFlags.SPECIAL_BUTTON_FLAG |
+      ButtonFlags.A_FLAG |
+      ButtonFlags.B_FLAG |
+      ButtonFlags.X_FLAG |
+      ButtonFlags.Y_FLAG |
+      ButtonFlags.UP_FLAG |
+      ButtonFlags.DOWN_FLAG |
+      ButtonFlags.LEFT_FLAG |
+      ButtonFlags.RIGHT_FLAG |
+      ButtonFlags.LB_FLAG |
+      ButtonFlags.RB_FLAG |
+      ButtonFlags.LS_CLK_FLAG |
+      ButtonFlags.RS_CLK_FLAG |
+      ButtonFlags.BACK_FLAG |
+      ButtonFlags.PLAY_FLAG |
+      ButtonFlags.SPECIAL_BUTTON_FLAG |
       ButtonFlags.TOUCHPAD_FLAG;
   }
-  
+
   private findEndpoints(): boolean {
     if (!this.device.configs || this.device.configs.length === 0) {
       console.error(`${TAG} Device has no configuration`);
       return false;
     }
-    
+
     const config = this.device.configs[0];
     if (!config.interfaces || config.interfaces.length === 0) {
       console.error(`${TAG} Configuration has no interface`);
       return false;
     }
-    
+
     console.info(`${TAG} Device has ${config.interfaces.length} interfaces`);
     for (let i = 0; i < config.interfaces.length; i++) {
       const iface = config.interfaces[i];
-      console.info(`${TAG} Interface ${i}: id=${iface.id}, clazz=${iface.clazz}, subclass=${iface.subClass}, protocol=${iface.protocol}, endpoints=${iface.endpoints?.length || 0}`);
+      console.info(
+        `${TAG} Interface ${i}: id=${iface.id}, clazz=${iface.clazz}, subclass=${iface.subClass}, protocol=${iface.protocol}, endpoints=${iface.endpoints?.length || 0}`,
+      );
     }
-    
+
     // Find HID interface (class = 3)
     // DualSense usually has HID as the first interface
     this.usbInterface = null;
@@ -103,22 +120,22 @@ export abstract class AbstractDualSenseController extends AbstractController {
         break;
       }
     }
-    
+
     // If no HID interface found, use the first interface
     if (!this.usbInterface) {
       console.warn(`${TAG} HID interface not found, using first interface`);
       this.usbInterface = config.interfaces[0];
     }
-    
+
     if (!this.usbInterface.endpoints || this.usbInterface.endpoints.length === 0) {
       console.error(`${TAG} Interface has no endpoints`);
       return false;
     }
-    
+
     // Find input and output endpoints
     for (const endpoint of this.usbInterface.endpoints) {
       const direction = endpoint.direction;
-      
+
       if (direction === usbManager.USBRequestDirection.USB_REQUEST_DIR_FROM_DEVICE) {
         if (this.inEndpoint !== null) {
           console.warn(`${TAG} Duplicate input endpoint found`);
@@ -135,21 +152,21 @@ export abstract class AbstractDualSenseController extends AbstractController {
         console.info(`${TAG} Found output endpoint: address=0x${endpoint.address.toString(16)}`);
       }
     }
-    
+
     // DualShock/DualSense may not have output endpoint
     if (this.inEndpoint === null) {
       console.warn(`${TAG} Missing input endpoint`);
       return false;
     }
-    
+
     return true;
   }
-  
+
   private claimInterface(): boolean {
     if (!this.pipe || !this.usbInterface) {
       return false;
     }
-    
+
     try {
       const result = usbManager.claimInterface(this.pipe, this.usbInterface, true);
       if (result !== 0) {
@@ -163,26 +180,26 @@ export abstract class AbstractDualSenseController extends AbstractController {
       return false;
     }
   }
-  
+
   protected async bulkRead(timeout: number = 3000): Promise<Uint8Array | null> {
     if (!this.pipe || !this.inEndpoint) {
-      throw new Error('USB pipe or endpoint not initialized');
+      throw new Error("USB pipe or endpoint not initialized");
     }
-    
+
     const buffer = new Uint8Array(64);
     const result = await usbManager.bulkTransfer(this.pipe, this.inEndpoint, buffer, timeout);
-    
+
     // Negative value indicates error
     if (result < 0) {
       throw createUsbError(result);
     }
-    
+
     if (result > 0) {
       return buffer.slice(0, result);
     }
     return null;
   }
-  
+
   protected async bulkWrite(data: Uint8Array, timeout: number = 3000): Promise<number> {
     // DDK path: send via DDK synchronously
     if (this.useDdkPolling && this.ddkPoller) {
@@ -197,61 +214,63 @@ export abstract class AbstractDualSenseController extends AbstractController {
     if (!this.pipe || !this.outEndpoint) {
       return -1;
     }
-    
+
     try {
       const result = await usbManager.bulkTransfer(this.pipe, this.outEndpoint, data, timeout);
-      return typeof result === 'number' ? result : data.length;
+      return typeof result === "number" ? result : data.length;
     } catch (err) {
       console.error(`${TAG} Bulk write failed:`, err);
       return -1;
     }
   }
-  
+
   protected async sendCommand(data: Uint8Array): Promise<boolean> {
     const result = await this.bulkWrite(data);
     return result === data.length;
   }
-  
+
   private async inputLoop(): Promise<void> {
     console.info(`${TAG} Input loop started - waiting for data...`);
-    
+
     // Initialization complete, mark ready and notify
     this.notifyDeviceAdded();
     console.info(`${TAG} Device added notification sent`);
-    
+
     let readCount = 0;
     let successCount = 0;
     let detectedHardwareError = false;
-    
+
     // Error history (for pattern analysis)
     const errorHistory: number[] = [];
     const MAX_ERROR_HISTORY = 5;
-    
+
     while (!this.stopped) {
       try {
         // Use longer timeout (consistent with Android)
         // Returns immediately when data is available
         const buffer = await this.bulkRead(1000);
-        
+
         if (this.stopped) {
           break;
         }
-        
+
         readCount++;
-        
+
         // Clear error history on successful read
         if (buffer && buffer.length > 0) {
           errorHistory.length = 0;
-          
+
           if (this.handleRead(buffer)) {
             successCount++;
             this.reportInput();
-            
+
             // Print status every 100 successful reads
             if (successCount % 100 === 1) {
-              console.info(`${TAG} Input state: buttons=0x${this.buttonFlags.toString(16)}, LX=${this.leftStickX.toFixed(2)}, LY=${this.leftStickY.toFixed(2)}`);
+              console.info(
+                `${TAG} Input state: buttons=0x${this.buttonFlags.toString(16)}, LX=${this.leftStickX.toFixed(2)}, LY=${this.leftStickY.toFixed(2)}`,
+              );
             }
-            
+
             // Report IMU data
             if (this.capabilities & ControllerCapabilities.GYRO) {
               this.notifyControllerMotion(MotionType.GYRO, this.gyroX, this.gyroY, this.gyroZ);
@@ -259,7 +278,7 @@ export abstract class AbstractDualSenseController extends AbstractController {
             if (this.capabilities & ControllerCapabilities.ACCEL) {
               this.notifyControllerMotion(MotionType.ACCEL, this.accelX, this.accelY, this.accelZ);
             }
-            
+
             // Report touchpad data
             if (this.capabilities & ControllerCapabilities.TOUCHPAD) {
               this.notifyTouchpadInput(this.touchpadActive, this.touchpadX, this.touchpadY);
@@ -274,43 +293,55 @@ export abstract class AbstractDualSenseController extends AbstractController {
           const usbErr = err instanceof UsbError ? err : null;
           const errorCode = usbErr ? usbErr.code : 0;
           const retryable = usbErr ? usbErr.retryable : true;
-          
+
           // Timeout error - continue polling
-          if (errorCode === -8) {  // USB_ERROR_TIMEOUT
+          if (errorCode === -8) {
+            // USB_ERROR_TIMEOUT
             continue;
-          } else if (errorCode === -4) {  // USB_ERROR_NO_DEVICE
+          } else if (errorCode === -4) {
+            // USB_ERROR_NO_DEVICE
             // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} Device unreachable but ignore disconnect enabled, continuing: ${err}`);
+              console.warn(
+                `${TAG} Device unreachable but ignore disconnect enabled, continuing: ${err}`,
+              );
               continue;
             }
             console.warn(`${TAG} Device unreachable: ${err}`);
             break;
           }
-          
+
           // Record error history
           errorHistory.unshift(errorCode);
           if (errorHistory.length > MAX_ERROR_HISTORY) {
             errorHistory.pop();
           }
-          
+
           // Use error pattern analysis (non-timeout errors)
           const analysis = analyzeErrorPattern(errorHistory);
-          console.info(`${TAG} Error analysis: sleep=${analysis.likelySleepMode}, disconnected=${analysis.likelyDisconnected}, confidence=${(analysis.confidence * 100).toFixed(0)}%`);
-          
-          if (analysis.likelyDisconnected && analysis.confidence >= 0.80) {
+          console.info(
+            `${TAG} Error analysis: sleep=${analysis.likelySleepMode}, disconnected=${analysis.likelyDisconnected}, confidence=${(analysis.confidence * 100).toFixed(0)}%`,
+          );
+
+          if (analysis.likelyDisconnected && analysis.confidence >= 0.8) {
             // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} Device disconnect detected but ignore disconnect enabled, continuing: ${err}`);
+              console.warn(
+                `${TAG} Device disconnect detected but ignore disconnect enabled, continuing: ${err}`,
+              );
               continue;
             }
-            console.error(`${TAG} Device disconnect detected (confidence: ${(analysis.confidence * 100).toFixed(0)}%): ${err}`);
+            console.error(
+              `${TAG} Device disconnect detected (confidence: ${(analysis.confidence * 100).toFixed(0)}%): ${err}`,
+            );
             detectedHardwareError = true;
             break;
           } else if (isHardwareError(errorCode)) {
             // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} Hardware error detected but ignore disconnect enabled, continuing: ${err}`);
+              console.warn(
+                `${TAG} Hardware error detected but ignore disconnect enabled, continuing: ${err}`,
+              );
               continue;
             }
             console.error(`${TAG} Hardware error detected: ${err}`);
@@ -322,7 +353,9 @@ export abstract class AbstractDualSenseController extends AbstractController {
             if (!retryable) {
               // If ignore disconnect is set, continue polling
               if (this.ignoreDisconnect) {
-                console.warn(`${TAG} Non-retryable error but ignore disconnect enabled, continuing: ${err}`);
+                console.warn(
+                  `${TAG} Non-retryable error but ignore disconnect enabled, continuing: ${err}`,
+                );
                 continue;
               }
               break;
@@ -331,9 +364,9 @@ export abstract class AbstractDualSenseController extends AbstractController {
         }
       }
     }
-    
+
     console.info(`${TAG} Input loop ended`);
-    
+
     // Decide whether to notify device removal based on error type
     if (!this.stopped) {
       if (detectedHardwareError) {
@@ -346,19 +379,23 @@ export abstract class AbstractDualSenseController extends AbstractController {
       }
     }
   }
-  
+
   start(): boolean {
-    console.info(`${TAG} Starting controller: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`);
+    console.info(
+      `${TAG} Starting controller: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`,
+    );
     this.markInitializing();
-    
+
     // Find endpoints
     if (!this.findEndpoints()) {
       console.error(`${TAG} Failed to find endpoints`);
       return false;
     }
-    
+
     // ====== Try DDK path first ======
-    console.info(`${TAG} DDK conditions: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`);
+    console.info(
+      `${TAG} DDK conditions: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`,
+    );
     if (this.ddkPollingEnabled && DdkUsbPoller.isAvailable() && this.inEndpoint) {
       const ddkStarted = this.tryDdkPath();
       if (ddkStarted) {
@@ -368,13 +405,13 @@ export abstract class AbstractDualSenseController extends AbstractController {
     }
 
     // ====== Fallback: usbManager path ======
-    
+
     // Claim interface
     if (!this.claimInterface()) {
       console.error(`${TAG} Failed to claim interface`);
       return false;
     }
-    
+
     // Perform initialization
     if (!this.doInit()) {
       console.error(`${TAG} Initialization failed`);
@@ -383,10 +420,10 @@ export abstract class AbstractDualSenseController extends AbstractController {
 
     // Start input loop
     this.stopped = false;
-    
+
     // ArkTS async polling
     this.inputLoop();
-    
+
     return true;
   }
 
@@ -423,7 +460,9 @@ export abstract class AbstractDualSenseController extends AbstractController {
     const outEp = this.outEndpoint?.address ?? 0;
     const maxPkt = this.inEndpoint!.maxPacketSize || 64;
 
-    console.info(`${TAG} DDK device matched: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`);
+    console.info(
+      `${TAG} DDK device matched: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`,
+    );
 
     // Step 3: Close usbManager pipe (DDK cannot ClaimInterface on a device already connected via usbManager)
     if (this.pipe) {
@@ -439,7 +478,11 @@ export abstract class AbstractDualSenseController extends AbstractController {
     // Step 4: Create DDK poller and start
     this.ddkPoller = new DdkUsbPoller();
     const started = this.ddkPoller.start(
-      ddkDeviceId, ifaceIndex, inEp, outEp, maxPkt,
+      ddkDeviceId,
+      ifaceIndex,
+      inEp,
+      outEp,
+      maxPkt,
       (data: Uint8Array, length: number) => {
         if (this.stopped) return;
         if (this.handleRead(data.slice(0, length))) {
@@ -458,14 +501,16 @@ export abstract class AbstractDualSenseController extends AbstractController {
 
         if (this.ignoreDisconnect) {
           if (!nativeStillRunning) {
-            console.error(`${TAG} DDK native thread exited! errorCode=${errorCode}, controller input will be interrupted until reconnection`);
+            console.error(
+              `${TAG} DDK native thread exited! errorCode=${errorCode}, controller input will be interrupted until reconnection`,
+            );
           }
           return;
         }
         console.error(`${TAG} DDK polling fatal error: ${errorCode}, stopping controller`);
         this.stop();
       },
-      100
+      100,
     );
 
     if (!started) {
@@ -494,7 +539,7 @@ export abstract class AbstractDualSenseController extends AbstractController {
     console.info(`${TAG} Controller started (DDK high-speed polling)`);
     return true;
   }
-  
+
   stop(): void {
     if (this.stopped) {
       return;
@@ -508,10 +553,10 @@ export abstract class AbstractDualSenseController extends AbstractController {
       this.useDdkPolling = false;
     }
     try {
-        usbManager.releaseInterface(this.pipe, this.usbInterface);
-      } catch (err) {
-        console.error(`${TAG} Failed to release interface:`, err);
-      }
+      usbManager.releaseInterface(this.pipe, this.usbInterface);
+    } catch (err) {
+      console.error(`${TAG} Failed to release interface:`, err);
+    }
     try {
       usbManager.closePipe(this.pipe);
     } catch (err) {
@@ -519,7 +564,7 @@ export abstract class AbstractDualSenseController extends AbstractController {
     }
     this.pipe = null;
   }
-  
+
   isConnected(): boolean {
     return !this.stopped && (this.pipe !== null || this.useDdkPolling);
   }
@@ -534,10 +579,10 @@ export abstract class AbstractDualSenseController extends AbstractController {
       console.error(`${TAG} Failed to restore pipe: ${err}`);
     }
   }
-  
+
   protected abstract getInitData(): Uint8Array;
-  
+
   protected abstract handleRead(buffer: Uint8Array): boolean;
-  
+
   protected abstract doInit(): boolean;
 }

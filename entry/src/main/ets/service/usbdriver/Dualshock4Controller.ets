@@ -8,145 +8,167 @@
  * (at your option) any later version.
  */
 
+import { usbManager } from "@kit.BasicServicesKit";
+import { AbstractDualSenseController } from "./AbstractDualSenseController";
+import { UsbDriverListener } from "./UsbDriverListener";
+import { ButtonFlags, DPadDirection, DualShock4 } from "./ControllerConstants";
+import { readShortLE, TRIGGER_MAX } from "../GamepadTypes";
 
-import { usbManager } from '@kit.BasicServicesKit';
-import { AbstractDualSenseController } from './AbstractDualSenseController';
-import { UsbDriverListener } from './UsbDriverListener';
-import { ButtonFlags, DPadDirection, DualShock4 } from './ControllerConstants';
-import { readShortLE, TRIGGER_MAX } from '../GamepadTypes';
-
-const TAG = '[USB-DS4]';
+const TAG = "[USB-DS4]";
 
 export class Dualshock4Controller extends AbstractDualSenseController {
-  
   constructor(
     device: usbManager.USBDevice,
     pipe: usbManager.USBDevicePipe,
     deviceId: number,
-    listener: UsbDriverListener
+    listener: UsbDriverListener,
   ) {
     super(device, pipe, deviceId, listener);
-    this.deviceName = 'DualShock 4 Controller';
+    this.deviceName = "DualShock 4 Controller";
   }
-  
+
   static canClaimDevice(device: usbManager.USBDevice): boolean {
     if (device.vendorId !== DualShock4.VID) {
       return false;
     }
-    
+
     if (!DualShock4.PIDS.includes(device.productId)) {
       return false;
     }
-    
+
     if (!device.configs || device.configs.length === 0) {
       return false;
     }
-    
+
     const config = device.configs[0];
     if (!config.interfaces || config.interfaces.length === 0) {
       return false;
     }
-    
-    console.info(`${TAG} 检测到 DualShock 4 控制器: VID=0x${device.vendorId.toString(16)}, PID=0x${device.productId.toString(16)}`);
+
+    console.info(
+      `${TAG} 检测到 DualShock 4 控制器: VID=0x${device.vendorId.toString(16)}, PID=0x${device.productId.toString(16)}`,
+    );
     return true;
   }
-  
+
   private normalizeThumbStickAxis(value: number): number {
-    return (2.0 * value / TRIGGER_MAX) - 1.0;
+    return (2.0 * value) / TRIGGER_MAX - 1.0;
   }
-  
+
   private normalizeTriggerAxis(value: number): number {
     return value / TRIGGER_MAX;
   }
-  
+
   protected handleRead(buffer: Uint8Array): boolean {
     if (buffer.length < 64) {
       console.warn(`${TAG} 数据太短: ${buffer.length}`);
       return false;
     }
-    
+
     const reportId = buffer[0];
     if (reportId !== 0x01 && reportId !== 0x11) {
       return false;
     }
-    
+
     // D-Pad
-    const dpad = buffer[5] & 0x0F;
-    this.setButtonFlag(ButtonFlags.UP_FLAG, 
-      (dpad === DPadDirection.UP || dpad === DPadDirection.UP_RIGHT || dpad === DPadDirection.UP_LEFT) ? 1 : 0);
-    this.setButtonFlag(ButtonFlags.DOWN_FLAG, 
-      (dpad === DPadDirection.DOWN || dpad === DPadDirection.DOWN_RIGHT || dpad === DPadDirection.DOWN_LEFT) ? 1 : 0);
-    this.setButtonFlag(ButtonFlags.LEFT_FLAG, 
-      (dpad === DPadDirection.LEFT || dpad === DPadDirection.UP_LEFT || dpad === DPadDirection.DOWN_LEFT) ? 1 : 0);
-    this.setButtonFlag(ButtonFlags.RIGHT_FLAG, 
-      (dpad === DPadDirection.RIGHT || dpad === DPadDirection.UP_RIGHT || dpad === DPadDirection.DOWN_RIGHT) ? 1 : 0);
-    
+    const dpad = buffer[5] & 0x0f;
+    this.setButtonFlag(
+      ButtonFlags.UP_FLAG,
+      dpad === DPadDirection.UP || dpad === DPadDirection.UP_RIGHT || dpad === DPadDirection.UP_LEFT
+        ? 1
+        : 0,
+    );
+    this.setButtonFlag(
+      ButtonFlags.DOWN_FLAG,
+      dpad === DPadDirection.DOWN ||
+        dpad === DPadDirection.DOWN_RIGHT ||
+        dpad === DPadDirection.DOWN_LEFT
+        ? 1
+        : 0,
+    );
+    this.setButtonFlag(
+      ButtonFlags.LEFT_FLAG,
+      dpad === DPadDirection.LEFT ||
+        dpad === DPadDirection.UP_LEFT ||
+        dpad === DPadDirection.DOWN_LEFT
+        ? 1
+        : 0,
+    );
+    this.setButtonFlag(
+      ButtonFlags.RIGHT_FLAG,
+      dpad === DPadDirection.RIGHT ||
+        dpad === DPadDirection.UP_RIGHT ||
+        dpad === DPadDirection.DOWN_RIGHT
+        ? 1
+        : 0,
+    );
+
     const b5 = buffer[5];
-    this.setButtonFlag(ButtonFlags.X_FLAG, b5 & 0x10);  // Square
-    this.setButtonFlag(ButtonFlags.A_FLAG, b5 & 0x20);  // Cross
-    this.setButtonFlag(ButtonFlags.B_FLAG, b5 & 0x40);  // Circle
-    this.setButtonFlag(ButtonFlags.Y_FLAG, b5 & 0x80);  // Triangle
-    
+    this.setButtonFlag(ButtonFlags.X_FLAG, b5 & 0x10); // Square
+    this.setButtonFlag(ButtonFlags.A_FLAG, b5 & 0x20); // Cross
+    this.setButtonFlag(ButtonFlags.B_FLAG, b5 & 0x40); // Circle
+    this.setButtonFlag(ButtonFlags.Y_FLAG, b5 & 0x80); // Triangle
+
     const b6 = buffer[6];
-    this.setButtonFlag(ButtonFlags.LB_FLAG, b6 & 0x01);  // L1
-    this.setButtonFlag(ButtonFlags.RB_FLAG, b6 & 0x02);  // R1
-    this.setButtonFlag(ButtonFlags.BACK_FLAG, b6 & 0x10);   // Share
-    this.setButtonFlag(ButtonFlags.PLAY_FLAG, b6 & 0x20);   // Options
+    this.setButtonFlag(ButtonFlags.LB_FLAG, b6 & 0x01); // L1
+    this.setButtonFlag(ButtonFlags.RB_FLAG, b6 & 0x02); // R1
+    this.setButtonFlag(ButtonFlags.BACK_FLAG, b6 & 0x10); // Share
+    this.setButtonFlag(ButtonFlags.PLAY_FLAG, b6 & 0x20); // Options
     this.setButtonFlag(ButtonFlags.LS_CLK_FLAG, b6 & 0x40); // L3
     this.setButtonFlag(ButtonFlags.RS_CLK_FLAG, b6 & 0x80); // R3
-    
+
     const b7 = buffer[7];
-    this.setButtonFlag(ButtonFlags.SPECIAL_BUTTON_FLAG, b7 & 0x01);  // PS
-    this.setButtonFlag(ButtonFlags.TOUCHPAD_FLAG, b7 & 0x02);  // Touchpad click
-    
+    this.setButtonFlag(ButtonFlags.SPECIAL_BUTTON_FLAG, b7 & 0x01); // PS
+    this.setButtonFlag(ButtonFlags.TOUCHPAD_FLAG, b7 & 0x02); // Touchpad click
+
     // DualShock 4 touchpad resolution: 1920 x 942
     if (buffer.length >= 39) {
       const contactByte = buffer[35];
       const isActive = (contactByte & 0x80) === 0;
       this.touchpadActive = isActive;
       if (isActive) {
-        this.touchpadX = buffer[36] | ((buffer[37] & 0x0F) << 8);
-        this.touchpadY = ((buffer[37] & 0xF0) >> 4) | (buffer[38] << 4);
+        this.touchpadX = buffer[36] | ((buffer[37] & 0x0f) << 8);
+        this.touchpadY = ((buffer[37] & 0xf0) >> 4) | (buffer[38] << 4);
       }
     }
-    
+
     this.leftStickX = this.normalizeThumbStickAxis(buffer[1]);
     this.leftStickY = this.normalizeThumbStickAxis(buffer[2]);
     this.rightStickX = this.normalizeThumbStickAxis(buffer[3]);
     this.rightStickY = this.normalizeThumbStickAxis(buffer[4]);
-    
+
     this.leftTrigger = this.normalizeTriggerAxis(buffer[8]);
     this.rightTrigger = this.normalizeTriggerAxis(buffer[9]);
-    
+
     if (buffer.length >= 24) {
       const GYRO_SCALE = 2000.0 / 32768.0;
       const ACCEL_SCALE = 4.0 / 32768.0;
       const G_TO_MS2 = 9.81;
-      
-const gyrox = readShortLE(buffer, 13);
+
+      const gyrox = readShortLE(buffer, 13);
       const gyroy = readShortLE(buffer, 15);
       const gyroz = readShortLE(buffer, 17);
 
       const accelx = readShortLE(buffer, 19);
       const accely = readShortLE(buffer, 21);
       const accelz = readShortLE(buffer, 23);
-      
+
       this.gyroX = gyrox * GYRO_SCALE;
       this.gyroY = gyroy * GYRO_SCALE;
       this.gyroZ = gyroz * GYRO_SCALE;
-      
+
       this.accelX = accelx * ACCEL_SCALE * G_TO_MS2;
       this.accelY = accely * ACCEL_SCALE * G_TO_MS2;
       this.accelZ = accelz * ACCEL_SCALE * G_TO_MS2;
     }
-    
+
     return true;
   }
-  
+
   protected getInitData(): Uint8Array {
     return new Uint8Array(0);
   }
-  
+
   protected doInit(): boolean {
     console.info(`${TAG} 初始化 DualShock 4 控制器`);
     const initData = this.getInitData();
@@ -155,20 +177,19 @@ const gyrox = readShortLE(buffer, 13);
     }
     return true;
   }
-  
+
   rumble(lowFreqMotor: number, highFreqMotor: number): void {
     const data = new Uint8Array(32);
     data[0] = 0x05;
-    data[1] = 0xFF;
-    data[4] = (highFreqMotor >> 8) & 0xFF;
-    data[5] = (lowFreqMotor >> 8) & 0xFF;
-    data[6] = 0x00;  // R
-    data[7] = 0x00;  // G
-    data[8] = 0xFF;
-    
+    data[1] = 0xff;
+    data[4] = (highFreqMotor >> 8) & 0xff;
+    data[5] = (lowFreqMotor >> 8) & 0xff;
+    data[6] = 0x00; // R
+    data[7] = 0x00; // G
+    data[8] = 0xff;
+
     this.bulkWrite(data);
   }
-  
-  rumbleTriggers(_leftTrigger: number, _rightTrigger: number): void {
-  }
+
+  rumbleTriggers(_leftTrigger: number, _rightTrigger: number): void {}
 }

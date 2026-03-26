@@ -14,7 +14,7 @@ export interface StreamConfig {
   fps: number;
   clientRefreshRateX100: number;
   bitrate: number;
-  codec: 'H.264' | 'HEVC';
+  codec: "H.264" | "HEVC";
   hdr: boolean;
   hdrMode: HdrMode;
   hdrHighBrightness: boolean;
@@ -74,32 +74,32 @@ export interface StreamConfig {
 }
 
 export enum AudioConfiguration {
-  STEREO = 0x000302CA,
-  SURROUND_51 = 0x003F06CA,
-  SURROUND_71 = 0x063F08CA
+  STEREO = 0x000302ca,
+  SURROUND_51 = 0x003f06ca,
+  SURROUND_71 = 0x063f08ca,
 }
 
 export function getSurroundAudioInfo(audioConfig: AudioConfiguration): number {
-  const channelCount = (audioConfig >> 8) & 0xFF;
-  const channelMask = (audioConfig >> 16) & 0xFFFF;
+  const channelCount = (audioConfig >> 8) & 0xff;
+  const channelMask = (audioConfig >> 16) & 0xffff;
   return (channelMask << 16) | channelCount;
 }
 
 export enum ColorRange {
   LIMITED = 0,
-  FULL = 1
+  FULL = 1,
 }
 
 export enum HdrMode {
   SDR = 0,
   HDR10 = 1,
-  HLG = 2
+  HLG = 2,
 }
 
 export enum RemoteConfig {
   LOCAL = 0,
   REMOTE = 1,
-  AUTO = 2
+  AUTO = 2,
 }
 
 export enum ScreenCombinationMode {
@@ -112,7 +112,7 @@ export enum ScreenCombinationMode {
 
 export enum PerfOverlayOrientation {
   HORIZONTAL = 0,
-  VERTICAL = 1
+  VERTICAL = 1,
 }
 
 export enum PerfOverlayPosition {
@@ -121,7 +121,7 @@ export enum PerfOverlayPosition {
   TOP_LEFT = 2,
   TOP_RIGHT = 3,
   BOTTOM_LEFT = 4,
-  BOTTOM_RIGHT = 5
+  BOTTOM_RIGHT = 5,
 }
 
 export interface ResolutionPreset {
@@ -139,7 +139,7 @@ export function getDefaultStreamConfig(): StreamConfig {
     fps: 60,
     clientRefreshRateX100: 6000,
     bitrate: defaultBitrate,
-    codec: 'H.264',
+    codec: "H.264",
     hdr: false,
     hdrMode: HdrMode.SDR,
     hdrHighBrightness: false,
@@ -159,11 +159,11 @@ export function getDefaultStreamConfig(): StreamConfig {
     multiController: true,
     attachedGamepadMask: 0,
     enableVibration: true,
-    vibrationMode: 'auto',
+    vibrationMode: "auto",
     vibrateFallbackStrength: 100,
     enableAudioVibration: false,
     audioVibrationStrength: 60,
-    audioVibrationSceneMode: 'game',
+    audioVibrationSceneMode: "game",
     deadzone: 7,
     flipFaceButtons: false,
 
@@ -195,34 +195,26 @@ export function getDefaultStreamConfig(): StreamConfig {
     perfOverlayPosition: PerfOverlayPosition.TOP,
     showOnscreenControls: false,
     onscreenControlsOpacity: 90,
-    enableEscMenu: true
+    enableEscMenu: true,
   };
 }
 
 export function getResolutionPresets(): ResolutionPreset[] {
   const presets: ResolutionPreset[] = [
-    { name: '720p', width: 1280, height: 720 } as ResolutionPreset,
-    { name: '1080p', width: 1920, height: 1080 } as ResolutionPreset,
-    { name: '1440p', width: 2560, height: 1440 } as ResolutionPreset,
-    { name: '4K', width: 3840, height: 2160 } as ResolutionPreset
+    { name: "720p", width: 1280, height: 720 } as ResolutionPreset,
+    { name: "1080p", width: 1920, height: 1080 } as ResolutionPreset,
+    { name: "1440p", width: 2560, height: 1440 } as ResolutionPreset,
+    { name: "4K", width: 3840, height: 2160 } as ResolutionPreset,
   ];
   return presets;
 }
 
 export function getRecommendedBitrate(width: number, height: number, fps: number): number {
-  const frameRateFactor = (fps <= 60 ? fps : (Math.sqrt(fps / 60) * 60)) / 30;
+  const frameRateFactor = (fps <= 60 ? fps : Math.sqrt(fps / 60) * 60) / 30;
 
   const pixels = width * height;
 
-  const pixelVals = [
-    640 * 360,
-    854 * 480,
-    1280 * 720,
-    1920 * 1080,
-    2560 * 1440,
-    3840 * 2160,
-    -1
-  ];
+  const pixelVals = [640 * 360, 854 * 480, 1280 * 720, 1920 * 1080, 2560 * 1440, 3840 * 2160, -1];
   const factorVals = [1, 2, 5, 10, 20, 40, -1];
 
   let resolutionFactor = factorVals[0];
@@ -236,7 +228,8 @@ export function getRecommendedBitrate(width: number, height: number, fps: number
       } else {
         resolutionFactor =
           ((pixels - pixelVals[i - 1]) / (pixelVals[i] - pixelVals[i - 1])) *
-          (factorVals[i] - factorVals[i - 1]) + factorVals[i - 1];
+            (factorVals[i] - factorVals[i - 1]) +
+          factorVals[i - 1];
       }
       break;
     } else if (pixelVals[i] === -1) {

@@ -8,44 +8,41 @@
  * (at your option) any later version.
  */
 
+import { promptAction } from "@kit.ArkUI";
+import { bundleManager, common, Want } from "@kit.AbilityKit";
+import { pasteboard } from "@kit.BasicServicesKit";
+import { AppAnimation, AppColors, AppSizes, AppSpacing } from "../common/Theme";
 
-import { promptAction } from '@kit.ArkUI';
-import { bundleManager, common, Want } from '@kit.AbilityKit';
-import { pasteboard } from '@kit.BasicServicesKit';
-import { AppAnimation, AppColors, AppSizes, AppSpacing } from '../common/Theme';
-
-const GITHUB_URL = 'https://github.com/AlkaidLab/moonlight-harmony';
-const QQ_GROUP_NUMBER = '103206957';
-
+const GITHUB_URL = "https://github.com/AlkaidLab/moonlight-harmony";
+const QQ_GROUP_NUMBER = "103206957";
 @Component
 export struct PinDialogView {
-  @Prop pin: string = '';
-  @Prop computerName: string = '';
+  @Prop pin: string = "";
+  @Prop computerName: string = "";
   onClose: () => void = () => {};
 
   build() {
     Stack() {
       Column()
-        .width('100%')
-        .height('100%')
-        .backgroundColor('#66000000')
-        .onClick(() => { this.onClose(); })
-
+        .width("100%")
+        .height("100%")
+        .backgroundColor("#66000000")
+        .onClick(() => {
+          this.onClose();
+        })
       Column() {
-        Text('配对 PIN 码')
+        Text("配对 PIN 码")
           .fontSize(AppSizes.FontHeadline)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.TextPrimary)
           .margin({ bottom: AppSpacing.Medium })
-
         Text(`请在 ${this.computerName} 上输入以下 PIN 码：`)
           .fontSize(AppSizes.FontBody)
           .fontColor(AppColors.TextSecondary)
           .textAlign(TextAlign.Center)
           .margin({ bottom: AppSpacing.Large })
-
         Row() {
-          ForEach(this.pin.split(''), (digit: string) => {
+          ForEach(this.pin.split(""), (digit: string) => {
             Text(digit)
               .fontSize(36)
               .fontWeight(FontWeight.Bold)
@@ -54,38 +51,46 @@ export struct PinDialogView {
               .height(72)
               .textAlign(TextAlign.Center)
               .backgroundColor(AppColors.PrimaryGlow)
-              .borderRadius(AppSizes.RadiusMedium)
+              .borderRadius(AppSizes.RadiusMedium);
           })
         }
         .justifyContent(FlexAlign.SpaceEvenly)
-        .width('100%')
+        .width("100%")
         .margin({ bottom: AppSpacing.XLarge })
-
-        Text('正在等待配对完成...')
+        Text("正在等待配对完成...")
           .fontSize(AppSizes.FontCaption)
           .fontColor(AppColors.TextSecondary)
-
-        Button('取消')
-          .width('100%')
+        Button("取消")
+          .width("100%")
           .height(44)
           .fontSize(AppSizes.FontBody)
           .fontColor(AppColors.TextSecondary)
           .backgroundColor(Color.Transparent)
           .margin({ top: AppSpacing.Large })
-          .onClick(() => { this.onClose(); })
+          .onClick(() => {
+            this.onClose();
+          })
       }
-      .width('85%')
+      .width("85%")
       .padding(AppSpacing.XLarge)
       .backgroundColor(AppColors.Surface)
       .borderRadius(AppSizes.RadiusXLarge)
     }
-    .width('100%')
-    .height('100%')
-    .transition(TransitionEffect.OPACITY.animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })
-      .combine(TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })))
+    .width("100%")
+    .height("100%")
+    .transition(
+      TransitionEffect.OPACITY.animation({
+        duration: AppAnimation.Normal,
+        curve: Curve.EaseOut,
+      }).combine(
+        TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({
+          duration: AppAnimation.Normal,
+          curve: Curve.EaseOut,
+        }),
+      ),
+    );
   }
 }
-
 @Component
 export struct AboutDialogView {
   onClose: () => void = () => {};
@@ -93,101 +98,112 @@ export struct AboutDialogView {
   build() {
     Stack() {
       Column()
-        .width('100%')
-        .height('100%')
-        .backgroundColor('#66000000')
-        .onClick(() => { this.onClose(); })
-
+        .width("100%")
+        .height("100%")
+        .backgroundColor("#66000000")
+        .onClick(() => {
+          this.onClose();
+        })
       Column() {
-        Image($r('app.media.vplus'))
+        Image($r("app.media.vplus"))
           .width(80)
           .height(80)
           .borderRadius(16)
           .objectFit(ImageFit.Cover)
           .margin({ bottom: AppSpacing.Medium })
-
-        Text('Moonlight V+')
+        Text("Moonlight V+")
           .fontSize(AppSizes.FontLargeTitle)
           .fontWeight(FontWeight.Bold)
           .fontColor(AppColors.Primary)
           .margin({ bottom: AppSpacing.Small })
-
         Text(AboutDialogView.getVersionInfo())
           .fontSize(AppSizes.FontBody)
           .fontColor(AppColors.TextSecondary)
           .margin({ bottom: AppSpacing.Large })
-
-        Text('开源游戏串流客户端，基于 Moonlight 开发')
+        Text("开源游戏串流客户端，基于 Moonlight 开发")
           .fontSize(AppSizes.FontBody)
           .fontColor(AppColors.TextSecondary)
           .textAlign(TextAlign.Center)
           .margin({ bottom: AppSpacing.Small })
-
-        Text('支持 NVIDIA GeForce Experience 和 Sunshine')
+        Text("支持 NVIDIA GeForce Experience 和 Sunshine")
           .fontSize(AppSizes.FontCaption)
           .fontColor(AppColors.TextTertiary)
           .textAlign(TextAlign.Center)
           .margin({ bottom: AppSpacing.XLarge })
-
         Row() {
-          Button('GitHub')
+          Button("GitHub")
             .height(40)
             .fontSize(AppSizes.FontBody)
             .fontColor(Color.White)
-            .backgroundColor('#24292e')
+            .backgroundColor("#24292e")
             .borderRadius(AppSizes.RadiusMedium)
             .layoutWeight(1)
-            .onClick(() => { AboutDialogView.openUrl(GITHUB_URL); })
-
-          Button('复制QQ群号')
+            .onClick(() => {
+              AboutDialogView.openUrl(GITHUB_URL);
+            })
+          Button("复制QQ群号")
             .height(40)
             .fontSize(AppSizes.FontBody)
             .fontColor(Color.White)
-            .backgroundColor('#12B7F5')
+            .backgroundColor("#12B7F5")
             .borderRadius(AppSizes.RadiusMedium)
             .layoutWeight(1)
             .margin({ left: AppSpacing.Medium })
-            .onClick(() => { AboutDialogView.copyQQGroupNumber(); })
+            .onClick(() => {
+              AboutDialogView.copyQQGroupNumber();
+            })
         }
-        .width('100%')
+        .width("100%")
         .margin({ bottom: AppSpacing.Medium })
-
-        Button('关闭')
-          .width('100%')
+        Button("关闭")
+          .width("100%")
           .height(44)
           .fontSize(AppSizes.FontBody)
           .fontColor(AppColors.TextSecondary)
           .backgroundColor(Color.Transparent)
-          .onClick(() => { this.onClose(); })
+          .onClick(() => {
+            this.onClose();
+          })
       }
-      .width('85%')
+      .width("85%")
       .padding(AppSpacing.XLarge)
       .backgroundColor(AppColors.Surface)
       .borderRadius(AppSizes.RadiusXLarge)
       .alignItems(HorizontalAlign.Center)
     }
-    .width('100%')
-    .height('100%')
-    .transition(TransitionEffect.OPACITY.animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })
-      .combine(TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })))
+    .width("100%")
+    .height("100%")
+    .transition(
+      TransitionEffect.OPACITY.animation({
+        duration: AppAnimation.Normal,
+        curve: Curve.EaseOut,
+      }).combine(
+        TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({
+          duration: AppAnimation.Normal,
+          curve: Curve.EaseOut,
+        }),
+      ),
+    );
   }
 
   static getVersionInfo(): string {
     try {
-      const bundleInfo = bundleManager.getBundleInfoForSelfSync(bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION);
+      const bundleInfo = bundleManager.getBundleInfoForSelfSync(
+        bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION,
+      );
       return `版本 ${bundleInfo.versionName} (Build ${bundleInfo.versionCode})`;
     } catch (_e) {
-      return '版本未知';
+      return "版本未知";
     }
   }
 
   static openUrl(url: string): void {
     try {
       const context = getContext() as common.UIAbilityContext;
-      const want: Want = { action: 'ohos.want.action.viewData', uri: url };
+      const want: Want = { action: "ohos.want.action.viewData", uri: url };
       context.startAbility(want);
     } catch (_e) {
-      promptAction.showToast({ message: '无法打开链接' });
+      promptAction.showToast({ message: "无法打开链接" });
     }
   }
 

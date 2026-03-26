@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
+import { AppColors, AppSizes, AppSpacing, AppAnimation } from "../common/Theme";
 
 export interface DialogButton {
   text: string;
@@ -22,14 +22,13 @@ export interface ConfirmDialogConfig {
   cancelButton?: DialogButton;
   confirmButton: DialogButton;
 }
-
 @CustomDialog
 export struct ConfirmDialog {
   controller: CustomDialogController;
   config: ConfirmDialogConfig = {
-    title: '',
-    message: '',
-    confirmButton: { text: 'OK', onClick: () => {} }
+    title: "",
+    message: "",
+    confirmButton: { text: "OK", onClick: () => {} },
   };
 
   build() {
@@ -39,15 +38,13 @@ export struct ConfirmDialog {
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .margin({ bottom: AppSpacing.Medium })
-
       Text(this.config.message)
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
         .textAlign(TextAlign.Center)
         .margin({ bottom: AppSpacing.Large })
-
       Row({ space: AppSpacing.Medium }) {
-        Button(this.config.cancelButton?.text ?? 'Cancel')
+        Button(this.config.cancelButton?.text ?? "Cancel")
           .layoutWeight(1)
           .height(48)
           .fontSize(AppSizes.FontBody)
@@ -60,7 +57,6 @@ export struct ConfirmDialog {
             }
             this.controller.close();
           })
-
         Button(this.config.confirmButton.text)
           .layoutWeight(1)
           .height(48)
@@ -72,15 +68,23 @@ export struct ConfirmDialog {
             this.config.confirmButton.onClick();
             this.controller.close();
           })
-      }
-      .width('100%')
+      }.width("100%")
     }
-    .width('100%')
+    .width("100%")
     .padding(AppSpacing.Large)
     .backgroundColor(AppColors.Background)
     .borderRadius(16)
-    .transition(TransitionEffect.OPACITY.animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })
-      .combine(TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })))
+    .transition(
+      TransitionEffect.OPACITY.animation({
+        duration: AppAnimation.Normal,
+        curve: Curve.EaseOut,
+      }).combine(
+        TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({
+          duration: AppAnimation.Normal,
+          curve: Curve.EaseOut,
+        }),
+      ),
+    );
   }
 }
 
@@ -90,13 +94,12 @@ export interface InfoDialogConfig {
   closeButtonText?: string;
   onClose?: () => void;
 }
-
 @CustomDialog
 export struct InfoDialog {
   controller: CustomDialogController;
   config: InfoDialogConfig = {
-    title: '',
-    content: ''
+    title: "",
+    content: "",
   };
 
   build() {
@@ -106,7 +109,6 @@ export struct InfoDialog {
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .margin({ bottom: AppSpacing.Medium })
-
       Scroll() {
         Text(this.config.content)
           .fontSize(AppSizes.FontBody)
@@ -115,11 +117,10 @@ export struct InfoDialog {
       }
       .scrollBar(BarState.Auto)
       .constraintSize({ maxHeight: 300 })
-      .width('100%')
+      .width("100%")
       .margin({ bottom: AppSpacing.Large })
-
-      Button(this.config.closeButtonText ?? 'OK')
-        .width('100%')
+      Button(this.config.closeButtonText ?? "OK")
+        .width("100%")
         .height(48)
         .fontSize(AppSizes.FontBody)
         .fontColor(Color.White)
@@ -132,12 +133,21 @@ export struct InfoDialog {
           this.controller.close();
         })
     }
-    .width('100%')
+    .width("100%")
     .padding(AppSpacing.Large)
     .backgroundColor(AppColors.Background)
     .borderRadius(16)
-    .transition(TransitionEffect.OPACITY.animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })
-      .combine(TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })))
+    .transition(
+      TransitionEffect.OPACITY.animation({
+        duration: AppAnimation.Normal,
+        curve: Curve.EaseOut,
+      }).combine(
+        TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({
+          duration: AppAnimation.Normal,
+          curve: Curve.EaseOut,
+        }),
+      ),
+    );
   }
 }
 
@@ -156,13 +166,12 @@ export interface ActionDialogConfig {
   cancelText?: string;
   onCancel?: () => void;
 }
-
 @CustomDialog
 export struct ActionDialog {
   controller: CustomDialogController;
   config: ActionDialogConfig = {
-    title: '',
-    actions: []
+    title: "",
+    actions: [],
   };
 
   build() {
@@ -178,9 +187,8 @@ export struct ActionDialog {
           .fontSize(AppSizes.FontBody)
           .fontColor(AppColors.TextSecondary)
           .textAlign(TextAlign.Center)
-          .margin({ bottom: AppSpacing.Medium })
+          .margin({ bottom: AppSpacing.Medium });
       }
-
       ForEach(this.config.actions, (action: ActionButton) => {
         Button() {
           Column() {
@@ -192,11 +200,11 @@ export struct ActionDialog {
               Text(action.subtitle)
                 .fontSize(AppSizes.FontCaption)
                 .fontColor(AppColors.TextTertiary)
-                .margin({ top: 2 })
+                .margin({ top: 2 });
             }
           }
         }
-        .width('100%')
+        .width("100%")
         .height(action.subtitle ? 56 : 48)
         .backgroundColor(action.backgroundColor ?? AppColors.Surface)
         .borderRadius(12)
@@ -204,11 +212,10 @@ export struct ActionDialog {
         .onClick(() => {
           action.onClick();
           this.controller.close();
-        })
+        });
       })
-
-      Button(this.config.cancelText ?? 'Cancel')
-        .width('100%')
+      Button(this.config.cancelText ?? "Cancel")
+        .width("100%")
         .height(48)
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
@@ -222,11 +229,20 @@ export struct ActionDialog {
           this.controller.close();
         })
     }
-    .width('100%')
+    .width("100%")
     .padding(AppSpacing.Large)
     .backgroundColor(AppColors.Background)
     .borderRadius(16)
-    .transition(TransitionEffect.OPACITY.animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })
-      .combine(TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({ duration: AppAnimation.Normal, curve: Curve.EaseOut })))
+    .transition(
+      TransitionEffect.OPACITY.animation({
+        duration: AppAnimation.Normal,
+        curve: Curve.EaseOut,
+      }).combine(
+        TransitionEffect.scale({ x: 0.96, y: 0.96 }).animation({
+          duration: AppAnimation.Normal,
+          curve: Curve.EaseOut,
+        }),
+      ),
+    );
   }
 }

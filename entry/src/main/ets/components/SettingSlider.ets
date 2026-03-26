@@ -8,8 +8,8 @@
  * (at your option) any later version.
  */
 
-import { AppColors, AppSizes } from '../common/Theme';
-import { vibrator } from '@kit.SensorServiceKit';
+import { AppColors, AppSizes } from "../common/Theme";
+import { vibrator } from "@kit.SensorServiceKit";
 
 export class LogarithmicSlider {
   static linearToLog(linearValue: number, min: number, max: number): number {
@@ -24,7 +24,7 @@ export class LogarithmicSlider {
     const result = Math.exp(minLog + normalizedValue * logRange);
     return Math.round(result);
   }
-  
+
   static logToLinear(logValue: number, min: number, max: number): number {
     if (logValue <= min) return 0;
     if (logValue >= max) return 100;
@@ -52,7 +52,7 @@ export interface SettingSliderConfig {
 }
 
 /**
- * 
+ *
  * ```
  * SettingSlider({
  *   config: {
@@ -74,7 +74,7 @@ export struct SettingSlider {
     value: 0,
     min: 0,
     max: 100,
-    onChange: (_v: number) => {}
+    onChange: (_v: number) => {},
   };
   @State private sliderPosition: number = 0;
   @State private draggingValue: number = 0;
@@ -89,15 +89,17 @@ export struct SettingSlider {
 
   private triggerSnapHaptic(): void {
     try {
-      vibrator.startVibration({
-        type: 'time',
-        duration: 20
-      }, {
-        id: 0,
-        usage: 'touch'
-      })
-    } catch (_e) {
-    }
+      vibrator.startVibration(
+        {
+          type: "time",
+          duration: 20,
+        },
+        {
+          id: 0,
+          usage: "touch",
+        },
+      );
+    } catch (_e) {}
   }
 
   private valueToPosition(value: number): number {
@@ -107,7 +109,7 @@ export struct SettingSlider {
     }
     return value;
   }
-  
+
   build() {
     Row() {
       Slider({
@@ -115,7 +117,7 @@ export struct SettingSlider {
         min: this.config.isLogarithmic ? 0 : this.config.min,
         max: this.config.isLogarithmic ? 100 : this.config.max,
         step: this.config.isLogarithmic ? 1 : (this.config.step ?? 1),
-        style: SliderStyle.OutSet
+        style: SliderStyle.OutSet,
       })
         .layoutWeight(1)
         .selectedColor(AppColors.Primary)
@@ -129,7 +131,7 @@ export struct SettingSlider {
         .focusOnTouch(true)
         .onChange((value: number, mode: SliderChangeMode) => {
           let actualValue = this.calculateActualValue(value);
-          
+
           if (mode === SliderChangeMode.Moving || mode === SliderChangeMode.Begin) {
             let snappedValue: number = this.applySnap(actualValue);
             if (snappedValue !== actualValue) {
@@ -145,53 +147,50 @@ export struct SettingSlider {
             this.isDragging = true;
             return;
           }
-          
+
           if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
             this.isDragging = false;
-            
+
             let finalValue = this.applySnap(actualValue);
-            
+
             this.sliderPosition = this.valueToPosition(finalValue);
-            
+
             this.committedValue = finalValue;
-            
+
             this.config.onChange(finalValue);
           }
         })
-
-      Text(this.isDragging ? this.formatValue(this.draggingValue) : this.formatValue(this.committedValue))
+      Text(
+        this.isDragging
+          ? this.formatValue(this.draggingValue)
+          : this.formatValue(this.committedValue),
+      )
         .fontSize(AppSizes.FontCaption)
         .fontColor(AppColors.TextSecondary)
         .width(70)
         .textAlign(TextAlign.End)
-    }
-    .width('100%')
+    }.width("100%");
   }
-  
+
   private calculateActualValue(sliderValue: number): number {
     if (this.config.isLogarithmic) {
       if (sliderValue === 0) {
         return 0;
       }
-      return LogarithmicSlider.linearToLog(
-        sliderValue, 
-        this.config.min, 
-        this.config.max
-      );
+      return LogarithmicSlider.linearToLog(sliderValue, this.config.min, this.config.max);
     }
     const step: number = this.config.step ?? 1;
     return Math.round(sliderValue / step) * step;
   }
-  
+
   private applySnap(value: number): number {
     if (!this.config.snapValues || this.config.snapValues.length === 0) {
       return value;
     }
-    
+
     if (this.config.isLogarithmic) {
-      const ratio: number = this.config.snapThreshold !== undefined
-        ? this.config.snapThreshold / 100
-        : 0.08;
+      const ratio: number =
+        this.config.snapThreshold !== undefined ? this.config.snapThreshold / 100 : 0.08;
       for (const snapValue of this.config.snapValues) {
         const dynamicThreshold: number = Math.max(snapValue * ratio, 1);
         if (Math.abs(value - snapValue) <= dynamicThreshold) {
@@ -199,21 +198,21 @@ export struct SettingSlider {
         }
       }
     } else {
-      const threshold: number = this.config.snapThreshold ?? (this.config.step ?? 1);
+      const threshold: number = this.config.snapThreshold ?? this.config.step ?? 1;
       for (const snapValue of this.config.snapValues) {
         if (Math.abs(value - snapValue) <= threshold) {
           return snapValue;
         }
       }
     }
-    
+
     return value;
   }
-  
+
   private formatValue(value: number): string {
     if (this.config.formatValue) {
       return this.config.formatValue(value);
     }
-    return `${Math.round(value)}${this.config.unit ?? ''}`;
+    return `${Math.round(value)}${this.config.unit ?? ""}`;
   }
 }

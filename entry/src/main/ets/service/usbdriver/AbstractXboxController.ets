@@ -15,75 +15,90 @@
  * Used for Xbox 360 and Xbox One controllers
  */
 
-import { usbManager } from '@kit.BasicServicesKit';
-import { AbstractController } from './AbstractController';
-import { UsbDriverListener } from './UsbDriverListener';
-import { ControllerType, ControllerCapabilities, ButtonFlags, UsbDirection } from './ControllerConstants';
-import { isHardwareError, createUsbError, UsbError } from './UsbErrorCodes';
-import { DdkUsbPoller } from './DdkUsbPoller';
+import { usbManager } from "@kit.BasicServicesKit";
+import { AbstractController } from "./AbstractController";
+import { UsbDriverListener } from "./UsbDriverListener";
+import {
+  ControllerType,
+  ControllerCapabilities,
+  ButtonFlags,
+  UsbDirection,
+} from "./ControllerConstants";
+import { isHardwareError, createUsbError, UsbError } from "./UsbErrorCodes";
+import { DdkUsbPoller } from "./DdkUsbPoller";
 
-const TAG = '[USB-XBOX]';
+const TAG = "[USB-XBOX]";
 
 export abstract class AbstractXboxController extends AbstractController {
   protected device: usbManager.USBDevice;
   protected pipe: usbManager.USBDevicePipe | null = null;
-  
+
   protected inEndpoint: usbManager.USBEndpoint | null = null;
   protected outEndpoint: usbManager.USBEndpoint | null = null;
   protected usbInterface: usbManager.USBInterface | null = null;
-  
+
   private inputThread: boolean = false;
   private stopped: boolean = false;
-  
+
   // DDK high-speed poller (bypasses usbManager IPC)
   private ddkPoller: DdkUsbPoller | null = null;
   private useDdkPolling: boolean = false;
-  
+
   constructor(
     device: usbManager.USBDevice,
     pipe: usbManager.USBDevicePipe,
     deviceId: number,
-    listener: UsbDriverListener
+    listener: UsbDriverListener,
   ) {
     super(deviceId, listener, device.vendorId, device.productId);
     this.device = device;
     this.pipe = pipe;
     this.type = ControllerType.XBOX;
     this.capabilities = ControllerCapabilities.ANALOG_TRIGGERS | ControllerCapabilities.RUMBLE;
-    
+
     // Supported buttons
     this.supportedButtonFlags =
-      ButtonFlags.A_FLAG | ButtonFlags.B_FLAG | ButtonFlags.X_FLAG | ButtonFlags.Y_FLAG |
-      ButtonFlags.UP_FLAG | ButtonFlags.DOWN_FLAG | ButtonFlags.LEFT_FLAG | ButtonFlags.RIGHT_FLAG |
-      ButtonFlags.LB_FLAG | ButtonFlags.RB_FLAG |
-      ButtonFlags.LS_CLK_FLAG | ButtonFlags.RS_CLK_FLAG |
-      ButtonFlags.BACK_FLAG | ButtonFlags.PLAY_FLAG | ButtonFlags.SPECIAL_BUTTON_FLAG;
+      ButtonFlags.A_FLAG |
+      ButtonFlags.B_FLAG |
+      ButtonFlags.X_FLAG |
+      ButtonFlags.Y_FLAG |
+      ButtonFlags.UP_FLAG |
+      ButtonFlags.DOWN_FLAG |
+      ButtonFlags.LEFT_FLAG |
+      ButtonFlags.RIGHT_FLAG |
+      ButtonFlags.LB_FLAG |
+      ButtonFlags.RB_FLAG |
+      ButtonFlags.LS_CLK_FLAG |
+      ButtonFlags.RS_CLK_FLAG |
+      ButtonFlags.BACK_FLAG |
+      ButtonFlags.PLAY_FLAG |
+      ButtonFlags.SPECIAL_BUTTON_FLAG;
   }
-  
+
   private findEndpoints(): boolean {
     if (!this.device.configs || this.device.configs.length === 0) {
       console.error(`${TAG} Device has no configuration`);
       return false;
     }
-    
+
     const config = this.device.configs[0];
     if (!config.interfaces || config.interfaces.length === 0) {
       console.error(`${TAG} Configuration has no interface`);
       return false;
     }
-    
+
     // Find the first interface
     this.usbInterface = config.interfaces[0];
-    
+
     if (!this.usbInterface.endpoints || this.usbInterface.endpoints.length === 0) {
       console.error(`${TAG} Interface has no endpoints`);
       return false;
     }
-    
+
     // Find input and output endpoints
     for (const endpoint of this.usbInterface.endpoints) {
       const direction = endpoint.direction;
-      
+
       if (direction === usbManager.USBRequestDirection.USB_REQUEST_DIR_FROM_DEVICE) {
         if (this.inEndpoint !== null) {
           console.warn(`${TAG} Duplicate input endpoint found`);
@@ -100,21 +115,23 @@ export abstract class AbstractXboxController extends AbstractController {
         console.info(`${TAG} Found output endpoint: address=0x${endpoint.address.toString(16)}`);
       }
     }
-    
+
     // Ensure required endpoints are found
     if (this.inEndpoint === null || this.outEndpoint === null) {
-      console.warn(`${TAG} Missing required endpoints: in=${this.inEndpoint !== null}, out=${this.outEndpoint !== null}`);
+      console.warn(
+        `${TAG} Missing required endpoints: in=${this.inEndpoint !== null}, out=${this.outEndpoint !== null}`,
+      );
       return false;
     }
-    
+
     return true;
   }
-  
+
   private claimInterface(): boolean {
     if (!this.pipe || !this.usbInterface) {
       return false;
     }
-    
+
     try {
       const result = usbManager.claimInterface(this.pipe, this.usbInterface, true);
       if (result !== 0) {
@@ -128,27 +145,27 @@ export abstract class AbstractXboxController extends AbstractController {
       return false;
     }
   }
-  
+
   protected async bulkRead(timeout: number = 3000): Promise<Uint8Array | null> {
     if (!this.pipe || !this.inEndpoint) {
-      throw new Error('USB pipe or endpoint not initialized');
+      throw new Error("USB pipe or endpoint not initialized");
     }
-    
+
     // Create read buffer
     const buffer = new Uint8Array(64);
     const result = await usbManager.bulkTransfer(this.pipe, this.inEndpoint, buffer, timeout);
-    
+
     // Negative value indicates error
     if (result < 0) {
       throw createUsbError(result);
     }
-    
+
     if (result > 0) {
       return buffer.slice(0, result);
     }
     return null;
   }
-  
+
   protected async bulkWrite(data: Uint8Array, timeout: number = 3000): Promise<number> {
     // DDK path: send via DDK synchronously
     if (this.useDdkPolling && this.ddkPoller) {
@@ -163,35 +180,35 @@ export abstract class AbstractXboxController extends AbstractController {
     if (!this.pipe || !this.outEndpoint) {
       return -1;
     }
-    
+
     try {
       // HarmonyOS bulkTransfer returns transferred bytes
       const result = await usbManager.bulkTransfer(this.pipe, this.outEndpoint, data, timeout);
-      return typeof result === 'number' ? result : data.length;
+      return typeof result === "number" ? result : data.length;
     } catch (err) {
       console.error(`${TAG} Bulk write failed:`, err);
       return -1;
     }
   }
-  
+
   private async inputLoop(): Promise<void> {
     console.info(`${TAG} Input loop started`);
-    
+
     // Initialization complete, mark ready and notify
     this.notifyDeviceAdded();
-    
+
     let detectedHardwareError = false;
-    
+
     while (!this.stopped) {
       try {
         // Use longer timeout (consistent with Android)
         // Returns immediately when data is available
         const buffer = await this.bulkRead(1000);
-        
+
         if (this.stopped) {
           break;
         }
-        
+
         if (buffer && buffer.length > 0) {
           if (this.handleRead(buffer)) {
             this.reportInput();
@@ -203,14 +220,18 @@ export abstract class AbstractXboxController extends AbstractController {
           const usbErr = err instanceof UsbError ? err : null;
           const errorCode = usbErr ? usbErr.code : 0;
           const retryable = usbErr ? usbErr.retryable : true;
-          
+
           // Timeout error - continue polling
-          if (errorCode === -8) {  // USB_ERROR_TIMEOUT
+          if (errorCode === -8) {
+            // USB_ERROR_TIMEOUT
             continue;
-          } else if (errorCode === -4) {  // USB_ERROR_NO_DEVICE
+          } else if (errorCode === -4) {
+            // USB_ERROR_NO_DEVICE
             // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} Device unreachable but ignore disconnect enabled, continuing: ${err}`);
+              console.warn(
+                `${TAG} Device unreachable but ignore disconnect enabled, continuing: ${err}`,
+              );
               continue;
             }
             console.warn(`${TAG} Device unreachable: ${err}`);
@@ -218,7 +239,9 @@ export abstract class AbstractXboxController extends AbstractController {
           } else if (isHardwareError(errorCode)) {
             // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} Hardware error detected but ignore disconnect enabled, continuing: ${err}`);
+              console.warn(
+                `${TAG} Hardware error detected but ignore disconnect enabled, continuing: ${err}`,
+              );
               continue;
             }
             console.error(`${TAG} Hardware error detected: ${err}`);
@@ -230,7 +253,9 @@ export abstract class AbstractXboxController extends AbstractController {
             if (!retryable) {
               // If ignore disconnect is set, continue polling
               if (this.ignoreDisconnect) {
-                console.warn(`${TAG} Non-retryable error but ignore disconnect enabled, continuing: ${err}`);
+                console.warn(
+                  `${TAG} Non-retryable error but ignore disconnect enabled, continuing: ${err}`,
+                );
                 continue;
               }
               break;
@@ -239,9 +264,9 @@ export abstract class AbstractXboxController extends AbstractController {
         }
       }
     }
-    
+
     console.info(`${TAG} Input loop ended`);
-    
+
     // Decide whether to notify device removal based on error type
     if (!this.stopped) {
       if (detectedHardwareError) {
@@ -254,9 +279,11 @@ export abstract class AbstractXboxController extends AbstractController {
       }
     }
   }
-  
+
   start(): boolean {
-    console.info(`${TAG} Starting controller: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`);
+    console.info(
+      `${TAG} Starting controller: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`,
+    );
     this.markInitializing();
 
     // Find endpoints
@@ -266,7 +293,9 @@ export abstract class AbstractXboxController extends AbstractController {
     }
 
     // ====== Try DDK path first ======
-    console.info(`${TAG} DDK conditions: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`);
+    console.info(
+      `${TAG} DDK conditions: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`,
+    );
     if (this.ddkPollingEnabled && DdkUsbPoller.isAvailable() && this.inEndpoint) {
       const ddkStarted = this.tryDdkPath();
       if (ddkStarted) {
@@ -276,7 +305,7 @@ export abstract class AbstractXboxController extends AbstractController {
     }
 
     // ====== Fallback: usbManager path ======
-    
+
     // Claim interface
     if (!this.claimInterface()) {
       console.error(`${TAG} Failed to claim interface`);
@@ -340,7 +369,9 @@ export abstract class AbstractXboxController extends AbstractController {
     const outEp = this.outEndpoint?.address ?? 0;
     const maxPkt = this.inEndpoint!.maxPacketSize || 64;
 
-    console.info(`${TAG} DDK device matched: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`);
+    console.info(
+      `${TAG} DDK device matched: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`,
+    );
 
     // Step 3: Close usbManager pipe (DDK cannot ClaimInterface on a device already connected via usbManager)
     if (this.pipe) {
@@ -377,14 +408,16 @@ export abstract class AbstractXboxController extends AbstractController {
         if (this.ignoreDisconnect) {
           if (!nativeStillRunning) {
             // Native thread exited but ignoreDisconnect is on - controller will be completely unresponsive
-            console.error(`${TAG} DDK native thread exited! errorCode=${errorCode}, controller input will be interrupted until reconnection`);
+            console.error(
+              `${TAG} DDK native thread exited! errorCode=${errorCode}, controller input will be interrupted until reconnection`,
+            );
           }
           return;
         }
         console.error(`${TAG} DDK polling fatal error: ${errorCode}, stopping controller`);
         this.stop();
       },
-      100  // 100ms timeout per read
+      100, // 100ms timeout per read
     );
 
     if (!started) {
@@ -416,12 +449,12 @@ export abstract class AbstractXboxController extends AbstractController {
     console.info(`${TAG} Controller started (DDK high-speed polling)`);
     return true;
   }
-  
+
   stop(): void {
     if (this.stopped) {
       return;
     }
-    
+
     console.info(`${TAG} Stopping controller`);
     this.stopped = true;
     this.markStopped();
@@ -436,7 +469,7 @@ export abstract class AbstractXboxController extends AbstractController {
       this.ddkPoller = null;
       this.useDdkPolling = false;
     }
-    
+
     // Release interface (usbManager path only, DDK path is released internally by stopPoller)
     if (!wasDdkPolling && this.pipe && this.usbInterface) {
       try {
@@ -445,7 +478,7 @@ export abstract class AbstractXboxController extends AbstractController {
         console.error(`${TAG} Failed to release interface:`, err);
       }
     }
-    
+
     // Close pipe
     if (this.pipe) {
       try {
@@ -455,11 +488,11 @@ export abstract class AbstractXboxController extends AbstractController {
       }
       this.pipe = null;
     }
-    
+
     // Notify device removed
     this.notifyDeviceRemoved();
   }
-  
+
   isConnected(): boolean {
     return !this.stopped && (this.pipe !== null || this.useDdkPolling);
   }
@@ -477,14 +510,14 @@ export abstract class AbstractXboxController extends AbstractController {
       console.error(`${TAG} Failed to restore pipe: ${err}`);
     }
   }
-  
+
   /**
    * Handle read data
    * @param buffer Read data buffer
    * @returns Whether input report should be sent
    */
   protected abstract handleRead(buffer: Uint8Array): boolean;
-  
+
   /**
    * Perform device initialization
    * @returns Whether initialization succeeded

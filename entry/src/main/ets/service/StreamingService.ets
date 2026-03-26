@@ -8,34 +8,34 @@
  * (at your option) any later version.
  */
 
-import { Want, ExtensionAbility } from '@kit.AbilityKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
+import { Want, ExtensionAbility } from "@kit.AbilityKit";
+import { hilog } from "@kit.PerformanceAnalysisKit";
 
-const TAG = 'StreamingService';
+const TAG = "StreamingService";
 const DOMAIN = 0x0000;
 
 /**
- * 
- * 
+ *
+ *
  */
 export default class StreamingService extends ExtensionAbility {
   onCreate(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'StreamingService onCreate');
+    hilog.info(DOMAIN, TAG, "%{public}s", "StreamingService onCreate");
   }
 
   onRequest(want: Want, startId: number): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', `StreamingService onRequest, startId: ${startId}`);
+    hilog.info(DOMAIN, TAG, "%{public}s", `StreamingService onRequest, startId: ${startId}`);
   }
 
   onForeground(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'StreamingService onForeground');
+    hilog.info(DOMAIN, TAG, "%{public}s", "StreamingService onForeground");
   }
 
   onBackground(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'StreamingService onBackground');
+    hilog.info(DOMAIN, TAG, "%{public}s", "StreamingService onBackground");
   }
 
   onDestroy(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'StreamingService onDestroy');
+    hilog.info(DOMAIN, TAG, "%{public}s", "StreamingService onDestroy");
   }
 }
