@@ -9,7 +9,7 @@
  */
 
 
-iimport { gameControllerService } from '../service/GameControllerService';
+import { gameControllerService } from '../service/GameControllerService';
 import { GamepadManager } from '../service/GamepadManager';
 import { UsbDriverService } from '../service/usbdriver';
 import { AXIS_MAX, gcButtonMap, TRIGGER_MAX } from '../service/GamepadTypes';

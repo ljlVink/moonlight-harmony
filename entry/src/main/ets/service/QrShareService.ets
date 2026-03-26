@@ -9,7 +9,7 @@
  */
 
 
-iimport { scanBarcode, scanCore } from '@kit.ScanKit';
+import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { image } from '@kit.ImageKit';
 import { generateQrPixelMap } from './QrCodeGenerator';
 import {

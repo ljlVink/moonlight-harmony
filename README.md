@@ -4,7 +4,7 @@
   
   <img src="entry/src/main/resources/base/media/app_icon.png" width="128" height="128" alt="Logo">
   
-  # 🌙 Moonlight V+ for HarmonyOS
+  # Moonlight V+ for HarmonyOS
   
   **专为鸿蒙打造的 PC 游戏串流客户端**
   
@@ -14,17 +14,17 @@
   
   基于 [Moonlight V+](https://github.com/qiin2333/moonlight-vplus) 的鸿蒙原生移植版本
   
-  [功能特性](#-功能特性) • [下载安装](#-下载安装) • [使用说明](#-使用说明) • [相关项目](#-相关项目) • [开发指南](#-开发指南)
+  [功能特性](#功能特性) • [下载安装](#下载安装) • [使用说明](#使用说明) • [相关项目](#相关项目) • [开发指南](#开发指南)
   
 </div>
 
 ---
 
-## ✨ 功能特性
+## 功能特性
 
-### 🏆 比原版 Moonlight 强在哪？
+### 比原版 Moonlight 强在哪？
 
-> 原版 Moonlight 只能 HDR10？**我们直接 HLG 拉满。** 华为设备原生 HDR Vivid 支持 + HLG (ARIB STD-B67) 传输，画面色彩准确到让你怀疑自己以前串流的是黑白电视。搭配 Foundation Sunshine 使用，你的 PC 游戏画面终于配得上你那块好屏幕了。
+> 原版 Moonlight 只能 HDR10？我们直接 HLG 拉满。华为设备原生 HDR Vivid 支持 + HLG (ARIB STD-B67) 传输，画面色彩准确到让你怀疑自己以前串流的是黑白电视。搭配 Foundation Sunshine 使用，你的 PC 游戏画面终于配得上你那块好屏幕了。
 
 | 特性 | 原版 Moonlight | 🌙 Moonlight V+ |
 |------|:-:|:-:|
@@ -41,28 +41,22 @@
 | 麦克风重定向 | ❌ | ✅ 语音开黑 |
 
 ### 视频串流
-- 🎮 支持 H.264/HEVC 硬件解码
-- 📺 支持 4K@120fps 高清串流
-- 🌈 支持 HDR10/HLG 高动态范围
-- 🔄 支持 VRR 可变刷新率
+
+支持 H.264/HEVC 硬件解码，最高 4K@120fps，HDR10/HLG 高动态范围，以及 VRR 可变刷新率。
 
 ### 音频
-- 🔊 支持立体声/5.1/7.1 环绕声
-- 🎧 支持空间音频 (HarmonyOS 5.0+)
-- 🎙️ 支持麦克风重定向 (开发者模式)
+
+立体声/5.1/7.1 环绕声，HarmonyOS 5.0+ 设备支持空间音频，开发者模式下支持麦克风重定向。
 
 ### 输入控制
-- 🎮 蓝牙/USB 手柄支持 (Xbox/PlayStation/Switch)
-- 📱 虚拟屏幕控制器
-- 🖱️ 触控/鼠标模拟
-- ⌨️ 完整键盘支持
+
+支持蓝牙/USB 手柄（Xbox/PlayStation/Switch）、虚拟屏幕控制器、触控/鼠标模拟和完整键盘输入。
 
 ### 连接
-- 🔍 自动发现局域网主机
-- 🌐 支持远程串流 (需要端口转发或 WAN IP)
-- 🔒 AES-128 加密连接
 
-## 📥 下载安装
+自动发现局域网主机，支持通过端口转发或 WAN IP 进行远程串流，连接使用 AES-128 加密。
+
+## 下载安装
 
 ### 系统要求
 - HarmonyOS NEXT 5.0 或更高版本
@@ -82,7 +76,7 @@
    # 使用 DevEco Studio 打开并编译
    ```
 
-## 📖 使用说明
+## 使用说明
 
 ### 主机设置
 
@@ -105,7 +99,7 @@
 | 5GHz WiFi 局域网 | 4K | 60fps | 50 Mbps |
 | 有线/Wi-Fi 6 | 1080p | 120fps | 40 Mbps |
 
-## 🔗 相关项目
+## 相关项目
 
 | 项目 | 说明 |
 |------|------|
@@ -114,13 +108,13 @@
 | [Moonlight](https://moonlight-stream.org/) | 官方 Moonlight 项目 |
 | [moonlight-common-c](https://github.com/moonlight-stream/moonlight-common-c) | 核心协议库 |
 
-## 🛠️ 开发指南
+## 开发指南
 
 ### 开发环境
 
-- **DevEco Studio**: 5.0.0 或更高版本
-- **HarmonyOS SDK**: API 12 (HarmonyOS 5.0)
-- **Node.js**: 16.x 或更高版本
+- DevEco Studio 5.0.0 或更高版本
+- HarmonyOS SDK API 12 (HarmonyOS 5.0)
+- Node.js 16.x 或更高版本
 
 ### 项目结构
 
@@ -166,19 +160,19 @@ git clone https://github.com/AlkaidLab/moonlight-harmony.git
 ./hvigorw assembleHap
 ```
 
-## 🐛 问题反馈
+## 问题反馈
 
-如果您遇到问题或有功能建议，请：
+如果你遇到问题或有功能建议：
 
-1. 查看 [Issues](https://github.com/AlkaidLab/moonlight-harmony/issues) 是否已有相关问题
-2. 如果没有，请 [创建新 Issue](https://github.com/AlkaidLab/moonlight-harmony/issues/new)
+1. 先看看 [Issues](https://github.com/AlkaidLab/moonlight-harmony/issues) 里有没有类似问题
+2. 没有的话，[开个新 Issue](https://github.com/AlkaidLab/moonlight-harmony/issues/new)
 
-反馈时请提供：
+反馈时请附上：
 - 设备型号和系统版本
 - 问题复现步骤
-- 错误日志（如有）
+- 错误日志（有的话）
 
-## 📄 许可证
+## 许可证
 
 本项目基于 [GPL v3](LICENSE) 许可证开源。
 
@@ -191,12 +185,9 @@ git clone https://github.com/AlkaidLab/moonlight-harmony.git
 | [Pipw API](https://img-api.pipw.top) | 二次元壁纸（默认）| 图片版权归原作者所有 |
 | [Lorem Picsum](https://picsum.photos) | 摄影壁纸（可选）| Unsplash 授权 |
 
-**重要声明**：
-- 本应用仅提供技术链接，不存储、不拥有这些图片的版权
-- 如有版权问题，请联系原图片来源方
-- 用户可在设置中随时关闭壁纸功能或切换为其他来源
+本应用只提供技术链接，不存储这些图片，也不拥有其版权。如有版权问题请联系原图片来源方。用户可以在设置中关闭壁纸功能或切换来源。
 
-## 🙏 致谢
+## 致谢
 
 - [Moonlight Game Streaming](https://moonlight-stream.org/) - 官方 Moonlight 项目
 - [moonlight-common-c](https://github.com/moonlight-stream/moonlight-common-c) - 核心协议库
@@ -206,8 +197,8 @@ git clone https://github.com/AlkaidLab/moonlight-harmony.git
 
 <div align="center">
   
-  **Powered by AlkaidLab** ✨
+  **Powered by AlkaidLab**
   
-  如果这个项目对您有帮助，欢迎给一个 ⭐️
+  觉得有用的话，欢迎给个 Star。
   
 </div>
