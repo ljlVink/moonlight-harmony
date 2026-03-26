@@ -10,12 +10,7 @@
 
 /**
  * @file audio_renderer.cpp
- * @brief HarmonyOS OHAudio 音频渲染器实现
- * 
- * 性能优化：
- * - 无锁环形缓冲区（SPSC）替代 std::queue + new/delete
- * - 音频工作组集成，保障回调线程调度
- * - 始终设置 QoS USER_INTERACTIVE
+ * @brief HarmonyOS OHAudio audio renderer implementation
  */
 
 #include "audio_renderer.h"
@@ -28,16 +23,10 @@
 #define LOG_TAG "AudioRenderer"
 
 // =============================================================================
-// OHAudio 新式回调 API 动态加载（兼容旧设备缺失符号）
-// =============================================================================
-// 某些 OHAudio 回调设置函数在部分 HarmonyOS 5.0.x (API 12) 设备的
-// libohaudio.so 中不存在（如 SetRendererInterruptCallback）。
-// 若直接链接，.so 加载时 linker 会因 "symbol not found" 而拒绝加载整个模块，
-// 导致所有页面（包括 SettingsPageV2）因 native 模块不可用而崩溃。
-// 使用 dlsym 运行时加载这些可选 API，缺失时静默跳过。
+// OHAudio callback API dynamic loading (compatibility for older devices)
 // =============================================================================
 
-// 函数指针类型定义 — Renderer
+// Function pointer type definitions - Renderer
 typedef OH_AudioStream_Result (*PFN_SetRendererWriteDataCb)(
     OH_AudioStreamBuilder*, OH_AudioRenderer_OnWriteDataCallback, void*);
 typedef OH_AudioStream_Result (*PFN_SetRendererInterruptCb)(
@@ -47,11 +36,11 @@ typedef OH_AudioStream_Result (*PFN_SetRendererErrorCb)(
 typedef OH_AudioStream_Result (*PFN_SetRendererOutputDeviceChangeCb)(
     OH_AudioStreamBuilder*, OH_AudioRenderer_OutputDeviceChangeCallback, void*);
 
-// 函数指针类型定义 — 空间音频 (API 20+)
+// Function pointer type definitions - Spatial audio (API 20+)
 typedef OH_AudioStream_Result (*PFN_SetSpatializationEnabled)(
     OH_AudioStreamBuilder* builder, bool spatializationEnabled);
 
-// 全局函数指针
+// Global function pointers
 static PFN_SetRendererWriteDataCb       g_pfnSetRendererWriteDataCb = nullptr;
 static PFN_SetRendererInterruptCb       g_pfnSetRendererInterruptCb = nullptr;
 static PFN_SetRendererErrorCb           g_pfnSetRendererErrorCb = nullptr;
@@ -62,7 +51,7 @@ static bool g_audioApisChecked = false;
 static bool g_writeDataCbAvailable = false;
 static bool g_spatialAudioAvailable = false;
 
-// 一次性加载所有 OHAudio 可选 API
+// Load all optional OHAudio APIs
 static void LoadAudioApis() {
     if (g_audioApisChecked) return;
     g_audioApisChecked = true;
@@ -73,7 +62,7 @@ static void LoadAudioApis() {
         return;
     }
 
-    // Renderer 新式回调
+    // Renderer new-style callbacks
     g_pfnSetRendererWriteDataCb = (PFN_SetRendererWriteDataCb)
         dlsym(handle, "OH_AudioStreamBuilder_SetRendererWriteDataCallback");
     g_pfnSetRendererInterruptCb = (PFN_SetRendererInterruptCb)
@@ -83,7 +72,7 @@ static void LoadAudioApis() {
     g_pfnSetRendererDeviceChangeCb = (PFN_SetRendererOutputDeviceChangeCb)
         dlsym(handle, "OH_AudioStreamBuilder_SetRendererOutputDeviceChangeCallback");
 
-    // 空间音频 (API 20+)
+    // Spatial audio (API 20+)
     g_pfnSetSpatializationEnabled = (PFN_SetSpatializationEnabled)
         dlsym(handle, "OH_AudioStreamBuilder_SetSpatializationEnabled");
 
@@ -97,15 +86,15 @@ static void LoadAudioApis() {
                 g_pfnSetRendererErrorCb ? "Y" : "N",
                 g_pfnSetRendererDeviceChangeCb ? "Y" : "N",
                 g_pfnSetSpatializationEnabled ? "Y" : "N");
-    // 不 dlclose，保持库加载
+    // Don't dlclose, keep library loaded
 }
 
 // =============================================================================
-// AudioRenderer 类实现
+// AudioRenderer class implementation
 // =============================================================================
 
 AudioRenderer::AudioRenderer() {
-    // ringBuffer_ 在 Init 中动态分配
+    // ringBuffer_ is dynamically allocated in Init
 }
 
 AudioRenderer::~AudioRenderer() {
@@ -115,23 +104,22 @@ AudioRenderer::~AudioRenderer() {
 int AudioRenderer::Init(const AudioRendererConfig& config) {
     if (renderer_ != nullptr) {
         OH_LOG_WARN(LOG_APP, "AudioRenderer already initialized, cleaning up first to reinitialize");
-        Cleanup();  // 清理旧实例后重新初始化，防止重复进入串流时音频问题
+        Cleanup();  // Clean up old instance before re-initializing
     }
     
     config_ = config;
     
-    // 动态分配环形缓冲区：根据实际声道数和采样率计算容量
-    // 所有声道配置统一 TARGET_BUFFER_MS 时长，避免 stereo 时缓冲区过大
+    // Dynamically allocate ring buffer: calculate capacity based on actual channels and sample rate
     int usableSamples = config_.sampleRate * config_.channelCount * TARGET_BUFFER_MS / 1000;
-    // 对齐到帧边界（channelCount × samplesPerFrame）
+    // Align to frame boundary (channelCount × samplesPerFrame)
     int frameSize = config_.channelCount * config_.samplesPerFrame;
     if (frameSize > 0) {
         usableSamples = ((usableSamples + frameSize - 1) / frameSize) * frameSize;
     }
-    // SPSC 环形缓冲区需要多留 1 个位置以区分满/空
+    // SPSC ring buffer needs 1 extra slot to distinguish full/empty
     ringCapacity_ = usableSamples + 1;
     
-    // 释放旧缓冲区（如果有）
+    // Release old buffer (if any)
     delete[] ringBuffer_;
     ringBuffer_ = new int16_t[ringCapacity_];
     memset(ringBuffer_, 0, ringCapacity_ * sizeof(int16_t));
@@ -147,14 +135,14 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
     OH_LOG_INFO(LOG_APP, "Initializing audio renderer: sampleRate=%{public}d, channels=%{public}d, samplesPerFrame=%{public}d",
                 config_.sampleRate, config_.channelCount, config_.samplesPerFrame);
     
-    // 创建 AudioStreamBuilder
+    // Create AudioStreamBuilder
     OH_AudioStream_Result result = OH_AudioStreamBuilder_Create(&builder_, AUDIOSTREAM_TYPE_RENDERER);
     if (result != AUDIOSTREAM_SUCCESS || builder_ == nullptr) {
         OH_LOG_ERROR(LOG_APP, "Failed to create AudioStreamBuilder: %{public}d", result);
         return -1;
     }
     
-    // 设置采样率
+    // Set sample rate
     result = OH_AudioStreamBuilder_SetSamplingRate(builder_, config_.sampleRate);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_ERROR(LOG_APP, "Failed to set sampling rate: %{public}d", result);
@@ -163,7 +151,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 设置声道数
+    // Set channel count
     result = OH_AudioStreamBuilder_SetChannelCount(builder_, config_.channelCount);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_ERROR(LOG_APP, "Failed to set channel count: %{public}d", result);
@@ -172,10 +160,8 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 设置声道布局
-    // 根据声道数选择对应的声道布局
-    // HarmonyOS 支持的布局: CH_LAYOUT_MONO(1), CH_LAYOUT_STEREO(2), 
-    // CH_LAYOUT_5POINT1(6), CH_LAYOUT_7POINT1(8) 等
+    // Set channel layout
+    // Select appropriate layout based on channel count
     OH_AudioChannelLayout channelLayout;
     switch (config_.channelCount) {
         case 1:
@@ -185,15 +171,15 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
             channelLayout = CH_LAYOUT_STEREO;
             break;
         case 6:
-            // 5.1 环绕声: FL, FR, FC, LFE, BL, BR
+            // 5.1 surround: FL, FR, FC, LFE, BL, BR
             channelLayout = CH_LAYOUT_5POINT1;
             break;
         case 8:
-            // 7.1 环绕声: FL, FR, FC, LFE, BL, BR, SL, SR
+            // 7.1 surround: FL, FR, FC, LFE, BL, BR, SL, SR
             channelLayout = CH_LAYOUT_7POINT1;
             break;
         default:
-            // 对于不支持的声道数，使用 UNKNOWN 让系统自动选择
+            // For unsupported channel counts, use UNKNOWN to let system decide
             OH_LOG_WARN(LOG_APP, "Unsupported channel count %{public}d, using CH_LAYOUT_UNKNOWN", 
                         config_.channelCount);
             channelLayout = CH_LAYOUT_UNKNOWN;
@@ -211,7 +197,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 设置采样格式（16-bit PCM）
+    // Set sample format (16-bit PCM)
     result = OH_AudioStreamBuilder_SetSampleFormat(builder_, AUDIOSTREAM_SAMPLE_S16LE);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_ERROR(LOG_APP, "Failed to set sample format: %{public}d", result);
@@ -220,7 +206,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 设置编码类型（PCM）
+    // Set encoding type (PCM)
     result = OH_AudioStreamBuilder_SetEncodingType(builder_, AUDIOSTREAM_ENCODING_TYPE_RAW);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_ERROR(LOG_APP, "Failed to set encoding type: %{public}d", result);
@@ -229,30 +215,29 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 设置用途（游戏）
+    // Set usage (game)
     result = OH_AudioStreamBuilder_SetRendererInfo(builder_, AUDIOSTREAM_USAGE_GAME);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_WARN(LOG_APP, "Failed to set renderer usage: %{public}d", result);
-        // 非致命错误，继续
+        // Non-fatal error, continue
     }
     
-    // 设置低延迟模式
-    // 注意：当启用空间音频时使用 NORMAL 模式，因为 FAST 模式会绕过 DSP 空间化处理管线
+    // Set low-latency mode
+    // Note: Use NORMAL mode when spatial audio is enabled, as FAST mode bypasses DSP spatialization
     OH_AudioStream_LatencyMode latencyMode = config_.enableSpatialAudio 
         ? AUDIOSTREAM_LATENCY_MODE_NORMAL 
         : AUDIOSTREAM_LATENCY_MODE_FAST;
     result = OH_AudioStreamBuilder_SetLatencyMode(builder_, latencyMode);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_WARN(LOG_APP, "Failed to set latency mode: %{public}d", result);
-        // 非致命错误，继续
+        // Non-fatal error, continue
     } else {
         OH_LOG_INFO(LOG_APP, "Audio latency mode: %{public}s",
                     latencyMode == AUDIOSTREAM_LATENCY_MODE_FAST ? "FAST" : "NORMAL (spatial audio)");
     }
     
-    // 设置回调帧大小（API 12+）
-    // 匹配 Opus 解码帧大小（通常 240 samples = 5ms @48kHz），
-    // 减少 OHAudio 内部缓冲，降低音频管线延迟
+    // Set callback frame size (API 12+)
+    // Match Opus decode frame size (typically 240 samples = 5ms @48kHz)
     result = OH_AudioStreamBuilder_SetFrameSizeInCallback(builder_, config_.samplesPerFrame);
     if (result == AUDIOSTREAM_SUCCESS) {
         OH_LOG_INFO(LOG_APP, "Audio callback frame size set to %{public}d samples", config_.samplesPerFrame);
@@ -260,7 +245,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         OH_LOG_WARN(LOG_APP, "Failed to set callback frame size: %{public}d (using system default)", result);
     }
     
-    // 尝试启用空间音频（HarmonyOS 5.0+ API 20）
+    // Try to enable spatial audio (HarmonyOS 5.0+ API 20)
     LoadAudioApis();
     if (config_.enableSpatialAudio && g_spatialAudioAvailable && g_pfnSetSpatializationEnabled != nullptr) {
         result = g_pfnSetSpatializationEnabled(builder_, true);
@@ -273,10 +258,10 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         OH_LOG_INFO(LOG_APP, "Spatial audio not available on this device/API level");
     }
     
-    // 设置回调 — 通过 dlsym 动态加载的函数指针设置（兼容旧设备）
+    // Set callbacks via dlsym-loaded function pointers (compatibility for older devices)
     LoadAudioApis();
 
-    // 数据写入回调（必需）
+    // Data write callback (required)
     if (g_pfnSetRendererWriteDataCb) {
         result = g_pfnSetRendererWriteDataCb(builder_,
             (OH_AudioRenderer_OnWriteDataCallback)OnWriteData, this);
@@ -293,7 +278,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 中断事件回调（可选 — 部分 API 12 设备不存在此符号）
+    // Interrupt event callback (optional - not available on some API 12 devices)
     if (g_pfnSetRendererInterruptCb) {
         result = g_pfnSetRendererInterruptCb(builder_,
             (OH_AudioRenderer_OnInterruptCallback)OnInterruptEvent, this);
@@ -304,7 +289,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         OH_LOG_INFO(LOG_APP, "SetRendererInterruptCallback not available, skipping");
     }
     
-    // 错误回调（可选）
+    // Error callback (optional)
     if (g_pfnSetRendererErrorCb) {
         result = g_pfnSetRendererErrorCb(builder_,
             (OH_AudioRenderer_OnErrorCallback)OnError, this);
@@ -315,7 +300,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         OH_LOG_INFO(LOG_APP, "SetRendererErrorCallback not available, skipping");
     }
     
-    // 设备变更回调（可选）
+    // Device change callback (optional)
     if (g_pfnSetRendererDeviceChangeCb) {
         result = g_pfnSetRendererDeviceChangeCb(builder_,
             (OH_AudioRenderer_OutputDeviceChangeCallback)OnDeviceChange, this);
@@ -326,7 +311,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         OH_LOG_INFO(LOG_APP, "SetRendererOutputDeviceChangeCallback not available, skipping");
     }
     
-    // 创建渲染器
+    // Create renderer
     result = OH_AudioStreamBuilder_GenerateRenderer(builder_, &renderer_);
     if (result != AUDIOSTREAM_SUCCESS || renderer_ == nullptr) {
         OH_LOG_ERROR(LOG_APP, "Failed to generate renderer: %{public}d", result);
@@ -335,7 +320,7 @@ int AudioRenderer::Init(const AudioRendererConfig& config) {
         return -1;
     }
     
-    // 设置初始音量（如果配置了）
+    // Set initial volume (if configured)
     if (config_.volume > 0.0f && config_.volume <= 1.0f) {
         SetVolume(config_.volume);
     }
@@ -352,7 +337,7 @@ int AudioRenderer::SetVolume(float volume) {
         return -1;
     }
     
-    // 限制音量范围
+    // Clamp volume range
     if (volume < 0.0f) volume = 0.0f;
     if (volume > 1.0f) volume = 1.0f;
     
@@ -372,10 +357,10 @@ int AudioRenderer::Start() {
         return -1;
     }
     
-    // 清空 OHAudio 内部缓冲，避免播放旧数据导致初始延迟
+    // Clear OHAudio internal buffer to avoid playing stale data
     OH_AudioRenderer_Flush(renderer_);
     
-    // 清空环形缓冲区
+    // Clear ring buffer
     ringHead_.store(0, std::memory_order_relaxed);
     ringTail_.store(0, std::memory_order_relaxed);
     wasUnderrun_.store(false, std::memory_order_relaxed);
@@ -401,7 +386,7 @@ int AudioRenderer::Stop() {
         OH_AudioRenderer_Stop(renderer_);
     }
     
-    // 清空环形缓冲区
+    // Clear ring buffer
     ringHead_.store(0, std::memory_order_relaxed);
     ringTail_.store(0, std::memory_order_relaxed);
     wasUnderrun_.store(false, std::memory_order_relaxed);
@@ -425,7 +410,7 @@ void AudioRenderer::Cleanup() {
     
     configured_ = false;
     
-    // 释放动态环形缓冲区
+    // Release dynamic ring buffer
     delete[] ringBuffer_;
     ringBuffer_ = nullptr;
     ringCapacity_ = 0;
@@ -438,7 +423,7 @@ int AudioRenderer::PlaySamples(const int16_t* pcmData, int sampleCount) {
         return -1;
     }
     
-    // 如果需要重启，尝试恢复
+    // If restart needed, try to recover
     if (needRestart_.load(std::memory_order_relaxed)) {
         TryRestart();
     }
@@ -447,14 +432,13 @@ int AudioRenderer::PlaySamples(const int16_t* pcmData, int sampleCount) {
         return -1;
     }
     
-    // 写入环形缓冲区（无锁 SPSC）
-    // 生产者只写 ringTail_，不触碰 ringHead_（消费者的变量），保证无锁正确性
-    // 延迟控制由消费者 OnWriteData 负责（在读取前跳过旧数据）
+    // Write to ring buffer (lock-free SPSC)
+    // Producer only writes ringTail_, doesn't touch ringHead_ (consumer's variable)
     int dataSize = sampleCount * config_.channelCount;
     int tail = ringTail_.load(std::memory_order_relaxed);
     int head = ringHead_.load(std::memory_order_acquire);
     
-    // 计算可用空间（保留1个元素的间隔以区分满/空）
+    // Calculate available space (keep 1 slot gap to distinguish full/empty)
     int available;
     if (tail >= head) {
         available = ringCapacity_ - (tail - head) - 1;
@@ -463,14 +447,13 @@ int AudioRenderer::PlaySamples(const int16_t* pcmData, int sampleCount) {
     }
     
     if (available < dataSize) {
-        // 缓冲区空间不足 → 丢弃新数据
-        // 不推进 head（消费者的写变量），保持 SPSC 无锁约定
-        // 消费者端的延迟裁剪会确保缓冲区不会持续积累
+        // Buffer full -> drop new data
+        // Don't advance head (consumer's write variable), maintain SPSC contract
         droppedSamples_.fetch_add(sampleCount, std::memory_order_relaxed);
         return 0;
     }
     
-    // 写入数据到环形缓冲区
+    // Write data to ring buffer
     int firstPart = std::min(dataSize, ringCapacity_ - tail);
     memcpy(ringBuffer_ + tail, pcmData, firstPart * sizeof(int16_t));
     if (firstPart < dataSize) {
@@ -491,21 +474,21 @@ int AudioRenderer::TryRestart() {
         return -1;
     }
     
-    // 先停止当前渲染器
+    // Stop current renderer first
     OH_AudioRenderer_Stop(renderer_);
     
-    // 清空环形缓冲区 + OHAudio 内部缓冲，避免播放过时数据
+    // Clear ring buffer + OHAudio internal buffer to avoid playing stale data
     ringHead_.store(0, std::memory_order_relaxed);
     ringTail_.store(0, std::memory_order_relaxed);
     wasUnderrun_.store(false, std::memory_order_relaxed);
     OH_AudioRenderer_Flush(renderer_);
     
-    // 尝试重新启动
+    // Try to restart
     OH_AudioStream_Result result = OH_AudioRenderer_Start(renderer_);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_ERROR(LOG_APP, "Failed to restart renderer: %{public}d", result);
         
-        // 完全重建渲染器
+        // Full renderer rebuild
         OH_LOG_INFO(LOG_APP, "Attempting full renderer rebuild...");
         OH_AudioRenderer_Release(renderer_);
         renderer_ = nullptr;
@@ -546,7 +529,7 @@ AudioRendererStats AudioRenderer::GetStats() const {
     stats.droppedSamples = droppedSamples_.load(std::memory_order_relaxed);
     stats.underruns = underruns_.load(std::memory_order_relaxed);
     
-    // 计算当前缓冲区延迟
+    // Calculate current buffer latency
     int head = ringHead_.load(std::memory_order_relaxed);
     int tail = ringTail_.load(std::memory_order_relaxed);
     int buffered;
@@ -574,19 +557,19 @@ double AudioRenderer::GetBufferLatencyMs() const {
 }
 
 // =============================================================================
-// OHAudio 回调实现
+// OHAudio callback implementations
 // =============================================================================
 
 OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* renderer, void* userData,
                                     void* buffer, int32_t bufferLen) {
     AudioRenderer* self = static_cast<AudioRenderer*>(userData);
     if (self == nullptr || !self->running_) {
-        // 填充静音
+        // Fill with silence
         memset(buffer, 0, bufferLen);
         return AUDIO_DATA_CALLBACK_RESULT_VALID;
     }
     
-    // 始终设置音频回调线程 QoS 为最高优先级
+    // Always set audio callback thread QoS to highest priority
     static thread_local bool qosSet = false;
     if (!qosSet) {
         int ret = OH_QoS_SetThreadQoS(QOS_USER_INTERACTIVE);
@@ -596,7 +579,7 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
         qosSet = true;
     }
     
-    // 从环形缓冲区读取数据（无锁 SPSC 消费者端）
+    // Read from ring buffer (lock-free SPSC consumer side)
     int16_t* outBuffer = static_cast<int16_t*>(buffer);
     int samplesNeeded = bufferLen / sizeof(int16_t);
     
@@ -604,7 +587,7 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
     int tail = self->ringTail_.load(std::memory_order_acquire);
     int channelCount = std::max(self->config_.channelCount, 1);
 
-    // 计算可读数据量
+    // Calculate readable data amount
     int available;
     if (tail >= head) {
         available = tail - head;
@@ -612,15 +595,15 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
         available = self->ringCapacity_ - head + tail;
     }
     
-    // 延迟裁剪（消费者端）：如果缓冲区积累过多，跳过旧数据到合理位置
-    // 在消费者线程推进 head 是 SPSC 安全的（head 本就是消费者的写变量）
+    // Latency trimming (consumer side): skip old data if buffer accumulated too much
+    // Advancing head in consumer thread is SPSC-safe (head is consumer's write variable)
     if (available > 0 && self->config_.sampleRate > 0) {
         int bufferedFrames = available / channelCount;
         double latencyMs = (double)bufferedFrames * 1000.0 / self->config_.sampleRate;
         if (latencyMs > MAX_AUDIO_LATENCY_MS) {
-            // 跳到只保留 MAX_AUDIO_LATENCY_MS/2 的数据，给后续帧留余量
+            // Jump to keep only MAX_AUDIO_LATENCY_MS/2 of data, leaving room for subsequent frames
             int targetSamples = self->config_.sampleRate * channelCount * MAX_AUDIO_LATENCY_MS / 2 / 1000;
-            // 对齐到帧边界
+            // Align to frame boundary
             targetSamples = (targetSamples / channelCount) * channelCount;
             int toDrop = available - targetSamples;
             if (toDrop > 0) {
@@ -629,30 +612,30 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
                 self->ringHead_.store(head, std::memory_order_release);
                 available -= toDrop;
                 self->droppedSamples_.fetch_add(toDrop / channelCount, std::memory_order_relaxed);
-                // 标记需要 fade-in（跳过数据后波形不连续）
+                // Mark need fade-in (waveform discontinuous after skipping data)
                 self->wasUnderrun_.store(true, std::memory_order_relaxed);
             }
         }
     }
     
     int toCopy = std::min(available, samplesNeeded);
-    // 自适应渐变长度：根据 gap 大小调整，大 gap 需要更长渐变以减少爆音
-    // 基础: 96 帧 (~2ms @48kHz)，最大: 480 帧 (~10ms @48kHz)
+    // Adaptive fade length: adjust based on gap size, larger gap needs longer fade to reduce clicks
+    // Base: 96 frames (~2ms @48kHz), Max: 480 frames (~10ms @48kHz)
     static constexpr int FADE_FRAMES_MIN = 96;
     static constexpr int FADE_FRAMES_MAX = 480;
     int gap = samplesNeeded - toCopy;
-    // gap 越大（数据越少），渐变越长
+    // Larger gap (less data) -> longer fade
     int FADE_FRAMES;
     if (gap <= 0 || samplesNeeded <= 0) {
         FADE_FRAMES = FADE_FRAMES_MIN;
     } else {
-        // 线性插值：gap 从 0 到 samplesNeeded 时，fade 从 MIN 到 MAX
+        // Linear interpolation: gap 0->samplesNeeded, fade MIN->MAX
         float gapRatio = (float)gap / (float)samplesNeeded;
         FADE_FRAMES = FADE_FRAMES_MIN + (int)((FADE_FRAMES_MAX - FADE_FRAMES_MIN) * gapRatio);
     }
     
     if (toCopy > 0) {
-        // 从环形缓冲区读取
+        // Read from ring buffer
         int firstPart = std::min(toCopy, self->ringCapacity_ - head);
         memcpy(outBuffer, self->ringBuffer_ + head, firstPart * sizeof(int16_t));
         if (firstPart < toCopy) {
@@ -660,9 +643,9 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
         }
         self->ringHead_.store((head + toCopy) % self->ringCapacity_, std::memory_order_release);
         
-        // Underrun 后恢复：对开头数据施加渐入（fade-in），避免静音→有信号的波形跳变
+        // Underrun recovery: apply fade-in to start data to avoid silence->signal waveform jump
         if (self->wasUnderrun_.load(std::memory_order_relaxed)) {
-            // 按帧步进（每帧 channelCount 个采样点），确保同一时间步的所有声道获得相同增益
+            // Step by frame (channelCount samples per frame), ensure all channels get same gain
             int fadeFrames = std::min(toCopy / channelCount, FADE_FRAMES);
             for (int f = 0; f < fadeFrames; f++) {
                 float gain = (float)f / (float)fadeFrames;
@@ -673,15 +656,15 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
         }
     }
     
-    // 如果数据不足，填充静音（underrun）
+    // If data insufficient, fill with silence (underrun)
     if (toCopy < samplesNeeded) {
-        // 计算欠缺比例：仅当大比例欠缺时才做渐出（小缺口直接填静音即可）
+        // Calculate deficit ratio: only fade out for significant deficit (small gap just fill silence)
         int gap = samplesNeeded - toCopy;
-        bool significantUnderrun = (gap > samplesNeeded / 4);  // 超过25%欠缺才渐出
+        bool significantUnderrun = (gap > samplesNeeded / 4);  // Only fade out if >25% deficit
         
         if (toCopy > 0 && significantUnderrun) {
-            // 对末尾有效数据施加渐出，避免有信号→静音的波形跳变
-            // 按帧步进确保多声道同步
+            // Apply fade-out to trailing valid data to avoid signal->silence waveform jump
+            // Step by frame to ensure multi-channel sync
             int fadeFrames = std::min(toCopy / channelCount, FADE_FRAMES);
             int fadeStartSample = toCopy - fadeFrames * channelCount;
             for (int f = 0; f < fadeFrames; f++) {
@@ -699,7 +682,7 @@ OH_AudioData_Callback_Result AudioRenderer::OnWriteData(OH_AudioRenderer* render
         self->wasUnderrun_.store(false, std::memory_order_relaxed);
     }
     
-    // 更新已播放样本数（按通道换算）
+    // Update played samples count (per channel)
     self->playedSamples_.fetch_add(toCopy / channelCount, std::memory_order_relaxed);
     
     return AUDIO_DATA_CALLBACK_RESULT_VALID;
@@ -713,7 +696,7 @@ void AudioRenderer::OnDeviceChange(OH_AudioRenderer* renderer, void* userData,
     if (self == nullptr) return;
     
     if (reason == REASON_OLD_DEVICE_UNAVAILABLE) {
-        // 旧设备不可用（如拔出耳机），标记重启
+        // Old device unavailable (e.g. headphone unplugged), schedule restart
         OH_LOG_WARN(LOG_APP, "Audio device unavailable, scheduling restart");
         self->needRestart_ = true;
     }
@@ -758,19 +741,19 @@ void AudioRenderer::OnError(OH_AudioRenderer* renderer, void* userData,
 }
 
 // =============================================================================
-// 全局简化接口
+// Global simplified interface
 // =============================================================================
 
 namespace {
-    // 使用原子指针保证 PlaySamples 等高频调用的线程安全
-    // Cleanup 通过 mutex 保证与 Init 的互斥
+    // Use atomic pointer for thread-safety of high-frequency calls like PlaySamples
+    // Cleanup uses mutex to ensure mutual exclusion with Init
     static std::atomic<AudioRenderer*> g_audioRenderer{nullptr};
     static std::mutex g_audioRendererMutex;
 }
 
 namespace AudioRendererInstance {
 
-// 空间音频配置（可通过 NAPI 设置）
+// Spatial audio config (can be set via NAPI)
 static bool g_enableSpatialAudio = false;
 
 void SetSpatialAudioEnabled(bool enabled) {

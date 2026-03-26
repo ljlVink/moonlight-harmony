@@ -9,9 +9,7 @@
  */
 
 /**
- * Nintendo Switch Pro Controller 驱动
  * 
- * 参考 Android moonlight-android SwitchProController
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -25,7 +23,6 @@ const TAG = '[USB-SWITCH]';
 const PACKET_SIZE = 64;
 const COMMAND_RETRIES = 10;
 
-// SPI Flash 偏移量
 const FACTORY_LS_CALIBRATION_OFFSET = 0x603D;
 const FACTORY_RS_CALIBRATION_OFFSET = 0x6046;
 const USER_LS_MAGIC_OFFSET = 0x8010;
@@ -45,7 +42,6 @@ export class SwitchProController extends AbstractController {
   private stopped: boolean = false;
   private sendPacketCount: number = 0;
   
-  // IMU 数据
   private gyroX: number = 0;
   private gyroY: number = 0;
   private gyroZ: number = 0;
@@ -53,12 +49,10 @@ export class SwitchProController extends AbstractController {
   private accelY: number = 0;
   private accelZ: number = 0;
   
-  // 摇杆校准数据: [stick][axis][min, center, max]
   private stickCalibration: number[][][] = [
     [[0, 0x800, 0xFFF], [0, 0x800, 0xFFF]],
     [[0, 0x800, 0xFFF], [0, 0x800, 0xFFF]]
   ];
-  // 预计算的轴范围: [stick][axis][negative, positive]
   private stickExtends: number[][][] = [
     [[-0x700, 0x700], [-0x700, 0x700]],
     [[-0x700, 0x700], [-0x700, 0x700]]
@@ -77,7 +71,6 @@ export class SwitchProController extends AbstractController {
     this.capabilities = ControllerCapabilities.GYRO | ControllerCapabilities.ACCEL | ControllerCapabilities.RUMBLE;
     this.deviceName = 'Switch Pro Controller';
     
-    // 支持的按钮
     this.supportedButtonFlags = 
       ButtonFlags.A_FLAG | ButtonFlags.B_FLAG | ButtonFlags.X_FLAG | ButtonFlags.Y_FLAG |
       ButtonFlags.UP_FLAG | ButtonFlags.DOWN_FLAG | ButtonFlags.LEFT_FLAG | ButtonFlags.RIGHT_FLAG |
@@ -86,9 +79,6 @@ export class SwitchProController extends AbstractController {
       ButtonFlags.BACK_FLAG | ButtonFlags.PLAY_FLAG | ButtonFlags.SPECIAL_BUTTON_FLAG | ButtonFlags.MISC_FLAG;
   }
   
-  /**
-   * 检查是否可以驱动该设备
-   */
   static canClaimDevice(device: usbManager.USBDevice): boolean {
     if (device.vendorId !== SwitchPro.VID) {
       return false;
@@ -120,9 +110,6 @@ export class SwitchProController extends AbstractController {
     return true;
   }
   
-  /**
-   * 是否是 Joy-Con
-   */
   private isJoyCon(): boolean {
     const pid = this.device.productId;
     return pid === SwitchPro.JOYCON_LEFT_PID || 
@@ -130,9 +117,6 @@ export class SwitchProController extends AbstractController {
            pid === SwitchPro.JOYCON_PAIR_PID;
   }
   
-  /**
-   * 查找端点
-   */
   private findEndpoints(): boolean {
     if (!this.device.configs || this.device.configs.length === 0) {
       return false;
@@ -164,9 +148,6 @@ export class SwitchProController extends AbstractController {
     return this.inEndpoint !== null && this.outEndpoint !== null;
   }
   
-  /**
-   * 声明接口
-   */
   private claimInterface(): boolean {
     if (!this.pipe || !this.usbInterface) {
       return false;
@@ -181,9 +162,6 @@ export class SwitchProController extends AbstractController {
     }
   }
   
-  /**
-   * 发送数据
-   */
   private async sendData(data: Uint8Array): Promise<boolean> {
     if (!this.pipe || !this.outEndpoint) {
       return false;
@@ -197,9 +175,6 @@ export class SwitchProController extends AbstractController {
     }
   }
   
-  /**
-   * 读取数据
-   */
   private async readData(timeout: number = 100, throwOnError: boolean = false): Promise<Uint8Array | null> {
     if (!this.pipe || !this.inEndpoint) {
       if (throwOnError) {
@@ -212,7 +187,6 @@ export class SwitchProController extends AbstractController {
       const buffer = new Uint8Array(64);
       const result = await usbManager.bulkTransfer(this.pipe, this.inEndpoint, buffer, timeout);
       
-      // 负数表示错误
       if (result < 0) {
         if (throwOnError) {
           throw new Error(`USB 读取失败，错误码: ${result}`);
@@ -232,9 +206,6 @@ export class SwitchProController extends AbstractController {
     }
   }
   
-  /**
-   * 发送命令
-   */
   private async sendCommand(id: number, waitReply: boolean): Promise<boolean> {
     const data = new Uint8Array([0x80, id]);
     
@@ -260,9 +231,6 @@ export class SwitchProController extends AbstractController {
     return false;
   }
   
-  /**
-   * 发送子命令
-   */
   private async sendSubcommand(subcommand: number, payload: Uint8Array): Promise<Uint8Array | null> {
     const data = new Uint8Array(11 + payload.length);
     data[0] = 0x01;  // Rumble + subcommand
@@ -291,62 +259,38 @@ export class SwitchProController extends AbstractController {
     return null;
   }
   
-  /**
-   * 握手
-   */
   private async handshake(): Promise<boolean> {
     return await this.sendCommand(0x02, true);
   }
   
-  /**
-   * 高速模式
-   */
   private async highSpeed(): Promise<boolean> {
     return await this.sendCommand(0x03, true);
   }
   
-  /**
-   * 强制 USB 模式
-   */
   private async forceUSB(): Promise<boolean> {
     return await this.sendCommand(0x04, true);
   }
   
-  /**
-   * 设置输入报告模式
-   */
   private async setInputReportMode(mode: number): Promise<boolean> {
     const result = await this.sendSubcommand(0x03, new Uint8Array([mode]));
     return result !== null;
   }
   
-  /**
-   * 设置玩家 LED
-   */
   private async setPlayerLED(id: number): Promise<boolean> {
     const result = await this.sendSubcommand(0x30, new Uint8Array([id & 0b1111]));
     return result !== null;
   }
   
-  /**
-   * 启用 IMU
-   */
   private async enableIMU(enable: boolean): Promise<boolean> {
     const result = await this.sendSubcommand(0x40, new Uint8Array([enable ? 0x01 : 0x00]));
     return result !== null;
   }
   
-  /**
-   * 启用震动
-   */
   private async enableVibration(enable: boolean): Promise<boolean> {
     const result = await this.sendSubcommand(0x48, new Uint8Array([enable ? 0x01 : 0x00]));
     return result !== null;
   }
   
-  /**
-   * 应用默认校准
-   */
   private applyDefaultCalibration(stick: number): void {
     for (let axis = 0; axis < 2; axis++) {
       this.stickCalibration[stick][axis][0] = 0x000;
@@ -357,9 +301,6 @@ export class SwitchProController extends AbstractController {
     }
   }
   
-  /**
-   * 应用摇杆校准
-   */
   private applyStickCalibration(value: number, stick: number, axis: number): number {
     const center = this.stickCalibration[stick][axis][1];
     
@@ -393,22 +334,17 @@ export class SwitchProController extends AbstractController {
     return 0;
   }
   
-  /**
-   * 处理输入报告
-   */
   private handleRead(buffer: Uint8Array): boolean {
     if (buffer.length < PACKET_SIZE) {
       return false;
     }
     
-    // 检查报告 ID
     if (buffer[0] !== 0x30) {
       return false;
     }
     
     this.buttonFlags = 0;
     
-    // Nintendo 布局与 Xbox 相反
     const b3 = buffer[3];
     const b4 = buffer[4];
     const b5 = buffer[5];
@@ -430,11 +366,9 @@ export class SwitchProController extends AbstractController {
     this.setButtonFlag(ButtonFlags.LS_CLK_FLAG, b4 & 0x08);
     this.setButtonFlag(ButtonFlags.RS_CLK_FLAG, b4 & 0x04);
     
-    // 扳机 (数字 ZL/ZR)
     this.leftTrigger = (b5 & 0x80) !== 0 ? 1.0 : 0.0;
     this.rightTrigger = (b3 & 0x80) !== 0 ? 1.0 : 0.0;
     
-    // 摇杆: 每轴 12 位
     const lsx = buffer[6] | ((buffer[7] & 0x0F) << 8);
     const lsy = ((buffer[7] & 0xF0) >> 4) | (buffer[8] << 4);
     const rsx = buffer[9] | ((buffer[10] & 0x0F) << 8);
@@ -445,12 +379,10 @@ export class SwitchProController extends AbstractController {
     this.rightStickX = this.applyStickCalibration(rsx, 1, 0);
     this.rightStickY = -this.applyStickCalibration(rsy, 1, 1);
     
-    // IMU 数据 (从偏移 13 开始)
     if (buffer.length >= 25) {
       const GYRO_SCALE = 0.06103;  // deg/s per LSB
       const ACCEL_SCALE = 0.000244;  // g per LSB
       
-      // 读取 IMU 数据
       this.accelX = readShortLE(buffer, 13) * ACCEL_SCALE;
       this.accelY = readShortLE(buffer, 15) * ACCEL_SCALE;
       this.accelZ = readShortLE(buffer, 17) * ACCEL_SCALE;
@@ -462,21 +394,14 @@ export class SwitchProController extends AbstractController {
     return true;
   }
   
-  /**
-   * 报告运动数据
-   */
   private reportMotion(): void {
     this.notifyControllerMotion(MotionType.GYRO, this.gyroX, this.gyroY, this.gyroZ);
     this.notifyControllerMotion(MotionType.ACCEL, this.accelX * 9.81, this.accelY * 9.81, this.accelZ * 9.81);
   }
   
-  /**
-   * 输入循环
-   */
   private async inputLoop(): Promise<void> {
     console.info(`${TAG} 开始初始化...`);
     
-    // 初始化序列
     const handshakeSuccess = await this.handshake();
     if (!handshakeSuccess || this.stopped) {
       if (!handshakeSuccess) console.error(`${TAG} 握手失败`);
@@ -491,7 +416,6 @@ export class SwitchProController extends AbstractController {
     console.info(`${TAG} ${deviceType}: handshake ${await this.handshake()}`);
     if (this.stopped) return;
     
-    // 应用默认校准
     this.applyDefaultCalibration(0);
     this.applyDefaultCalibration(1);
     
@@ -508,20 +432,15 @@ export class SwitchProController extends AbstractController {
     
     console.info(`${TAG} ${deviceType}: 初始化完成!`);
     
-    // 通知设备已添加
     this.notifyDeviceAdded();
     
     let isSleepMode = false;
     let detectedHardwareError = false;
-    let consecutiveTimeouts = 0;  // 连续超时计数
-    const MAX_CONSECUTIVE_TIMEOUTS = 10;  // 1秒超时，10次 = 10秒
+    let consecutiveTimeouts = 0;
+    const MAX_CONSECUTIVE_TIMEOUTS = 10;
     
-    // 输入循环
     while (!this.stopped) {
       try {
-        // 使用较长的超时（与 Android 一致）
-        // 有数据时会立即返回，不会影响实际轮询率
-        // 输入循环中使用 throwOnError: true 以便正确检测设备断开
         const buffer = await this.readData(1000, true);
         
         if (this.stopped) {
@@ -529,18 +448,16 @@ export class SwitchProController extends AbstractController {
         }
         
         if (buffer && this.handleRead(buffer)) {
-          consecutiveTimeouts = 0;  // 收到数据，重置超时计数
+          consecutiveTimeouts = 0;
           this.reportInput();
           this.reportMotion();
         }
       } catch (err) {
         if (!this.stopped) {
-          // 检查错误类型
           const usbErr = err instanceof UsbError ? err : null;
           const errorCode = usbErr ? usbErr.code : 0;
-          const retryable = usbErr ? usbErr.retryable : true;  // 默认可重试
+          const retryable = usbErr ? usbErr.retryable : true;
           
-          // 超时错误特殊处理：需要连续多次才认为是省电模式
           if (errorCode === -8) {  // USB_ERROR_TIMEOUT
             consecutiveTimeouts++;
             if (consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
@@ -548,11 +465,9 @@ export class SwitchProController extends AbstractController {
               isSleepMode = true;
               break;
             }
-            // 单次超时不做处理，继续轮询
             continue;
           } else if (errorCode === -4) {  // USB_ERROR_NO_DEVICE
             console.warn(`${TAG} 设备不可达: ${err}`);
-            // 检查是否应该忽略断开信号
             if (this.ignoreDisconnect) {
               console.info(`${TAG} 忽略设备不可达错误（用户已启用忽略断开设置）`);
               continue;
@@ -561,19 +476,15 @@ export class SwitchProController extends AbstractController {
             break;
           } else if (isHardwareError(errorCode)) {
             console.error(`${TAG} 检测到硬件错误: ${err}`);
-            // 检查是否应该忽略断开信号
             if (this.ignoreDisconnect) {
               console.info(`${TAG} 忽略硬件错误（用户已启用忽略断开设置）`);
               continue;
             }
             detectedHardwareError = true;
-            // 硬件错误 - 立即停止
             break;
           } else {
             console.error(`${TAG} 输入读取错误: ${err}`);
-            // 其他错误 - 如果标记为可重试则继续，否则停止
             if (!retryable) {
-              // 检查是否应该忽略断开信号
               if (this.ignoreDisconnect) {
                 console.info(`${TAG} 忽略不可重试错误（用户已启用忽略断开设置）`);
                 continue;
@@ -587,26 +498,20 @@ export class SwitchProController extends AbstractController {
     
     console.info(`${TAG} 输入循环结束`);
     
-    // 根据错误类型决定是否通知设备移除
     if (!this.stopped) {
       if (detectedHardwareError) {
         console.error(`${TAG} 由于硬件错误，自动停止控制器`);
         this.stop();
       } else if (isSleepMode) {
         console.info(`${TAG} 设备进入省电模式，等待自动重连...`);
-        // 省电模式：只停止 I/O 循环但不立即移除，让 UsbDriverService 定时器处理重连
         this.notifyDeviceRemoved();
       } else {
-        // 其他错误
         console.warn(`${TAG} 由于 IO 错误，自动停止控制器`);
         this.stop();
       }
     }
   }
   
-  /**
-   * 启动控制器
-   */
   start(): boolean {
     console.info(`${TAG} 启动控制器`);
     this.markInitializing();
@@ -627,9 +532,6 @@ export class SwitchProController extends AbstractController {
     return true;
   }
   
-  /**
-   * 停止控制器
-   */
   stop(): void {
     if (this.stopped) {
       return;
@@ -661,16 +563,10 @@ export class SwitchProController extends AbstractController {
     this.notifyDeviceRemoved();
   }
   
-  /**
-   * 检查控制器是否已连接
-   */
   isConnected(): boolean {
     return !this.stopped && this.pipe !== null;
   }
   
-  /**
-   * 震动反馈
-   */
   rumble(lowFreqMotor: number, highFreqMotor: number): void {
     const data = new Uint8Array(10);
     data[0] = 0x10;
@@ -698,10 +594,6 @@ export class SwitchProController extends AbstractController {
     this.sendData(data);
   }
   
-  /**
-   * 扳机震动（Switch Pro 不支持）
-   */
   rumbleTriggers(_leftTrigger: number, _rightTrigger: number): void {
-    // Switch Pro 不支持扳机震动
   }
 }

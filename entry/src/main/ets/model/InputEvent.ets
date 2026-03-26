@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 输入事件模型
- */
 export enum InputType {
   MOUSE_MOVE = 0,
   MOUSE_BUTTON = 1,
@@ -34,7 +31,7 @@ export interface MouseMoveEvent extends InputEvent {
 
 export interface MouseButtonEvent extends InputEvent {
   type: InputType.MOUSE_BUTTON;
-  button: number;  // 0=左键, 1=中键, 2=右键
+  button: number;
   isPressed: boolean;
 }
 
@@ -48,7 +45,7 @@ export interface KeyboardEvent extends InputEvent {
   type: InputType.KEYBOARD;
   keyCode: number;
   isPressed: boolean;
-  modifiers: number;  // Ctrl, Alt, Shift, Win
+  modifiers: number;
 }
 
 export interface ControllerButtonEvent extends InputEvent {
@@ -62,7 +59,7 @@ export interface ControllerAxisEvent extends InputEvent {
   type: InputType.CONTROLLER_AXIS;
   controllerIndex: number;
   axis: ControllerAxis;
-  value: number;  // -32768 to 32767
+  value: number;
 }
 
 export interface TouchEvent extends InputEvent {
@@ -97,13 +94,12 @@ export enum ControllerButton {
   START = 0x0010,
   BACK = 0x0020,
   SPECIAL = 0x0400,
-  // 扩展按钮 (Sunshine 专用)
   PADDLE1 = 0x010000,
   PADDLE2 = 0x020000,
   PADDLE3 = 0x040000,
   PADDLE4 = 0x080000,
-  TOUCHPAD = 0x100000,  // Sony 控制器的触摸板按钮
-  MISC = 0x200000       // Share/Mic/Capture/Mute 按钮
+  TOUCHPAD = 0x100000,
+  MISC = 0x200000
 }
 
 export enum ControllerAxis {

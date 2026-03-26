@@ -9,15 +9,9 @@
  */
 
 /**
- * 二维码分享服务
  *
- * 将自定义按键配置序列化为紧凑 JSON，通过 QR 码分享。
- * 使用 @kit.ScanKit 生成二维码和扫码导入。
  *
- * v2 格式：动作编码为短字符串（K65 代替 {"type":"keyboard","vk":65}），
- * 复合动作用 | 和 : 分隔。总体积减少 70-90%（特别是轮盘/数字摇杆等嵌套类型）。
  *
- * 向后兼容 v1 格式（动作直接存储为 JSON 对象）。
  */
 
 import { scanCore, scanBarcode } from '@kit.ScanKit';
@@ -52,10 +46,9 @@ export interface QrCodeResult {
 }
 
 // =============================================================================
-// 紧凑格式类型定义
 // =============================================================================
 
-/** v2 紧凑按键定义 — 动作编码为字符串 */
+/**
 interface CompactKeyV2 {
   l: string;       // label
   a: string;       // action (v2 encoded string)
@@ -65,7 +58,6 @@ interface CompactKeyV2 {
   y: number;       // yPercent
   w: number;       // width
   h: number;       // height
-  // ── 可选：仅在非默认值时序列化 ──
   o?: number;      // opacity (default=80)
   r?: number;      // borderRadius (default=12)
   bg?: string;     // bgColor
@@ -77,20 +69,18 @@ interface CompactKeyV2 {
   hp?: string;     // haptic (default='light')
 }
 
-/** 紧凑导出包 */
+/**
 interface CompactExportV2 {
   v: number;       // version (2)
   n: string;       // profile name
   k: CompactKeyV2[]; // keys
 }
 
-/** QR 码最大推荐字符数（留余量） */
+/**
 const QR_MAX_CHARS = 4000;
 
 // =============================================================================
-// v2 动作编码 / 解码
 // =============================================================================
-// 编码规则：
 //   K{vk}                           keyboard
 //   M{button}                       mouse
 //   S{direction}                    mouseScroll
@@ -105,7 +95,7 @@ const QR_MAX_CHARS = 4000;
 //   C|{act}|{act}|...               combo
 //   H,{k1},{k2}[/{sk1},{sk2}/...]   shortcut
 
-/** 将 KeyAction 编码为紧凑字符串 */
+/**
 function encodeAction(a: KeyAction): string {
   switch (a.type) {
     case 'keyboard':
@@ -173,7 +163,7 @@ function encodeAction(a: KeyAction): string {
   }
 }
 
-/** 解码简单动作字符串（不含 |） */
+/**
 function decodeSimpleAction(s: string): KeyAction {
   if (s.startsWith('K')) {
     const vk = parseInt(s.substring(1));
@@ -251,13 +241,11 @@ function decodeSimpleAction(s: string): KeyAction {
       }
     }
   }
-  // fallback: 返回无操作
   return { type: 'special', id: 'none' } as SpecialAction;
 }
 
-/** 将编码字符串解码为 KeyAction */
+/**
 function decodeAction(s: string): KeyAction {
-  // 复合类型以 W|, X|, C| 开头
   if (s.startsWith('W|')) {
     const body = s.substring(2);
     const segParts = body.split('|');
@@ -293,15 +281,13 @@ function decodeAction(s: string): KeyAction {
     const actions: KeyAction[] = parts.map((p: string) => decodeSimpleAction(p));
     return { type: 'combo', actions: actions } as ComboAction;
   }
-  // 简单类型
   return decodeSimpleAction(s);
 }
 
 // =============================================================================
-// 紧凑序列化 / 反序列化
 // =============================================================================
 
-/** 将 CustomKeyDef 转为 v2 紧凑格式 */
+/**
 function toCompact(key: CustomKeyDef): CompactKeyV2 {
   const ck: CompactKeyV2 = {
     l: key.label,
@@ -325,7 +311,7 @@ function toCompact(key: CustomKeyDef): CompactKeyV2 {
   return ck;
 }
 
-/** 将 v2 紧凑格式还原为 CustomKeyDef */
+/**
 function fromCompactV2(ck: CompactKeyV2): CustomKeyDef {
   return {
     id: generateKeyId(),
@@ -350,7 +336,7 @@ function fromCompactV2(ck: CompactKeyV2): CustomKeyDef {
   };
 }
 
-/** v1 兼容：直接从含 KeyAction 对象的紧凑格式还原 */
+/**
 function fromCompactV1(raw: Record<string, Object>): CustomKeyDef {
   return {
     id: generateKeyId(),
@@ -376,14 +362,10 @@ function fromCompactV1(raw: Record<string, Object>): CustomKeyDef {
 }
 
 // =============================================================================
-// 公共 API
 // =============================================================================
 
 export class QrShareService {
 
-  /**
-   * 将配置序列化为 v2 紧凑 JSON 字符串
-   */
   static serialize(profileName: string, keys: CustomKeyDef[]): string {
     const data: CompactExportV2 = {
       v: 2,
@@ -393,10 +375,6 @@ export class QrShareService {
     return JSON.stringify(data);
   }
 
-  /**
-   * 从紧凑 JSON 反序列化为按键列表（兼容 v1 和 v2）
-   * @returns [profileName, keys] 或 null（解析失败）
-   */
   static deserialize(json: string): [string, CustomKeyDef[]] | null {
     try {
       const raw = JSON.parse(json) as Record<string, Object>;
@@ -408,13 +386,11 @@ export class QrShareService {
       const profileName = (raw['n'] as string) ?? '导入配置';
 
       if (version >= 2) {
-        // v2: 动作编码为字符串
         const keys: CustomKeyDef[] = keyArr.map((item: Object) =>
           fromCompactV2(item as CompactKeyV2)
         );
         return [profileName, keys];
       }
-      // v1: 动作为原始 JSON 对象
       const keys: CustomKeyDef[] = keyArr.map((item: Object) =>
         fromCompactV1(item as Record<string, Object>)
       );
@@ -424,16 +400,11 @@ export class QrShareService {
     }
   }
 
-  /** 检查数据是否能放入 QR 码 */
+  /**
   static canFitInQr(json: string): boolean {
     return json.length <= QR_MAX_CHARS;
   }
 
-  /**
-   * 生成 QR 码 PixelMap（纯 ArkTS 实现，无 512 字节限制）
-   * @param content 要编码的字符串
-   * @param size 图片尺寸 (px)
-   */
   static async generateQrCode(content: string, size: number = 600): Promise<QrCodeResult> {
     try {
       const pixelMap = await generateQrPixelMap(content, size);
@@ -447,10 +418,6 @@ export class QrShareService {
     }
   }
 
-  /**
-   * 启动系统相机扫码
-   * @returns 扫码内容字符串，失败返回 null
-   */
   static async scanQrCode(): Promise<string | null> {
     try {
       const options: scanBarcode.ScanOptions = {

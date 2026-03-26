@@ -12,20 +12,16 @@ import { ObservableApp } from '../viewmodel/AppViewModel';
 import { AppColors, AppSizes } from '../common/Theme';
 import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
 
-// 应用卡片尺寸常量
 const CARD_WIDTH = 160;
 const CARD_ICON_HEIGHT = 120;
 const CARD_TITLE_HEIGHT = 40;
 
-/**
- * 应用卡片组件 - 简洁现代风格
- */
 @Component
 export struct AppCard {
   @ObjectLink app: ObservableApp;
   onTap: () => void = () => {};
   onLongPress: () => void = () => {};
-  onSelect: () => void = () => {}; // 选中回调（用于更新背景图）
+  onSelect: () => void = () => {};
 
   @State private isPressed: boolean = false;
   @State private isFocused: boolean = false;
@@ -33,7 +29,6 @@ export struct AppCard {
 
   build() {
     Column() {
-      // 图标区域
       Stack({ alignContent: Alignment.TopStart }) {
         if (this.app.localIconPath && !this.imageLoadFailed) {
           Image('file://' + this.app.localIconPath)
@@ -70,14 +65,13 @@ export struct AppCard {
           .borderRadius({ topLeft: AppSizes.RadiusMedium, topRight: AppSizes.RadiusMedium })
         }
 
-        // 运行中指示器
         if (this.app.isRunning) {
           Row() {
             Circle()
               .width(6)
               .height(6)
               .fill(AppColors.Online)
-            Text('运行中')
+            Text('Running')
               .fontSize(10)
               .fontWeight(FontWeight.Medium)
               .fontColor(AppColors.Online)
@@ -92,7 +86,6 @@ export struct AppCard {
       .width('100%')
       .height(CARD_ICON_HEIGHT)
 
-      // 应用名称
       Text(this.app.name)
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
@@ -117,7 +110,6 @@ export struct AppCard {
       offsetY: this.isFocused ? 8 : 4
     })
     .clip(true)
-    // 缩放：按下时缩小，焦点时放大，其他正常
     .scale({
       x: this.isPressed ? 0.96 : (this.isFocused ? 1.05 : 1),
       y: this.isPressed ? 0.96 : (this.isFocused ? 1.05 : 1)
@@ -138,12 +130,10 @@ export struct AppCard {
     })
     .onKeyEvent((event: KeyEvent) => {
       if (event.type === KeyType.Down) {
-        // 确认键
         if (event.keyCode === 2054 || event.keyCode === 2050) {
           this.onTap();
           return true;
         }
-        // 菜单键
         if (event.keyCode === 2051) {
           this.onLongPress();
           return true;

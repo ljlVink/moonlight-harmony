@@ -8,15 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 独立按键组件
- *
- * 参照 VirtualController / AnalogStick 的经验设计：
- *   - 独立 @Component 保证触摸处理器稳定
- *   - 每个按钮使用 HitTestMode.Block + event.stopPropagation()
- *   - 编辑模式拖拽通过内部 @State 实现，不触发父级重渲染
- */
-
 import {
   CustomKeyDef,
   KeyAction,
@@ -33,32 +24,22 @@ import {
 
 @Component
 export struct CustomKeyBtn {
-  // ── 配置属性 ──
   keyDef: CustomKeyDef = createDefaultKeyDef();
   @Prop editMode: boolean = false;
   @Prop isSelected: boolean = false;
 
-  // ── 回调 ──
   onAction: (action: KeyAction, isDown: boolean) => void = () => {};
-  /** 拖拽完成回调，参数为 vp 偏移量 (deltaX, deltaY) */
   onDragFinish: (keyId: string, deltaX: number, deltaY: number) => void = () => {};
   onSelect: (keyId: string) => void = () => {};
   onLongPress: (keyId: string) => void = () => {};
 
-  /**
-   * 吸附计算回调：传入按键 ID 和原始 vp 偏移，返回吸附后的 vp 偏移
-   * 返回 null 表示不吸附
-   */
   snapCalculator: (keyId: string, rawDx: number, rawDy: number) => SnapResult | null = () => null;
 
-  // ── 内部状态（独立 @State —— 触摸时变化只触发自身重渲染） ──
   @State private isPressed: boolean = false;
   @State private isToggled: boolean = false;
-  /** 拖拽偏移（视觉 translate） */
   @State private dragOffsetX: number = 0;
   @State private dragOffsetY: number = 0;
 
-  // 拖拽追踪（非 @State）
   private dragging: boolean = false;
   private dragStartX: number = 0;
   private dragStartY: number = 0;
@@ -105,8 +86,6 @@ export struct CustomKeyBtn {
       })
   }
 
-  // ── 普通模式触摸处理 ──
-
   private handlePlayTouch(event: TouchEvent): void {
     if (this.keyDef.behavior === 'toggle') {
       if (event.type === TouchType.Down) {
@@ -116,7 +95,6 @@ export struct CustomKeyBtn {
       }
       return;
     }
-    // 点触模式
     if (event.type === TouchType.Down) {
       this.isPressed = true;
       this.onAction(this.keyDef.action, true);
@@ -126,8 +104,6 @@ export struct CustomKeyBtn {
       this.onAction(this.keyDef.action, false);
     }
   }
-
-  // ── 编辑模式触摸处理（拖拽 + 长按 + 选中） ──
 
   private handleEditTouch(event: TouchEvent): void {
     const touch = event.touches[0];
@@ -175,7 +151,6 @@ export struct CustomKeyBtn {
       case TouchType.Cancel:
         this.cancelLongPress();
         if (this.dragging) {
-          // 传递 vp 偏移量（不是新坐标），由父层转换为百分比
           this.onDragFinish(this.keyDef.id,
             this.dragOffsetX,
             this.dragOffsetY);

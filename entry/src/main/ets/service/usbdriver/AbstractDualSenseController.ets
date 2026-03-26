@@ -9,10 +9,10 @@
  */
 
 /**
- * 抽象 DualSense 风格控制器基类
- * 
- * 参考 Android moonlight-android AbstractDualSenseController
- * 用于 DualShock 4 和 DualSense 控制器
+ * Abstract DualSense-style controller base class
+ *
+ * Reference: Android moonlight-android AbstractDualSenseController
+ * Used for DualShock 4 and DualSense controllers
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -34,11 +34,11 @@ export abstract class AbstractDualSenseController extends AbstractController {
   
   private stopped: boolean = false;
   
-  // DDK 高速轮询器 (绕过 usbManager IPC)
+  // DDK high-speed poller (bypasses usbManager IPC)
   private ddkPoller: DdkUsbPoller | null = null;
   private useDdkPolling: boolean = false;
   
-  // IMU 数据
+  // IMU data
   protected gyroX: number = 0;
   protected gyroY: number = 0;
   protected gyroZ: number = 0;
@@ -63,8 +63,8 @@ export abstract class AbstractDualSenseController extends AbstractController {
       ControllerCapabilities.GYRO |
       ControllerCapabilities.ACCEL;
     
-    // 支持的按钮
-    this.supportedButtonFlags = 
+    // Supported buttons
+    this.supportedButtonFlags =
       ButtonFlags.A_FLAG | ButtonFlags.B_FLAG | ButtonFlags.X_FLAG | ButtonFlags.Y_FLAG |
       ButtonFlags.UP_FLAG | ButtonFlags.DOWN_FLAG | ButtonFlags.LEFT_FLAG | ButtonFlags.RIGHT_FLAG |
       ButtonFlags.LB_FLAG | ButtonFlags.RB_FLAG |
@@ -73,85 +73,78 @@ export abstract class AbstractDualSenseController extends AbstractController {
       ButtonFlags.TOUCHPAD_FLAG;
   }
   
-  /**
-   * 查找并设置端点
-   */
   private findEndpoints(): boolean {
     if (!this.device.configs || this.device.configs.length === 0) {
-      console.error(`${TAG} 设备没有配置`);
+      console.error(`${TAG} Device has no configuration`);
       return false;
     }
     
     const config = this.device.configs[0];
     if (!config.interfaces || config.interfaces.length === 0) {
-      console.error(`${TAG} 配置没有接口`);
+      console.error(`${TAG} Configuration has no interface`);
       return false;
     }
     
-    // 打印所有接口信息
-    console.info(`${TAG} 设备共有 ${config.interfaces.length} 个接口`);
+    console.info(`${TAG} Device has ${config.interfaces.length} interfaces`);
     for (let i = 0; i < config.interfaces.length; i++) {
       const iface = config.interfaces[i];
-      console.info(`${TAG} 接口 ${i}: id=${iface.id}, clazz=${iface.clazz}, subclass=${iface.subClass}, protocol=${iface.protocol}, endpoints=${iface.endpoints?.length || 0}`);
+      console.info(`${TAG} Interface ${i}: id=${iface.id}, clazz=${iface.clazz}, subclass=${iface.subClass}, protocol=${iface.protocol}, endpoints=${iface.endpoints?.length || 0}`);
     }
     
-    // 查找 HID 接口 (class = 3)
-    // DualSense 通常第一个接口就是 HID
+    // Find HID interface (class = 3)
+    // DualSense usually has HID as the first interface
     this.usbInterface = null;
     for (let i = 0; i < config.interfaces.length; i++) {
       const iface = config.interfaces[i];
       // HID class = 3
       if (iface.clazz === 3) {
         this.usbInterface = iface;
-        console.info(`${TAG} 找到 HID 接口: index=${i}`);
+        console.info(`${TAG} Found HID interface: index=${i}`);
         break;
       }
     }
     
-    // 如果没找到 HID 接口，使用第一个接口
+    // If no HID interface found, use the first interface
     if (!this.usbInterface) {
-      console.warn(`${TAG} 未找到 HID 接口，使用第一个接口`);
+      console.warn(`${TAG} HID interface not found, using first interface`);
       this.usbInterface = config.interfaces[0];
     }
     
     if (!this.usbInterface.endpoints || this.usbInterface.endpoints.length === 0) {
-      console.error(`${TAG} 接口没有端点`);
+      console.error(`${TAG} Interface has no endpoints`);
       return false;
     }
     
-    // 查找输入和输出端点
+    // Find input and output endpoints
     for (const endpoint of this.usbInterface.endpoints) {
       const direction = endpoint.direction;
       
       if (direction === usbManager.USBRequestDirection.USB_REQUEST_DIR_FROM_DEVICE) {
         if (this.inEndpoint !== null) {
-          console.warn(`${TAG} 发现重复的输入端点`);
+          console.warn(`${TAG} Duplicate input endpoint found`);
           return false;
         }
         this.inEndpoint = endpoint;
-        console.info(`${TAG} 找到输入端点: address=0x${endpoint.address.toString(16)}`);
+        console.info(`${TAG} Found input endpoint: address=0x${endpoint.address.toString(16)}`);
       } else if (direction === usbManager.USBRequestDirection.USB_REQUEST_DIR_TO_DEVICE) {
         if (this.outEndpoint !== null) {
-          console.warn(`${TAG} 发现重复的输出端点`);
+          console.warn(`${TAG} Duplicate output endpoint found`);
           return false;
         }
         this.outEndpoint = endpoint;
-        console.info(`${TAG} 找到输出端点: address=0x${endpoint.address.toString(16)}`);
+        console.info(`${TAG} Found output endpoint: address=0x${endpoint.address.toString(16)}`);
       }
     }
     
-    // DualShock/DualSense 可能没有输出端点
+    // DualShock/DualSense may not have output endpoint
     if (this.inEndpoint === null) {
-      console.warn(`${TAG} 缺少输入端点`);
+      console.warn(`${TAG} Missing input endpoint`);
       return false;
     }
     
     return true;
   }
   
-  /**
-   * 声明接口
-   */
   private claimInterface(): boolean {
     if (!this.pipe || !this.usbInterface) {
       return false;
@@ -160,29 +153,26 @@ export abstract class AbstractDualSenseController extends AbstractController {
     try {
       const result = usbManager.claimInterface(this.pipe, this.usbInterface, true);
       if (result !== 0) {
-        console.error(`${TAG} 声明接口失败: ${result}`);
+        console.error(`${TAG} Failed to claim interface: ${result}`);
         return false;
       }
-      console.info(`${TAG} 成功声明接口`);
+      console.info(`${TAG} Successfully claimed interface`);
       return true;
     } catch (err) {
-      console.error(`${TAG} 声明接口异常:`, err);
+      console.error(`${TAG} Exception claiming interface:`, err);
       return false;
     }
   }
   
-  /**
-   * 批量传输读取
-   */
   protected async bulkRead(timeout: number = 3000): Promise<Uint8Array | null> {
     if (!this.pipe || !this.inEndpoint) {
-      throw new Error('USB 管道或端点未初始化');
+      throw new Error('USB pipe or endpoint not initialized');
     }
     
     const buffer = new Uint8Array(64);
     const result = await usbManager.bulkTransfer(this.pipe, this.inEndpoint, buffer, timeout);
     
-    // 负数表示错误
+    // Negative value indicates error
     if (result < 0) {
       throw createUsbError(result);
     }
@@ -193,20 +183,17 @@ export abstract class AbstractDualSenseController extends AbstractController {
     return null;
   }
   
-  /**
-   * 批量传输写入
-   */
   protected async bulkWrite(data: Uint8Array, timeout: number = 3000): Promise<number> {
-    // DDK 路径: 通过 DDK 同步发送
+    // DDK path: send via DDK synchronously
     if (this.useDdkPolling && this.ddkPoller) {
       const ret = this.ddkPoller.sendOutput(data);
       if (ret < 0) {
-        console.error(`${TAG} DDK sendOutput 失败: ret=${ret}, dataLen=${data.length}`);
+        console.error(`${TAG} DDK sendOutput failed: ret=${ret}, dataLen=${data.length}`);
       }
       return ret;
     }
 
-    // usbManager 路径
+    // usbManager path
     if (!this.pipe || !this.outEndpoint) {
       return -1;
     }
@@ -215,41 +202,35 @@ export abstract class AbstractDualSenseController extends AbstractController {
       const result = await usbManager.bulkTransfer(this.pipe, this.outEndpoint, data, timeout);
       return typeof result === 'number' ? result : data.length;
     } catch (err) {
-      console.error(`${TAG} 批量写入失败:`, err);
+      console.error(`${TAG} Bulk write failed:`, err);
       return -1;
     }
   }
   
-  /**
-   * 发送命令
-   */
   protected async sendCommand(data: Uint8Array): Promise<boolean> {
     const result = await this.bulkWrite(data);
     return result === data.length;
   }
   
-  /**
-   * 输入读取线程 (ArkTS 后备方案)
-   */
   private async inputLoop(): Promise<void> {
-    console.info(`${TAG} 输入循环启动 - 等待数据...`);
+    console.info(`${TAG} Input loop started - waiting for data...`);
     
-    // 初始化完成，标记就绪并通知
+    // Initialization complete, mark ready and notify
     this.notifyDeviceAdded();
-    console.info(`${TAG} 设备已添加通知发送完成`);
+    console.info(`${TAG} Device added notification sent`);
     
     let readCount = 0;
     let successCount = 0;
     let detectedHardwareError = false;
     
-    // 错误历史记录（用于模式分析）
+    // Error history (for pattern analysis)
     const errorHistory: number[] = [];
     const MAX_ERROR_HISTORY = 5;
     
     while (!this.stopped) {
       try {
-        // 使用较长的超时（与 Android 一致）
-        // 有数据时会立即返回，不会影响实际轮询率
+        // Use longer timeout (consistent with Android)
+        // Returns immediately when data is available
         const buffer = await this.bulkRead(1000);
         
         if (this.stopped) {
@@ -258,20 +239,20 @@ export abstract class AbstractDualSenseController extends AbstractController {
         
         readCount++;
         
-        // 成功读取时清空错误历史
+        // Clear error history on successful read
         if (buffer && buffer.length > 0) {
-          errorHistory.length = 0;  // 清空错误历史
+          errorHistory.length = 0;
           
           if (this.handleRead(buffer)) {
             successCount++;
             this.reportInput();
             
-            // 每 100 次成功读取打印一次状态
+            // Print status every 100 successful reads
             if (successCount % 100 === 1) {
-              console.info(`${TAG} 输入状态: buttons=0x${this.buttonFlags.toString(16)}, LX=${this.leftStickX.toFixed(2)}, LY=${this.leftStickY.toFixed(2)}`);
+              console.info(`${TAG} Input state: buttons=0x${this.buttonFlags.toString(16)}, LX=${this.leftStickX.toFixed(2)}, LY=${this.leftStickY.toFixed(2)}`);
             }
             
-            // 报告 IMU 数据
+            // Report IMU data
             if (this.capabilities & ControllerCapabilities.GYRO) {
               this.notifyControllerMotion(MotionType.GYRO, this.gyroX, this.gyroY, this.gyroZ);
             }
@@ -279,69 +260,69 @@ export abstract class AbstractDualSenseController extends AbstractController {
               this.notifyControllerMotion(MotionType.ACCEL, this.accelX, this.accelY, this.accelZ);
             }
             
-            // 报告触摸板数据
+            // Report touchpad data
             if (this.capabilities & ControllerCapabilities.TOUCHPAD) {
               this.notifyTouchpadInput(this.touchpadActive, this.touchpadX, this.touchpadY);
             }
           }
         } else if (readCount % 100 === 0) {
-          console.warn(`${TAG} 读取空数据，已尝试 ${readCount} 次`);
+          console.warn(`${TAG} Read empty data, attempts: ${readCount}`);
         }
       } catch (err) {
         if (!this.stopped) {
-          // 检查错误类型
+          // Check error type
           const usbErr = err instanceof UsbError ? err : null;
           const errorCode = usbErr ? usbErr.code : 0;
-          const retryable = usbErr ? usbErr.retryable : true;  // 默认可重试
+          const retryable = usbErr ? usbErr.retryable : true;
           
-          // 超时错误 - 继续轮询
+          // Timeout error - continue polling
           if (errorCode === -8) {  // USB_ERROR_TIMEOUT
             continue;
           } else if (errorCode === -4) {  // USB_ERROR_NO_DEVICE
-            // 如果设置了忽略断开信号，继续轮询
+            // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} 设备不可达但忽略断开信号已启用，继续轮询: ${err}`);
+              console.warn(`${TAG} Device unreachable but ignore disconnect enabled, continuing: ${err}`);
               continue;
             }
-            console.warn(`${TAG} 设备不可达: ${err}`);
+            console.warn(`${TAG} Device unreachable: ${err}`);
             break;
           }
           
-          // 记录错误历史
+          // Record error history
           errorHistory.unshift(errorCode);
           if (errorHistory.length > MAX_ERROR_HISTORY) {
             errorHistory.pop();
           }
           
-          // 使用错误模式分析（非超时错误）
+          // Use error pattern analysis (non-timeout errors)
           const analysis = analyzeErrorPattern(errorHistory);
-          console.info(`${TAG} 错误分析: 省电=${analysis.likelySleepMode}, 断开=${analysis.likelyDisconnected}, 置信度=${(analysis.confidence * 100).toFixed(0)}%`);
+          console.info(`${TAG} Error analysis: sleep=${analysis.likelySleepMode}, disconnected=${analysis.likelyDisconnected}, confidence=${(analysis.confidence * 100).toFixed(0)}%`);
           
           if (analysis.likelyDisconnected && analysis.confidence >= 0.80) {
-            // 如果设置了忽略断开信号，继续轮询
+            // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} 检测到设备断开但忽略断开信号已启用，继续轮询: ${err}`);
+              console.warn(`${TAG} Device disconnect detected but ignore disconnect enabled, continuing: ${err}`);
               continue;
             }
-            console.error(`${TAG} 检测到设备断开 (置信度: ${(analysis.confidence * 100).toFixed(0)}%): ${err}`);
+            console.error(`${TAG} Device disconnect detected (confidence: ${(analysis.confidence * 100).toFixed(0)}%): ${err}`);
             detectedHardwareError = true;
             break;
           } else if (isHardwareError(errorCode)) {
-            // 如果设置了忽略断开信号，继续轮询
+            // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} 检测到硬件错误但忽略断开信号已启用，继续轮询: ${err}`);
+              console.warn(`${TAG} Hardware error detected but ignore disconnect enabled, continuing: ${err}`);
               continue;
             }
-            console.error(`${TAG} 检测到硬件错误: ${err}`);
+            console.error(`${TAG} Hardware error detected: ${err}`);
             detectedHardwareError = true;
             break;
           } else {
-            console.error(`${TAG} 输入读取错误: ${err}`);
-            // 其他错误 - 如果标记为可重试则继续，否则停止
+            console.error(`${TAG} Input read error: ${err}`);
+            // Other errors - continue if retryable, otherwise stop
             if (!retryable) {
-              // 如果设置了忽略断开信号，也继续轮询
+              // If ignore disconnect is set, continue polling
               if (this.ignoreDisconnect) {
-                console.warn(`${TAG} 不可重试错误但忽略断开信号已启用，继续轮询: ${err}`);
+                console.warn(`${TAG} Non-retryable error but ignore disconnect enabled, continuing: ${err}`);
                 continue;
               }
               break;
@@ -351,88 +332,82 @@ export abstract class AbstractDualSenseController extends AbstractController {
       }
     }
     
-    console.info(`${TAG} 输入循环结束`);
+    console.info(`${TAG} Input loop ended`);
     
-    // 根据错误类型决定是否通知设备移除
+    // Decide whether to notify device removal based on error type
     if (!this.stopped) {
       if (detectedHardwareError) {
-        console.error(`${TAG} 由于硬件错误，自动停止控制器`);
+        console.error(`${TAG} Stopping controller due to hardware error`);
         this.stop();
       } else {
-        // 设备断开或其他错误
-        console.warn(`${TAG} 由于设备断开/IO错误，自动停止控制器`);
+        // Device disconnected or other error
+        console.warn(`${TAG} Stopping controller due to device disconnect/IO error`);
         this.stop();
       }
     }
   }
   
-  /**
-   * 启动控制器
-   */
   start(): boolean {
-    console.info(`${TAG} 启动控制器: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`);
+    console.info(`${TAG} Starting controller: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`);
     this.markInitializing();
     
-    // 查找端点
+    // Find endpoints
     if (!this.findEndpoints()) {
-      console.error(`${TAG} 查找端点失败`);
+      console.error(`${TAG} Failed to find endpoints`);
       return false;
     }
     
-    // ====== 优先尝试 DDK 路径 ======
-    console.info(`${TAG} DDK 条件: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`);
+    // ====== Try DDK path first ======
+    console.info(`${TAG} DDK conditions: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`);
     if (this.ddkPollingEnabled && DdkUsbPoller.isAvailable() && this.inEndpoint) {
       const ddkStarted = this.tryDdkPath();
       if (ddkStarted) {
         return true;
       }
-      console.warn(`${TAG} DDK 路径失败，回退到 usbManager 路径`);
+      console.warn(`${TAG} DDK path failed, falling back to usbManager path`);
     }
 
-    // ====== 回退: usbManager 路径 ======
-
-    // 声明接口
+    // ====== Fallback: usbManager path ======
+    
+    // Claim interface
     if (!this.claimInterface()) {
-      console.error(`${TAG} 声明接口失败`);
+      console.error(`${TAG} Failed to claim interface`);
       return false;
     }
     
-    // 执行初始化
+    // Perform initialization
     if (!this.doInit()) {
-      console.error(`${TAG} 初始化失败`);
+      console.error(`${TAG} Initialization failed`);
       return false;
     }
 
-    // 启动输入循环
+    // Start input loop
     this.stopped = false;
-
-    // ArkTS async 轮询
+    
+    // ArkTS async polling
     this.inputLoop();
     
     return true;
   }
 
-  /**
-   * 尝试通过 USB DDK 路径启动控制器
-   */
   private tryDdkPath(): boolean {
-    console.info(`${TAG} 尝试 DDK 路径...`);
+    console.info(`${TAG} Trying DDK path...`);
 
     const initResult = DdkUsbPoller.init();
     if (initResult.code !== 0) {
-      console.warn(`${TAG} DDK init 失败: ${initResult.error}`);
+      console.warn(`${TAG} DDK init failed: ${initResult.error}`);
       return false;
     }
 
     let ddkDeviceId: number | undefined;
 
-    // 方式 A: GetDevices + 匹配 VID/PID
+    // Method A: GetDevices + match VID/PID
     const findResult = DdkUsbPoller.findDevice(this.vendorId, this.productId);
     if (findResult.found && findResult.deviceId !== undefined) {
       ddkDeviceId = findResult.deviceId;
     } else {
-      // 方式 B: 从 busNum/devAddress 构造 deviceId
-      console.info(`${TAG} GetDevices 未找到设备，尝试 makeDeviceId...`);
+      // Method B: Construct deviceId from busNum/devAddress
+      console.info(`${TAG} Device not found via GetDevices, trying makeDeviceId...`);
       const makeResult = DdkUsbPoller.makeDeviceId(this.device.busNum, this.device.devAddress);
       if (makeResult.found && makeResult.deviceId !== undefined) {
         ddkDeviceId = makeResult.deviceId;
@@ -440,28 +415,28 @@ export abstract class AbstractDualSenseController extends AbstractController {
     }
 
     if (ddkDeviceId === undefined) {
-      console.warn(`${TAG} DDK 无法获取 deviceId`);
-      return false;  // pipe 未关闭，无需恢复
+      console.warn(`${TAG} DDK failed to get deviceId`);
+      return false;
     }
     const ifaceIndex = this.usbInterface?.id ?? 0;
     const inEp = this.inEndpoint!.address;
     const outEp = this.outEndpoint?.address ?? 0;
     const maxPkt = this.inEndpoint!.maxPacketSize || 64;
 
-    console.info(`${TAG} DDK 设备已匹配: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`);
+    console.info(`${TAG} DDK device matched: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`);
 
-    // Step 3: 关闭 usbManager 管道 (DDK 无法在 usbManager 已连接的设备上 ClaimInterface)
+    // Step 3: Close usbManager pipe (DDK cannot ClaimInterface on a device already connected via usbManager)
     if (this.pipe) {
-      console.info(`${TAG} 关闭 usbManager 管道以释放设备给 DDK...`);
+      console.info(`${TAG} Closing usbManager pipe to release device for DDK...`);
       try {
         usbManager.closePipe(this.pipe);
       } catch (err) {
-        console.warn(`${TAG} closePipe 异常: ${err}`);
+        console.warn(`${TAG} closePipe exception: ${err}`);
       }
       this.pipe = null;
     }
 
-    // Step 4: 创建 DDK poller 并启动
+    // Step 4: Create DDK poller and start
     this.ddkPoller = new DdkUsbPoller();
     const started = this.ddkPoller.start(
       ddkDeviceId, ifaceIndex, inEp, outEp, maxPkt,
@@ -469,7 +444,7 @@ export abstract class AbstractDualSenseController extends AbstractController {
         if (this.stopped) return;
         if (this.handleRead(data.slice(0, length))) {
           this.reportInput();
-          // DDK 路径也报告触摸板数据
+          // DDK path also reports touchpad data
           if (this.capabilities & ControllerCapabilities.TOUCHPAD) {
             this.notifyTouchpadInput(this.touchpadActive, this.touchpadX, this.touchpadY);
           }
@@ -477,26 +452,26 @@ export abstract class AbstractDualSenseController extends AbstractController {
       },
       (errorCode: number) => {
         if (this.stopped) return;
-        console.warn(`${TAG} DDK 轮询错误: ${errorCode}`);
+        console.warn(`${TAG} DDK polling error: ${errorCode}`);
 
         const nativeStillRunning = this.ddkPoller?.isNativeRunning() ?? false;
 
         if (this.ignoreDisconnect) {
           if (!nativeStillRunning) {
-            console.error(`${TAG} DDK 原生线程已退出! 错误码=${errorCode}, 手柄输入将中断直到重新连接`);
+            console.error(`${TAG} DDK native thread exited! errorCode=${errorCode}, controller input will be interrupted until reconnection`);
           }
           return;
         }
-        console.error(`${TAG} DDK 轮询致命错误: ${errorCode}, 停止控制器`);
+        console.error(`${TAG} DDK polling fatal error: ${errorCode}, stopping controller`);
         this.stop();
       },
       100
     );
 
     if (!started) {
-      console.warn(`${TAG} DDK startPoller 失败`);
+      console.warn(`${TAG} DDK startPoller failed`);
       this.ddkPoller = null;
-      // 恢复 usbManager 管道 (DDK 失败后需要回退到 usbManager)
+      // Restore usbManager pipe (need to fallback to usbManager after DDK failure)
       this.reconnectPipe();
       return false;
     }
@@ -505,100 +480,77 @@ export abstract class AbstractDualSenseController extends AbstractController {
     this.useDdkPolling = true;
     this.ddkActive = true;
 
-    // 同步忽略断开信号设置到原生层
+    // Sync ignore disconnect setting to native layer
     if (this.ignoreDisconnect) {
       this.ddkPoller.setIgnoreDisconnect(true);
     }
 
     if (!this.doInit()) {
-      console.warn(`${TAG} DDK 路径下 doInit 失败`);
+      console.warn(`${TAG} doInit failed under DDK path`);
     }
 
-    // DDK 已启动，标记就绪并通知
+    // DDK started, mark ready and notify
     this.notifyDeviceAdded();
-    console.info(`${TAG} 控制器已启动 (DDK 高速轮询)`);
+    console.info(`${TAG} Controller started (DDK high-speed polling)`);
     return true;
   }
   
-  /**
-   * 停止控制器
-   */
   stop(): void {
     if (this.stopped) {
       return;
     }
     
-    console.info(`${TAG} 停止控制器`);
+    console.info(`${TAG} Stopping controller`);
     this.stopped = true;
     this.markStopped();
 
-    // 先发送振动停止命令（必须在 DDK 释放前，否则无法发送）
-    this.rumble(0, 0);
+    // Send rumble stop command first (must be done before DDK release, otherwise cannot send)
 
-    // 保存 DDK 状态，再停止 DDK 轮询器
-    const wasDdkPolling = this.useDdkPolling;
+    // Save DDK state, then stop DDK poller
     if (this.ddkPoller) {
       this.ddkPoller.stop();
       this.ddkPoller = null;
       this.useDdkPolling = false;
     }
     
-    // 释放接口 (仅 usbManager 路径，DDK 路径由 stopPoller 内部释放)
-    if (!wasDdkPolling && this.pipe && this.usbInterface) {
+    // Release interface (usbManager path only, DDK path is released internally by stopPoller)
       try {
         usbManager.releaseInterface(this.pipe, this.usbInterface);
       } catch (err) {
-        console.error(`${TAG} 释放接口失败:`, err);
+        console.error(`${TAG} Failed to release interface:`, err);
       }
     }
     
-    // 关闭管道
-    if (this.pipe) {
+    // Close pipe
       try {
         usbManager.closePipe(this.pipe);
       } catch (err) {
-        console.error(`${TAG} 关闭管道失败:`, err);
+        console.error(`${TAG} Failed to close pipe:`, err);
       }
       this.pipe = null;
     }
     
-    // 通知设备已移除
-    this.notifyDeviceRemoved();
+    // Notify device removed
   }
   
-  /**
-   * 检查控制器是否已连接
-   */
   isConnected(): boolean {
     return !this.stopped && (this.pipe !== null || this.useDdkPolling);
   }
 
-  /**
-   * 恢复 usbManager 管道 (DDK 失败后回退用)
-   */
   private reconnectPipe(): void {
     if (this.pipe) return;
     try {
-      console.info(`${TAG} 恢复 usbManager 管道...`);
+      console.info(`${TAG} Restoring usbManager pipe...`);
       this.pipe = usbManager.connectDevice(this.device);
-      console.info(`${TAG} usbManager 管道已恢复`);
+      console.info(`${TAG} usbManager pipe restored`);
     } catch (err) {
-      console.error(`${TAG} 恢复管道失败: ${err}`);
+      console.error(`${TAG} Failed to restore pipe: ${err}`);
     }
   }
   
-  /**
-   * 获取初始化数据
-   */
   protected abstract getInitData(): Uint8Array;
   
-  /**
-   * 处理读取的数据
-   */
   protected abstract handleRead(buffer: Uint8Array): boolean;
   
-  /**
-   * 执行设备初始化
-   */
   protected abstract doInit(): boolean;
 }

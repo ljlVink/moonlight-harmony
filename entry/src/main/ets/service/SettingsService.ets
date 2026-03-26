@@ -9,10 +9,7 @@
  */
 
 /**
- * 设置服务
  * 
- * 统一管理应用设置的读取和转换
- * 将设置值转换为串流配置
  */
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { display } from '@kit.ArkUI';
@@ -28,11 +25,7 @@ import {
   getRecommendedBitrate
 } from '../model/StreamConfig';
 
-/**
- * 设置键名常量类（与 SettingsPageV2 保持同步）
- */
 export class SettingsKeys {
-  // 视频设置
   static readonly RESOLUTION: string = 'settings_resolution';
   static readonly CUSTOM_RESOLUTIONS: string = 'settings_custom_resolutions';
   static readonly FPS: string = 'settings_fps';
@@ -51,7 +44,6 @@ export class SettingsKeys {
   static readonly SCREEN_OFFSET_X: string = 'settings_screen_offset_x';
   static readonly SCREEN_OFFSET_Y: string = 'settings_screen_offset_y';
 
-  // 音频设置
   static readonly AUDIO_CONFIG: string = 'settings_audio_config';
   static readonly ENABLE_LOCAL_AUDIO: string = 'settings_enable_local_audio';
   static readonly ENABLE_SPATIALIZER: string = 'settings_enable_spatializer';
@@ -59,13 +51,12 @@ export class SettingsKeys {
   static readonly ENABLE_MIC: string = 'settings_enable_mic';
   static readonly MIC_BITRATE: string = 'settings_mic_bitrate';
 
-  // 输入 - 手柄设置
   static readonly ENABLE_VIBRATION: string = 'settings_enable_vibration';
-  static readonly VIBRATION_MODE: string = 'settings_vibration_mode';  // 震动模式：自动/仅手柄/仅设备/同时
+  static readonly VIBRATION_MODE: string = 'settings_vibration_mode';
   static readonly VIBRATE_FALLBACK_STRENGTH: string = 'settings_vibrate_fallback_strength';
-  static readonly ENABLE_AUDIO_VIBRATION: string = 'settings_enable_audio_vibration';  // 音频振动（低频驱动）
-  static readonly AUDIO_VIBRATION_STRENGTH: string = 'settings_audio_vibration_strength';  // 音频振动强度 (0-100)
-  static readonly AUDIO_VIBRATION_SCENE_MODE: string = 'settings_audio_vibration_scene_mode';  // 音频振动场景模式
+  static readonly ENABLE_AUDIO_VIBRATION: string = 'settings_enable_audio_vibration';
+  static readonly AUDIO_VIBRATION_STRENGTH: string = 'settings_audio_vibration_strength';
+  static readonly AUDIO_VIBRATION_SCENE_MODE: string = 'settings_audio_vibration_scene_mode';
   static readonly MULTI_CONTROLLER: string = 'settings_multi_controller';
   static readonly FLIP_FACE_BUTTONS: string = 'settings_flip_face_buttons';
   static readonly DEADZONE: string = 'settings_deadzone';
@@ -73,7 +64,6 @@ export class SettingsKeys {
   static readonly GAMEPAD_MOTION_FALLBACK: string = 'settings_gamepad_motion_fallback';
   static readonly GAMEPAD_TOUCHPAD_MOUSE: string = 'settings_gamepad_touchpad_mouse';
 
-  // 输入 - 体感助手（陀螺仪映射右摇杆）
   static readonly GYRO_ASSIST_ENABLED: string = 'settings_gyro_assist_enabled';
   static readonly GYRO_SENSITIVITY: string = 'settings_gyro_sensitivity';
   static readonly GYRO_INVERT_X: string = 'settings_gyro_invert_x';
@@ -82,14 +72,13 @@ export class SettingsKeys {
   static readonly SHOW_GYRO_CARD: string = 'settings_show_gyro_card';
 
   static readonly ENABLE_START_KEY_MENU: string = 'settings_enable_start_key_menu';
-  static readonly IGNORE_DEVICE_DISCONNECT: string = 'settings_ignore_device_disconnect';  // 忽略手柄断开信号（用于电源管理问题的手柄）
-  static readonly GC_BUTTON_HOME_MAPPING: string = 'settings_gc_button_home_mapping';  // Game Controller Kit 2313按键映射
-  static readonly ENABLE_KEY_INTERCEPTOR: string = 'settings_enable_key_interceptor';  // 按键反劫持（拦截系统劫持的手柄按键）
-  static readonly USB_DRIVER_ENABLED: string = 'settings_usb_driver_enabled';  // 默认启用 USB 手柄驱动
-  static readonly FORCE_USB_DRIVER_ONLY: string = 'settings_force_usb_driver_only';  // 强制纯 USB 驱动模式（禁用 GCK）
-  static readonly DDK_HIGH_SPEED_POLLING: string = 'settings_ddk_high_speed_polling';  // USB 驱动高速轮询（DDK）
+  static readonly IGNORE_DEVICE_DISCONNECT: string = 'settings_ignore_device_disconnect';
+  static readonly GC_BUTTON_HOME_MAPPING: string = 'settings_gc_button_home_mapping';
+  static readonly ENABLE_KEY_INTERCEPTOR: string = 'settings_enable_key_interceptor';
+  static readonly USB_DRIVER_ENABLED: string = 'settings_usb_driver_enabled';
+  static readonly FORCE_USB_DRIVER_ONLY: string = 'settings_force_usb_driver_only';
+  static readonly DDK_HIGH_SPEED_POLLING: string = 'settings_ddk_high_speed_polling';
 
-  // 输入 - 屏幕控制器
   static readonly ENABLE_ONSCREEN_CONTROLS: string = 'settings_enable_onscreen_controls';
   static readonly ENABLE_ONSCREEN_KEYBOARD: string = 'settings_enable_onscreen_keyboard';
   static readonly ONLY_L3_R3: string = 'settings_only_l3_r3';
@@ -98,31 +87,27 @@ export class SettingsKeys {
   static readonly OSC_OPACITY: string = 'settings_osc_opacity';
   static readonly VIBRATE_OSC: string = 'settings_vibrate_osc';
 
-  // 输入 - 鼠标/触控
   static readonly SHOW_LOCAL_CURSOR: string = 'settings_show_local_cursor';
   static readonly TOUCHSCREEN_TRACKPAD: string = 'settings_touchscreen_trackpad';
   static readonly ENABLE_DOUBLE_CLICK_DRAG: string = 'settings_enable_double_click_drag';
   static readonly DOUBLE_TAP_TIME_THRESHOLD: string = 'settings_double_tap_time_threshold';
   static readonly MOUSE_NAV_BUTTONS: string = 'settings_mouse_nav_buttons';
-  static readonly GAME_MOUSE_MODE: string = 'settings_game_mouse_mode';  // 游戏鼠标模式（相对模式）
-  static readonly LAST_TOUCH_MODE: string = 'settings_last_touch_mode';  // 运行时触摸模式（菜单切换后持久化）
+  static readonly GAME_MOUSE_MODE: string = 'settings_game_mouse_mode';
+  static readonly LAST_TOUCH_MODE: string = 'settings_last_touch_mode';
 
-  // 增强触控设置
   static readonly ENABLE_ENHANCED_TOUCH: string = 'settings_enable_enhanced_touch';
   static readonly ENHANCED_TOUCH_ON_RIGHT: string = 'settings_enhanced_touch_on_right';
   static readonly ENHANCED_TOUCH_ZONE_DIVIDER: string = 'settings_enhanced_touch_zone_divider';
   static readonly POINTER_VELOCITY_FACTOR: string = 'settings_pointer_velocity_factor';
   static readonly LONG_PRESS_FLAT_REGION: string = 'settings_long_press_flat_region';
 
-  // 主机设置
   static readonly ENABLE_SOPS: string = 'settings_enable_sops';
   static readonly SCREEN_COMBINATION_MODE: string = 'settings_screen_combination_mode';
   static readonly LOCK_SCREEN_AFTER_DISCONNECT: string = 'settings_lock_screen_after_disconnect';
 
-  // 高级设置
   static readonly DECODER_BUFFER_COUNT: string = 'settings_decoder_buffer_count';
-  static readonly ENABLE_SYNC_DECODE: string = 'settings_enable_sync_decode';  // 同步解码模式
-  static readonly ENABLE_VRR: string = 'settings_enable_vrr';  // VRR 可变刷新率模式
+  static readonly ENABLE_SYNC_DECODE: string = 'settings_enable_sync_decode';
+  static readonly ENABLE_VRR: string = 'settings_enable_vrr';
   static readonly ENABLE_VSYNC: string = 'settings_enable_vsync';
   static readonly ENABLE_PERF_OVERLAY: string = 'settings_enable_perf_overlay';
   static readonly PERF_OVERLAY_ORIENTATION: string = 'settings_perf_overlay_orientation';
@@ -136,34 +121,26 @@ export class SettingsKeys {
   static readonly ENABLE_STUN: string = 'settings_enable_stun';
   static readonly ENABLE_ESC_MENU: string = 'settings_enable_esc_menu';
   static readonly ESC_MENU_KEY: string = 'settings_esc_menu_key';
-  static readonly ENABLE_BACKGROUND_TASK: string = 'settings_enable_background_task';  // 后台保活
+  static readonly ENABLE_BACKGROUND_TASK: string = 'settings_enable_background_task';
 
-  // UI 设置
   static readonly SMALL_ICON_MODE: string = 'settings_small_icon_mode';
   static readonly BACKGROUND_IMAGE_URL: string = 'settings_background_image_url';
   static readonly BACKGROUND_IMAGE_TYPE: string = 'settings_background_image_type';
   static readonly RESUME_STREAM: string = 'settings_resume_stream';
   
-  // 开发者模式
   static readonly DEVELOPER_MODE: string = 'settings_developer_mode';
-  // 开发者模式已激活（一次激活永久有效）
   static readonly DEV_KEY_ACTIVATED: string = 'settings_dev_key_activated';
   
-  // 性能模式
   static readonly PERFORMANCE_MODE: string = 'settings_performance_mode';
 }
 
-/**
- * 输入设置
- */
 export interface InputSettings {
-  // 手柄
   enableVibration: boolean;
-  vibrationMode: string;  // 自动/仅手柄/仅设备/同时
+  vibrationMode: string;
   vibrateFallbackStrength: number;
-  enableAudioVibration: boolean;  // 音频振动（低频驱动）
-  audioVibrationStrength: number;  // 音频振动强度 (0-100)
-  audioVibrationSceneMode: string;  // 音频振动场景模式
+  enableAudioVibration: boolean;
+  audioVibrationStrength: number;
+  audioVibrationSceneMode: string;
   multiController: boolean;
   flipFaceButtons: boolean;
   deadzone: number;
@@ -171,13 +148,12 @@ export interface InputSettings {
   gamepadMotionFallback: boolean;
   gamepadTouchpadMouse: boolean;
   enableStartKeyMenu: boolean;
-  ignoreDeviceDisconnect: boolean;  // 忽略手柄断开信号
-  enableKeyInterceptor: boolean;  // 按键反劫持
-  usbDriverEnabled: boolean;  // 默认启用 USB 手柄驱动
-  forceUsbDriverOnly: boolean;  // 强制纯 USB 驱动模式
-  ddkHighSpeedPolling: boolean;  // USB 驱动高速轮询（DDK）
+  ignoreDeviceDisconnect: boolean;
+  enableKeyInterceptor: boolean;
+  usbDriverEnabled: boolean;
+  forceUsbDriverOnly: boolean;
+  ddkHighSpeedPolling: boolean;
 
-  // 体感助手
   gyroAssistEnabled: boolean;
   gyroSensitivity: number;
   gyroInvertX: boolean;
@@ -185,7 +161,6 @@ export interface InputSettings {
   gyroActivationKey: number;
   showGyroCard: boolean;
 
-  // 屏幕控制器
   enableOnscreenControls: boolean;
   enableOnscreenKeyboard: boolean;
   onlyL3R3: boolean;
@@ -194,15 +169,13 @@ export interface InputSettings {
   oscOpacity: number;
   vibrateOsc: boolean;
 
-  // 鼠标/触控
   showLocalCursor: boolean;
   touchscreenTrackpad: boolean;
   enableDoubleClickDrag: boolean;
   doubleTapTimeThreshold: number;
   mouseNavButtons: boolean;
-  gameMouseMode: boolean;  // 游戏鼠标模式：相对增量+光标回弹，适合 FPS/TPS
+  gameMouseMode: boolean;
 
-  // 增强触控
   enableEnhancedTouch: boolean;
   enhancedTouchOnRight: boolean;
   enhancedTouchZoneDivider: number;
@@ -210,52 +183,40 @@ export interface InputSettings {
   longPressFlatRegion: number;
 }
 
-/**
- * 主机设置
- */
 export interface HostSettings {
   enableSops: boolean;
   screenCombinationMode: string;
   lockScreenAfterDisconnect: boolean;
 }
 
-/**
- * 显示设置
- */
 export interface DisplaySettings {
   stretchVideo: boolean;
   reverseResolution: boolean;
   rotableScreen: boolean;
   enableHdrHighBrightness: boolean;
-  screenPosition: string;            // 画面位置：9 宫格（居中/左上/上/右上/左/右/左下/下/右下）
-  screenOffsetX: number;             // 水平偏移百分比 (-100 ~ 100)
-  screenOffsetY: number;             // 垂直偏移百分比 (-100 ~ 100)
+  screenPosition: string;
+  screenOffsetX: number;
+  screenOffsetY: number;
   enablePerfOverlay: boolean;
   perfOverlayOrientation: string;
   perfOverlayPosition: string;
-  perfOverlayLocked?: boolean;       // 是否锁定覆盖层
-  perfOverlayItems?: string[];       // 启用的性能项目
-  perfOverlayBgOpacity?: number;     // 背景透明度 (0.0-1.0)
+  perfOverlayLocked?: boolean;
+  perfOverlayItems?: string[];
+  perfOverlayBgOpacity?: number;
 }
 
-/**
- * 高级设置
- */
 export interface AdvancedSettings {
   decoderBufferCount: number;
-  enableSyncDecode: boolean;  // 同步解码模式（API 20+，减少回调延迟）
-  enableVrr: boolean;  // VRR 可变刷新率模式
+  enableSyncDecode: boolean;
+  enableVrr: boolean;
   latencyToast: boolean;
   disableWarnings: boolean;
   enableStun: boolean;
   enableEscMenu: boolean;
   escMenuKey: string;
-  performanceMode: boolean;  // 性能模式：优化线程优先级和系统资源
+  performanceMode: boolean;
 }
 
-/**
- * 音频设置
- */
 export interface AudioSettings {
   audioConfig: string;
   enableLocalAudio: boolean;
@@ -265,17 +226,11 @@ export interface AudioSettings {
   micBitrate: number;
 }
 
-/**
- * 分辨率接口
- */
 interface Resolution {
   width: number;
   height: number;
 }
 
-/**
- * 设置服务单例
- */
 export class SettingsService {
   private static instance: SettingsService | null = null;
 
@@ -288,18 +243,12 @@ export class SettingsService {
     return SettingsService.instance;
   }
 
-  /**
-   * 解析分辨率字符串
-   * 支持预设格式(如 "1080p", "4K")和自定义格式(如 "2560x1080")
-   */
   private parseResolution(resolutionStr: string): Resolution {
-    // 本机分辨率：动态获取当前屏幕分辨率
     if (resolutionStr === 'native') {
       try {
         const displayInfo = display.getDefaultDisplaySync();
         const w = displayInfo.width;
         const h = displayInfo.height;
-        // 始终横屏格式
         return w >= h
           ? { width: w, height: h } as Resolution
           : { width: h, height: w } as Resolution;
@@ -307,7 +256,6 @@ export class SettingsService {
         return { width: 1920, height: 1080 } as Resolution;
       }
     }
-    // 预设分辨率
     switch (resolutionStr) {
       case '720p':
         return { width: 1280, height: 720 } as Resolution;
@@ -323,7 +271,6 @@ export class SettingsService {
         return { width: 854, height: 480 } as Resolution;
     }
     
-    // 尝试解析自定义格式: WIDTHxHEIGHT
     const match = resolutionStr.match(/^(\d+)x(\d+)$/);
     if (match) {
       const width = parseInt(match[1]);
@@ -333,15 +280,10 @@ export class SettingsService {
       }
     }
     
-    // 默认 1080p
     return { width: 1920, height: 1080 } as Resolution;
   }
 
-  /**
-   * 解析帧率字符串
-   */
   private parseFps(fpsStr: string): number {
-    // 检查是否是自定义帧率
     if (fpsStr.startsWith('自定义:')) {
       const customFps = parseInt(fpsStr.split(':')[1]);
       return isNaN(customFps) ? 60 : customFps;
@@ -355,25 +297,19 @@ export class SettingsService {
       case '90 FPS':
         return 90;
       case '119.88 FPS':
-        return 120; // 使用 120 作为 fps，实际帧率由 clientRefreshRateX100 控制
+        return 120;
       case '120 FPS':
         return 120;
       case '144 FPS':
         return 144;
       default: {
-        // 支持动态检测的设备刷新率（如 "165 FPS"）
         const parsed = parseInt(fpsStr);
         return isNaN(parsed) ? 60 : parsed;
       }
     }
   }
 
-  /**
-   * 解析帧率字符串并返回 clientRefreshRateX100
-   * 用于 NTSC 帧率支持 (如 119.88 Hz)
-   */
   private parseClientRefreshRateX100(fpsStr: string): number {
-    // 检查是否是自定义帧率
     if (fpsStr.startsWith('自定义:')) {
       const customFps = parseInt(fpsStr.split(':')[1]);
       return isNaN(customFps) ? 6000 : customFps * 100;
@@ -387,22 +323,18 @@ export class SettingsService {
       case '90 FPS':
         return 9000;
       case '119.88 FPS':
-        return 11988;  // NTSC 标准: 120000/1001 ≈ 119.88 Hz
+        return 11988;
       case '120 FPS':
         return 12000;
       case '144 FPS':
         return 14400;
       default: {
-        // 支持动态检测的设备刷新率（如 "165 FPS"）
         const parsed = parseInt(fpsStr);
         return isNaN(parsed) ? 6000 : parsed * 100;
       }
     }
   }
 
-  /**
-   * 解析音频配置字符串
-   */
   private parseAudioConfig(configStr: string): AudioConfiguration {
     switch (configStr) {
       case '立体声':
@@ -416,9 +348,6 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 解析视频编码格式
-   */
   private parseVideoFormat(formatStr: string): 'H.264' | 'HEVC' {
     switch (formatStr) {
       case '自动':
@@ -431,9 +360,6 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 解析屏幕组合模式
-   */
   private parseScreenCombinationMode(modeStr: string): ScreenCombinationMode {
     switch (modeStr) {
       case '主机默认':
@@ -451,9 +377,6 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 解析性能覆盖层方向
-   */
   private parsePerfOverlayOrientation(orientationStr: string): PerfOverlayOrientation {
     switch (orientationStr) {
       case '水平':
@@ -465,9 +388,6 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 解析性能覆盖层位置
-   */
   private parsePerfOverlayPosition(positionStr: string): PerfOverlayPosition {
     switch (positionStr) {
       case '顶部':
@@ -487,9 +407,6 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 获取布尔值设置
-   */
   private async getBoolean(key: string, defaultValue: boolean): Promise<boolean> {
     const value = await PreferencesUtil.get<string | boolean>(key, defaultValue.toString());
     if (typeof value === 'boolean') {
@@ -498,9 +415,6 @@ export class SettingsService {
     return value === 'true';
   }
 
-  /**
-   * 获取数值设置
-   */
   private async getNumber(key: string, defaultValue: number): Promise<number> {
     const value = await PreferencesUtil.get<number | string>(key, defaultValue.toString());
     if (typeof value === 'number') {
@@ -509,21 +423,14 @@ export class SettingsService {
     return parseInt(value) || defaultValue;
   }
 
-  /**
-   * 获取字符串设置
-   */
   private async getString(key: string, defaultValue: string): Promise<string> {
     return await PreferencesUtil.get<string>(key, defaultValue);
   }
 
-  /**
-   * 从设置生成 StreamConfig
-   */
   async getStreamConfig(): Promise<StreamConfig> {
-    // 获取基础视频设置
     const resolutionStr = await this.getString(SettingsKeys.RESOLUTION, '1080p');
     const fpsStr = await this.getString(SettingsKeys.FPS, '60 FPS');
-    const bitrateRaw = await this.getNumber(SettingsKeys.BITRATE, 0);  // 默认 0 表示自动计算
+    const bitrateRaw = await this.getNumber(SettingsKeys.BITRATE, 0);
     const hostScale = await this.getNumber(SettingsKeys.HOST_SCALE, 100);
     const enableHdr = await this.getBoolean(SettingsKeys.ENABLE_HDR, false);
     const hdrModeStr = await this.getString(SettingsKeys.HDR_MODE, 'HDR10');
@@ -531,47 +438,39 @@ export class SettingsService {
     const fullRange = await this.getBoolean(SettingsKeys.FULL_RANGE, false);
     const reverseResolution = await this.getBoolean(SettingsKeys.REVERSE_RESOLUTION, false);
 
-    // 解析分辨率和帧率
     let resolution: Resolution = this.parseResolution(resolutionStr);
     const fps = this.parseFps(fpsStr);
 
-    // 应用分辨率缩放
     if (hostScale !== 100) {
       const scaledWidth = Math.round(resolution.width * hostScale / 100);
       const scaledHeight = Math.round(resolution.height * hostScale / 100);
       resolution = { width: scaledWidth, height: scaledHeight } as Resolution;
     }
 
-    // 反转分辨率
     if (reverseResolution) {
       const temp = resolution.width;
       resolution.width = resolution.height;
       resolution.height = temp;
     }
 
-    // 计算码率（Mbps -> Kbps）
     let bitrate = bitrateRaw * 1000;
     if (bitrateRaw <= 0) {
-      // 如果码率设置为 0 或无效，使用推荐值
       bitrate = getRecommendedBitrate(resolution.width, resolution.height, fps);
     }
 
-    // 获取音频设置
     const audioConfigStr = await this.getString(SettingsKeys.AUDIO_CONFIG, '立体声');
     const enableLocalAudio = await this.getBoolean(SettingsKeys.ENABLE_LOCAL_AUDIO, false);
     const developerMode = await this.getBoolean(SettingsKeys.DEVELOPER_MODE, false);
-    const enableMic = developerMode && await this.getBoolean(SettingsKeys.ENABLE_MIC, false);  // 非开发者模式下强制禁用
+    const enableMic = developerMode && await this.getBoolean(SettingsKeys.ENABLE_MIC, false);
     const micBitrate = await this.getNumber(SettingsKeys.MIC_BITRATE, 64);
     const controlOnly = await this.getBoolean(SettingsKeys.CONTROL_ONLY, false);
     const enableSpatializer = await this.getBoolean(SettingsKeys.ENABLE_SPATIALIZER, false);
 
-    // 获取主机设置
     const enableSops = await this.getBoolean(SettingsKeys.ENABLE_SOPS, true);
     const multiController = await this.getBoolean(SettingsKeys.MULTI_CONTROLLER, true);
     const lockScreenAfterDisconnect = await this.getBoolean(SettingsKeys.LOCK_SCREEN_AFTER_DISCONNECT, false);
     const screenCombinationModeStr = await this.getString(SettingsKeys.SCREEN_COMBINATION_MODE, '主机默认');
 
-    // 获取输入设置
     const enableVibration = await this.getBoolean(SettingsKeys.ENABLE_VIBRATION, true);
     const vibrationMode = await this.getString(SettingsKeys.VIBRATION_MODE, '自动');
     const vibrateFallbackStrength = await this.getNumber(SettingsKeys.VIBRATE_FALLBACK_STRENGTH, 100);
@@ -581,29 +480,25 @@ export class SettingsService {
     const deadzone = await this.getNumber(SettingsKeys.DEADZONE, 7);
     const flipFaceButtons = await this.getBoolean(SettingsKeys.FLIP_FACE_BUTTONS, false);
 
-    // 获取鼠标/触控设置
-    const showLocalCursor = await this.getBoolean(SettingsKeys.SHOW_LOCAL_CURSOR, false);  // 默认不显示本地光标
+    const showLocalCursor = await this.getBoolean(SettingsKeys.SHOW_LOCAL_CURSOR, false);
     const touchscreenTrackpad = await this.getBoolean(SettingsKeys.TOUCHSCREEN_TRACKPAD, false);
     const enableDoubleClickDrag = await this.getBoolean(SettingsKeys.ENABLE_DOUBLE_CLICK_DRAG, false);
     const doubleTapTimeThreshold = await this.getNumber(SettingsKeys.DOUBLE_TAP_TIME_THRESHOLD, 125);
 
-    // 获取增强触控设置
     const enableEnhancedTouch = await this.getBoolean(SettingsKeys.ENABLE_ENHANCED_TOUCH, true);
     const enhancedTouchOnRight = await this.getBoolean(SettingsKeys.ENHANCED_TOUCH_ON_RIGHT, false);
     const enhancedTouchZoneDivider = await this.getNumber(SettingsKeys.ENHANCED_TOUCH_ZONE_DIVIDER, 50);
     const pointerVelocityFactor = await this.getNumber(SettingsKeys.POINTER_VELOCITY_FACTOR, 100);
     const longPressFlatRegion = await this.getNumber(SettingsKeys.LONG_PRESS_FLAT_REGION, 0);
 
-    // 获取高级设置
     const decoderBufferCount = await this.getNumber(SettingsKeys.DECODER_BUFFER_COUNT, 0);
-    const enableSyncDecode = await this.getBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false);  // 默认禁用
-    const enableVrr = await this.getBoolean(SettingsKeys.ENABLE_VRR, false);  // VRR 默认禁用
+    const enableSyncDecode = await this.getBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false);
+    const enableVrr = await this.getBoolean(SettingsKeys.ENABLE_VRR, false);
     const enableVsync = await this.getBoolean(SettingsKeys.ENABLE_VSYNC, false);
     const enableStun = await this.getBoolean(SettingsKeys.ENABLE_STUN, false);
     const stretchVideo = await this.getBoolean(SettingsKeys.STRETCH_VIDEO, false);
     const hdrHighBrightness = await this.getBoolean(SettingsKeys.ENABLE_HDR_HIGH_BRIGHTNESS, false);
 
-    // 获取显示设置
     const enablePerfOverlay = await this.getBoolean(SettingsKeys.ENABLE_PERF_OVERLAY, false);
     const perfOverlayOrientationStr = await this.getString(SettingsKeys.PERF_OVERLAY_ORIENTATION, '垂直');
     const perfOverlayPositionStr = await this.getString(SettingsKeys.PERF_OVERLAY_POSITION, '右上角');
@@ -611,9 +506,7 @@ export class SettingsService {
     const oscOpacity = await this.getNumber(SettingsKeys.OSC_OPACITY, 90);
     const enableEscMenu = await this.getBoolean(SettingsKeys.ENABLE_ESC_MENU, true);
 
-    // 构建 StreamConfig
     const config: StreamConfig = {
-      // 视频设置
       width: resolution.width,
       height: resolution.height,
       fps: fps,
@@ -625,20 +518,17 @@ export class SettingsService {
       hdrHighBrightness: hdrHighBrightness,
       stretchVideo: stretchVideo,
 
-      // 音频设置
       audioEnabled: !controlOnly,
       microphoneEnabled: enableMic,
       micBitrate: micBitrate,
       audioConfig: this.parseAudioConfig(audioConfigStr),
       enableSpatializer: enableSpatializer,
 
-      // 主机设置
       sops: enableSops,
       playLocalAudio: enableLocalAudio,
       screenCombinationMode: this.parseScreenCombinationMode(screenCombinationModeStr),
       lockScreenAfterDisconnect: lockScreenAfterDisconnect,
 
-      // 输入设置
       multiController: multiController,
       attachedGamepadMask: 0,
       enableVibration: enableVibration,
@@ -650,20 +540,17 @@ export class SettingsService {
       deadzone: deadzone,
       flipFaceButtons: flipFaceButtons,
 
-      // 鼠标/触控设置
       showLocalCursor: showLocalCursor,
       touchscreenTrackpad: touchscreenTrackpad,
       enableDoubleClickDrag: enableDoubleClickDrag,
       doubleTapTimeThreshold: doubleTapTimeThreshold,
 
-      // 增强触控设置
       enableEnhancedTouch: enableEnhancedTouch,
       enhancedTouchOnRight: enhancedTouchOnRight,
       enhancedTouchZoneDivider: enhancedTouchZoneDivider,
       pointerVelocityFactor: pointerVelocityFactor,
       longPressFlatRegion: longPressFlatRegion,
 
-      // 高级选项
       packetSize: 1024,
       encryptionFlags: 0,
       colorRange: fullRange ? ColorRange.FULL : ColorRange.LIMITED,
@@ -674,10 +561,8 @@ export class SettingsService {
       enableStun: enableStun,
       performanceMode: await this.getBoolean(SettingsKeys.PERFORMANCE_MODE, false),
 
-      // 运行时选项
       remote: RemoteConfig.AUTO,
 
-      // 显示选项
       showPerfOverlay: enablePerfOverlay,
       perfOverlayOrientation: this.parsePerfOverlayOrientation(perfOverlayOrientationStr),
       perfOverlayPosition: this.parsePerfOverlayPosition(perfOverlayPositionStr),
@@ -689,12 +574,8 @@ export class SettingsService {
     return config;
   }
 
-  /**
-   * 获取输入设置
-   */
   async getInputSettings(): Promise<InputSettings> {
     return {
-      // 手柄
       enableVibration: await this.getBoolean(SettingsKeys.ENABLE_VIBRATION, true),
       vibrationMode: await this.getString(SettingsKeys.VIBRATION_MODE, '自动'),
       vibrateFallbackStrength: await this.getNumber(SettingsKeys.VIBRATE_FALLBACK_STRENGTH, 100),
@@ -714,7 +595,6 @@ export class SettingsService {
       forceUsbDriverOnly: await this.getBoolean(SettingsKeys.FORCE_USB_DRIVER_ONLY, false),
       ddkHighSpeedPolling: await this.getBoolean(SettingsKeys.DDK_HIGH_SPEED_POLLING, false),
 
-      // 体感助手
       gyroAssistEnabled: await this.getBoolean(SettingsKeys.GYRO_ASSIST_ENABLED, false),
       gyroSensitivity: await this.getNumber(SettingsKeys.GYRO_SENSITIVITY, 1.0),
       gyroInvertX: await this.getBoolean(SettingsKeys.GYRO_INVERT_X, false),
@@ -722,7 +602,6 @@ export class SettingsService {
       gyroActivationKey: await this.getNumber(SettingsKeys.GYRO_ACTIVATION_KEY, -1),
       showGyroCard: await this.getBoolean(SettingsKeys.SHOW_GYRO_CARD, true),
 
-      // 屏幕控制器
       enableOnscreenControls: await this.getBoolean(SettingsKeys.ENABLE_ONSCREEN_CONTROLS, false),
       enableOnscreenKeyboard: await this.getBoolean(SettingsKeys.ENABLE_ONSCREEN_KEYBOARD, false),
       onlyL3R3: await this.getBoolean(SettingsKeys.ONLY_L3_R3, false),
@@ -731,7 +610,6 @@ export class SettingsService {
       oscOpacity: await this.getNumber(SettingsKeys.OSC_OPACITY, 90),
       vibrateOsc: await this.getBoolean(SettingsKeys.VIBRATE_OSC, true),
 
-      // 鼠标/触控
       showLocalCursor: await this.getBoolean(SettingsKeys.SHOW_LOCAL_CURSOR, false),
       touchscreenTrackpad: await this.getBoolean(SettingsKeys.TOUCHSCREEN_TRACKPAD, false),
       enableDoubleClickDrag: await this.getBoolean(SettingsKeys.ENABLE_DOUBLE_CLICK_DRAG, false),
@@ -739,7 +617,6 @@ export class SettingsService {
       mouseNavButtons: await this.getBoolean(SettingsKeys.MOUSE_NAV_BUTTONS, false),
       gameMouseMode: await this.getBoolean(SettingsKeys.GAME_MOUSE_MODE, false),
 
-      // 增强触控
       enableEnhancedTouch: await this.getBoolean(SettingsKeys.ENABLE_ENHANCED_TOUCH, true),
       enhancedTouchOnRight: await this.getBoolean(SettingsKeys.ENHANCED_TOUCH_ON_RIGHT, false),
       enhancedTouchZoneDivider: await this.getNumber(SettingsKeys.ENHANCED_TOUCH_ZONE_DIVIDER, 50),
@@ -748,9 +625,6 @@ export class SettingsService {
     };
   }
 
-  /**
-   * 获取主机设置
-   */
   async getHostSettings(): Promise<HostSettings> {
     return {
       enableSops: await this.getBoolean(SettingsKeys.ENABLE_SOPS, true),
@@ -759,9 +633,6 @@ export class SettingsService {
     };
   }
 
-  /**
-   * 获取显示设置
-   */
   async getDisplaySettings(): Promise<DisplaySettings> {
     const itemsStr = await this.getString(SettingsKeys.PERF_OVERLAY_ITEMS, 'resolution,decoder,render_fps,packet_loss,bitrate,network_latency,decode_latency');
     const items = itemsStr.split(',').filter(item => item.length > 0);
@@ -783,26 +654,20 @@ export class SettingsService {
     };
   }
 
-  /**
-   * 获取高级设置
-   */
   async getAdvancedSettings(): Promise<AdvancedSettings> {
     return {
       decoderBufferCount: await this.getNumber(SettingsKeys.DECODER_BUFFER_COUNT, 0),
-      enableSyncDecode: await this.getBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false),  // 默认禁用
-      enableVrr: await this.getBoolean(SettingsKeys.ENABLE_VRR, false),  // VRR 默认禁用
+      enableSyncDecode: await this.getBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false),
+      enableVrr: await this.getBoolean(SettingsKeys.ENABLE_VRR, false),
       latencyToast: await this.getBoolean(SettingsKeys.LATENCY_TOAST, false),
       disableWarnings: await this.getBoolean(SettingsKeys.DISABLE_WARNINGS, false),
       enableStun: await this.getBoolean(SettingsKeys.ENABLE_STUN, false),
       enableEscMenu: await this.getBoolean(SettingsKeys.ENABLE_ESC_MENU, true),
       escMenuKey: await this.getString(SettingsKeys.ESC_MENU_KEY, 'ESC'),
-      performanceMode: await this.getBoolean(SettingsKeys.PERFORMANCE_MODE, false)  // 性能模式默认禁用
+      performanceMode: await this.getBoolean(SettingsKeys.PERFORMANCE_MODE, false)
     };
   }
 
-  /**
-   * 获取音频设置
-   */
   async getAudioSettings(): Promise<AudioSettings> {
     return {
       audioConfig: await this.getString(SettingsKeys.AUDIO_CONFIG, '立体声'),
@@ -814,30 +679,18 @@ export class SettingsService {
     };
   }
 
-  /**
-   * 是否显示性能覆盖层
-   */
   async shouldShowPerfOverlay(): Promise<boolean> {
     return await this.getBoolean(SettingsKeys.ENABLE_PERF_OVERLAY, false);
   }
 
-  /**
-   * 是否显示屏幕控制器
-   */
   async shouldShowOnscreenControls(): Promise<boolean> {
     return await this.getBoolean(SettingsKeys.ENABLE_ONSCREEN_CONTROLS, false);
   }
 
-  /**
-   * 获取屏幕控制器透明度
-   */
   async getOscOpacity(): Promise<number> {
     return await this.getNumber(SettingsKeys.OSC_OPACITY, 90);
   }
 
-  /**
-   * 是否恢复上次串流
-   */
   async shouldResumeStream(): Promise<boolean> {
     return await this.getBoolean(SettingsKeys.RESUME_STREAM, false);
   }

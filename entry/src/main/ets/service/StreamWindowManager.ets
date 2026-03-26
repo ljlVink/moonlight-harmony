@@ -9,46 +9,35 @@
  */
 
 /**
- * 串流窗口管理器
  * 
- * 管理串流页面的窗口配置、屏幕方向和视频尺寸计算
  */
 import { window, display } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 
-/**
- * 显示尺寸信息
- */
 export interface DisplaySize {
   width: number;
   height: number;
 }
 
-/**
- * XComponent 尺寸
- */
 export interface XComponentSize {
   width: Length;
   height: Length;
 }
 
-/**
- * StreamWindowManager - 串流窗口管理器
- */
 export class StreamWindowManager {
   private context: common.UIAbilityContext;
   private streamWidth: number = 1920;
   private streamHeight: number = 1080;
   private screenWidth: number = 1920;
   private screenHeight: number = 1080;
-  /** 当前是否处于全屏沉浸模式（串流开始时默认进入全屏） */
+  /**
   private _isFullscreen: boolean = true;
-  /** 窗口大小变化回调（窗口模式拖拽缩放时触发） */
+  /**
   private onWindowSizeChanged: (() => void) | null = null;
-  /** windowSizeChange 监听器回调引用（用于 off 取消注册） */
+  /**
   private windowSizeChangeHandler: ((size: window.Size) => void) | null = null;
 
-  /** 查询当前是否全屏 */
+  /**
   get isFullscreen(): boolean {
     return this._isFullscreen;
   }
@@ -57,24 +46,15 @@ export class StreamWindowManager {
     this.context = context;
   }
 
-  /**
-   * 设置窗口大小变化回调（窗口模式下用户拖拽缩放时触发 XComponent 重算）
-   */
   setOnWindowSizeChanged(callback: (() => void) | null): void {
     this.onWindowSizeChanged = callback;
   }
   
-  /**
-   * 设置串流分辨率
-   */
   setStreamResolution(width: number, height: number): void {
     this.streamWidth = width;
     this.streamHeight = height;
   }
   
-  /**
-   * 获取屏幕尺寸
-   */
   getScreenSize(): DisplaySize {
     return {
       width: this.screenWidth,
@@ -82,9 +62,6 @@ export class StreamWindowManager {
     };
   }
   
-  /**
-   * 初始化屏幕尺寸
-   */
   async initScreenSize(): Promise<DisplaySize> {
     try {
       const displayInfo = display.getDefaultDisplaySync();
@@ -99,18 +76,12 @@ export class StreamWindowManager {
     return this.getScreenSize();
   }
 
-  // ==================== 窗口配置核心方法 ====================
-  
-  /**
-   * 配置窗口进入串流模式（全屏+常亮+沉浸式）
-   */
   async configureWindow(): Promise<void> {
     try {
       const win = await window.getLastWindow(this.context);
       win.setWindowKeepScreenOn(true);
       await this.enterImmersiveFullscreen(win);
 
-      // 横屏多窗支持
       if (this.streamWidth > this.streamHeight) {
         try { await win.enableLandscapeMultiWindow(); } catch (_e) {}
       }
@@ -122,9 +93,6 @@ export class StreamWindowManager {
     }
   }
   
-  /**
-   * 恢复窗口设置（串流结束时调用）
-   */
   async restoreWindow(): Promise<void> {
     try {
       const win = await window.getLastWindow(this.context);
@@ -132,11 +100,8 @@ export class StreamWindowManager {
       win.setWindowKeepScreenOn(false);
       await this.exitImmersiveFullscreen(win);
 
-      // 恢复全屏布局：重新显示系统栏后系统可能收回了全屏布局，
-      // 导致内容区缩进出现黑边，此处再次设为 true 使内容延伸到系统栏下
       try { await win.setWindowLayoutFullScreen(true); } catch (_e) {}
 
-      // 退出横屏多窗模式
       try { await win.disableLandscapeMultiWindow(); } catch (_e) {}
       await win.setPreferredOrientation(window.Orientation.UNSPECIFIED);
       win.setWindowBrightness(-1);
@@ -149,10 +114,7 @@ export class StreamWindowManager {
   }
 
   /**
-   * 切换窗口/全屏模式（2in1 设备）
    *
-   * 全屏 → 窗口化：退出沉浸式 + recover() 恢复悬浮窗
-   * 窗口化 → 全屏：隐藏装饰栏 + 沉浸式最大化
    */
   async toggleWindowMode(): Promise<void> {
     try {
@@ -166,11 +128,9 @@ export class StreamWindowManager {
           console.info('StreamWindowManager: recover() 不可用，保持最大化');
         }
         this._isFullscreen = false;
-        // 注册窗口大小变化监听（窗口模式下用户可能拖拽缩放）
         this.registerWindowSizeListener(win);
         console.info('StreamWindowManager: 已切换到窗口模式');
       } else {
-        // 取消窗口大小变化监听
         this.unregisterWindowSizeListener(win);
         await this.enterImmersiveFullscreen(win);
         this._isFullscreen = true;
@@ -181,14 +141,10 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   * 注册窗口大小变化监听器
-   */
   private registerWindowSizeListener(win: window.Window): void {
     this.unregisterWindowSizeListener(win);
     let debounceTimer: number = -1;
     this.windowSizeChangeHandler = (_size: window.Size) => {
-      // 防抖：拖拽缩放时高频触发，200ms 后才真正回调
       if (debounceTimer !== -1) {
         clearTimeout(debounceTimer);
       }
@@ -202,9 +158,6 @@ export class StreamWindowManager {
     } catch (_e) {}
   }
 
-  /**
-   * 取消窗口大小变化监听器
-   */
   private unregisterWindowSizeListener(win: window.Window): void {
     if (this.windowSizeChangeHandler) {
       try {
@@ -214,42 +167,25 @@ export class StreamWindowManager {
     }
   }
 
-  // ==================== 沉浸式全屏辅助方法 ====================
-
-  /**
-   * 进入沉浸式全屏：隐藏装饰栏 → 最大化(禁用Dock悬停) → 全屏布局 → 隐藏系统栏 → 沉浸式
-   */
   private async enterImmersiveFullscreen(win: window.Window): Promise<void> {
-    // 1. 隐藏装饰栏（必须在 maximize 之前，避免闪现）
     this.setDecorVisible(win, false);
 
-    // 2. 最大化 + 沉浸式 + 禁用 Dock 悬停（3 级回退）
     await this.maximizeImmersive(win);
 
-    // 3. 全屏布局（内容延伸到系统栏区域）
     try { await win.setWindowLayoutFullScreen(true); } catch (_e) {}
 
-    // 4. 隐藏系统栏
     await this.setSystemBarsVisible(win, false);
 
-    // 5. 沉浸式模式：抑制系统导航手势 (API 12+)
     try { win.setImmersiveModeEnabledState(true); } catch (_e) {}
   }
 
-  /**
-   * 退出沉浸式全屏：退出沉浸式 → 显示系统栏 → 显示装饰栏 → 退出沉浸式最大化
-   */
   private async exitImmersiveFullscreen(win: window.Window): Promise<void> {
-    // 1. 退出沉浸式模式
     try { win.setImmersiveModeEnabledState(false); } catch (_e) {}
 
-    // 2. 显示系统栏（不恢复 navigationIndicator，避免白色不透明样式）
     await this.setSystemBarsVisible(win, true);
 
-    // 3. 显示装饰栏
     this.setDecorVisible(win, true);
 
-    // 4. 退出沉浸式最大化
     try {
       await win.maximize(window.MaximizePresentation.EXIT_IMMERSIVE);
     } catch (_e) {
@@ -258,10 +194,7 @@ export class StreamWindowManager {
   }
 
   /**
-   * 最大化窗口并进入沉浸式，禁用标题栏和 Dock 悬停（3 级回退链）
    *
-   * 优先级：
-   * 1. ENTER_IMMERSIVE_DISABLE_TITLE_AND_DOCK_HOVER (API 14+) — 彻底禁用 Dock 悬停
    * 2. ENTER_IMMERSIVE (API 12+) + setTitleAndDockHoverShown(false)
    * 3. maximize() + setTitleAndDockHoverShown(false)
    */
@@ -278,9 +211,6 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   * 设置系统栏（状态栏 + 导航栏）可见性
-   */
   private async setSystemBarsVisible(win: window.Window, visible: boolean): Promise<void> {
     try {
       await win.setSpecificSystemBarEnabled('status', visible);
@@ -295,18 +225,10 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   * 设置窗口装饰栏（标题栏：放大/缩小/关闭按钮）可见性
-   */
   private setDecorVisible(win: window.Window, visible: boolean): void {
     try { win.setWindowDecorVisible(visible); } catch (_e) {}
   }
 
-  // ==================== 屏幕方向 ====================
-
-  /**
-   * 根据串流分辨率设置屏幕方向
-   */
   async configureOrientation(): Promise<void> {
     try {
       const win = await window.getLastWindow(this.context);
@@ -326,9 +248,6 @@ export class StreamWindowManager {
     }
   }
 
-  /**
-   * 更新屏幕尺寸（在屏幕旋转后调用）
-   */
   async updateScreenSize(): Promise<DisplaySize> {
     try {
       await new Promise<void>((resolve) => setTimeout(resolve, 100));
@@ -349,24 +268,16 @@ export class StreamWindowManager {
     return this.getScreenSize();
   }
 
-  // ==================== 显示设置 ====================
-
   /**
-   * 设置 HDR 高亮度模式
-   * 当 HDR 开启且用户启用高亮度选项时，将屏幕亮度调至最大
    *
-   * @param enableHdr 是否启用 HDR
-   * @param hdrHighBrightness 是否启用 HDR 高亮度模式
    */
   async setHdrBrightness(enableHdr: boolean, hdrHighBrightness: boolean): Promise<void> {
     try {
       const win = await window.getLastWindow(this.context);
       if (enableHdr && hdrHighBrightness) {
-        // HDR 高亮度模式：将屏幕亮度调至最大 (1.0)
         win.setWindowBrightness(1.0);
         console.info('StreamWindowManager: HDR 高亮度模式已启用 (brightness=1.0)');
       } else {
-        // 使用系统默认亮度 (-1)
         win.setWindowBrightness(-1);
         console.info('StreamWindowManager: 使用系统默认屏幕亮度');
       }
@@ -375,15 +286,9 @@ export class StreamWindowManager {
     }
   }
   
-  // ==================== 视频尺寸计算 ====================
-
   /**
-   * 计算 XComponent 尺寸以保持视频宽高比（全屏模式下使用屏幕尺寸计算 letterbox/pillarbox）
    *
-   * 窗口模式下应直接使用 '100%' 填满窗口，无需调用此方法。
    *
-   * @param stretchVideo 是否拉伸视频填满全屏
-   * @returns XComponent 尺寸
    */
   calculateXComponentSize(stretchVideo: boolean = false): XComponentSize {
     if (stretchVideo) {
@@ -422,12 +327,8 @@ export class StreamWindowManager {
     }
   }
 
-  // ==================== 初始化 ====================
-
   /**
-   * 完整的窗口初始化流程
    * 
-   * @returns 屏幕尺寸
    */
   async initialize(): Promise<DisplaySize> {
     await this.initScreenSize();

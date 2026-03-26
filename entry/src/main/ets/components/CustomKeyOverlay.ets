@@ -9,13 +9,7 @@
  */
 
 /**
- * 自定义按键覆盖层
  *
- * 参照 VirtualController 的经验重构（ARKUI_TOUCH_HANDLING_LESSONS.md）：
- *   - 每个按键是独立 @Component（如 AnalogStick），有自己的 @State 和触摸处理器
- *   - 每个按钮使用 HitTestMode.Block + event.stopPropagation()
- *   - 编辑模式拖拽通过按钮内部 @State 实现，不触发父级重渲染
- *   - 父层使用 hitTestReady 延迟刷新命中测试区域
  */
 
 import { componentSnapshot, display, LengthMetrics, promptAction, window } from '@kit.ArkUI';
@@ -68,54 +62,48 @@ import {
 import { CustomKeyBtn } from './CustomKeyBtn';
 
 // =============================================================================
-// 主覆盖层组件
 // =============================================================================
 
 @Component
 export struct CustomKeyOverlay {
-  /** 按键事件回调（统一入口，包含 keyboard/mouse/gamepad/special 所有类型） */
+  /**
   onKeyAction: (action: KeyAction, isDown: boolean) => void = () => {};
-  /** 模拟摇杆移动回调 */
+  /**
   onAnalogStickMovement: (stick: string, x: number, y: number) => void = () => {};
-  /** 模拟摇杆 L3/R3 点击回调（双击触发，自动短按+释放） */
+  /**
   onAnalogStickClick: (stick: string) => void = () => {};
-  /** 十字键盘方向变化回调（位掩码，0=无方向） */
+  /**
   onDPadDirectionChange: (direction: number) => void = () => {};
-  /** 编辑模式变化回调 */
+  /**
   onEditModeChanged: (editing: boolean) => void = () => {};
 
-  // ── 状态 ──
   @State keys: CustomKeyDef[] = [];
   @Link editMode: boolean;
-  /** 配置版本号（外部递增触发重新加载按键） */
+  /**
   @Prop @Watch('onProfileVersionChanged') profileVersion: number = 0;
   @State selectedKeyId: string = '';
   @State showAddPanel: boolean = false;
   @State showPropertyPanel: boolean = false;
   @State addPanelCategoryIdx: number = 0;
-  /** 轮盘分区编辑：正在选择按键的分区索引，-1 表示未在选择 */
+  /**
   @State private segmentPickerIndex: number = -1;
-  /** 分区按键选择器的分类索引 */
+  /**
   @State private segmentPickerCategoryIdx: number = 0;
 
-  /**
-   * 命中测试刷新触发器（参照 VirtualControllerOverlay）。
-   * 延迟在父层触发一次重渲染，刷新整棵子树的命中测试区域。
-   */
   @State private hitTestReady: number = 0;
 
-  /** 屏幕尺寸 (vp)，用于百分比坐标↔绝对坐标转换 */
+  /**
   @State private screenWidthVp: number = 0;
   @State private screenHeightVp: number = 0;
-  /** 数字摇杆方向追踪状态（按 keyId 索引） */
+  /**
   private digitalStickStates: Map<string, DigitalDirState> = new Map();
-  /** 撤销/重做栈 */
+  /**
   private undoStack: CustomKeyDef[][] = [];
   private redoStack: CustomKeyDef[][] = [];
   private static readonly MAX_UNDO = 50;
   @State private canUndo: boolean = false;
   @State private canRedo: boolean = false;
-  /** 缩放手柄拖拽状态 */
+  /**
   @State private resizeDragDX: number = 0;
   @State private resizeDragDY: number = 0;
   private resizing: boolean = false;
@@ -123,66 +111,64 @@ export struct CustomKeyOverlay {
   private resizeStartY: number = 0;
   private resizeOrigWidth: number = 0;
   private resizeOrigHeight: number = 0;
-  /** 元素对齐吸附 */
+  /**
   @State private snapEnabled: boolean = false;
-  /** 吸附阈值 (vp) */
+  /**
   private static readonly SNAP_THRESHOLD_VP = 8;
-  /** 对齐辅助线位置 (vp)，-1 表示隐藏 */
+  /**
   @State private alignGuideX: number = -1;
   @State private alignGuideY: number = -1;
 
-  /** 二维码分享面板 */
+  /**
   @State private showSharePanel: boolean = false;
   @State private qrPixelMap: image.PixelMap | undefined = undefined;
   @State private qrLoading: boolean = false;
   @State private qrTooLarge: boolean = false;
   @State private qrError: string = '';
   @State private shareJson: string = '';
-  /** 扫码导入预览 */
+  /**
   @State private importPreviewName: string = '';
   @State private importPreviewCount: number = 0;
   @State private importPreviewKeys: CustomKeyDef[] = [];
   @State private showImportConfirm: boolean = false;
 
-  /** 删除确认对话框 */
-  /** 配色主题面板 */
+  /**
+  /**
   @State private showThemePanel: boolean = false;
-  /** 配置档案面板 */
+  /**
   @State private showProfilePanel: boolean = false;
   @State private profileNames: string[] = [];
   @State private activeProfileName: string = '';
-  /** 正在重命名的配置名（空字符串表示未在编辑） */
+  /**
   @State private editingProfileName: string = '';
   @State private editingProfileNewName: string = '';
-  /** 配置切换回调（通知 StreamPage 刷新） */
+  /**
   onProfileSwitched: () => void = () => {};
   @State private themeExtracting: boolean = false;
   @State private extractedAccentColor: string = '';
-  /** 截屏取色时临时隐藏覆盖层，避免 UI 元素污染采样 */
+  /**
   @State private hidingForCapture: boolean = false;
-  /** 取色动画 */
+  /**
   @State private captureAnimColor: string = '';
   @State private captureAnimActive: boolean = false;
-  @State private scanLineY: number = 0;        // 扫描线 Y 位置百分比 0~100
-  @State private scanTintOpacity: number = 0;  // 扫过区域染色透明度
-  @State private scanLabelOpacity: number = 0; // 颜色标签透明度
-  @State private scanFlashOpacity: number = 0; // 完成时闪光效果
+  @State private scanLineY: number = 0;
+  @State private scanTintOpacity: number = 0;
+  @State private scanLabelOpacity: number = 0;
+  @State private scanFlashOpacity: number = 0;
 
-  /** 获取按 layer 升序排列的按键（layer 大的在上层） */
+  /**
   private getSortedKeys(): CustomKeyDef[] {
     return this.keys.slice().sort((a: CustomKeyDef, b: CustomKeyDef) => a.layer - b.layer);
   }
 
-  /** 屏幕变化监听回调引用，用于注销 */
+  /**
   private displayChangeCallback: ((displayId: number) => void) | null = null;
 
   async aboutToAppear(): Promise<void> {
-    // 获取屏幕尺寸
     const displayInfo = display.getDefaultDisplaySync();
     this.screenWidthVp = px2vp(displayInfo.width);
     this.screenHeightVp = px2vp(displayInfo.height);
 
-    // 监听屏幕变化（折叠屏展开/折叠、旋转等），动态更新坐标基准
     this.displayChangeCallback = (_displayId: number): void => {
       try {
         const info = display.getDefaultDisplaySync();
@@ -207,14 +193,12 @@ export struct CustomKeyOverlay {
     this.keys = await CustomKeyStore.getKeys();
     this.activeProfileName = await CustomKeyStore.getActiveProfileName();
 
-    // 延迟刷新命中测试区域（与 VirtualControllerOverlay 同理）
     setTimeout(() => {
       this.hitTestReady = 1;
     }, 100);
   }
 
   aboutToDisappear(): void {
-    // 注销屏幕变化监听
     if (this.displayChangeCallback) {
       try {
         display.off('change', this.displayChangeCallback);
@@ -223,7 +207,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 外部配置版本变化时重新加载按键 */
+  /**
   async onProfileVersionChanged(): Promise<void> {
     this.keys = await CustomKeyStore.getKeys();
     this.activeProfileName = await CustomKeyStore.getActiveProfileName();
@@ -232,18 +216,13 @@ export struct CustomKeyOverlay {
 
   build() {
     Column() {
-      // 主区域
       Stack() {
-        // 对齐辅助线（拖拽吸附时显示）
         if (this.editMode && this.snapEnabled) {
           this.AlignmentGuides()
         }
 
-        // 自定义按键 —— 每个是独立 @Component，有自己的触摸生命周期
-        // 按 layer 升序排列，layer 大的在上层
         ForEach(this.getSortedKeys(), (key: CustomKeyDef) => {
           if (key.action.type === 'analogStick' && !this.editMode) {
-            // 模拟摇杆：非编辑模式时渲染真正的虚拟摇杆 UI
             Column() {
               VirtualJoystick({
                 joystickSize: Math.max(key.width, key.height),
@@ -260,16 +239,13 @@ export struct CustomKeyOverlay {
                   this.onAnalogStickMovement(stickAction.stick, sx, sy);
                 },
                 onStickClick: (): void => {
-                  // 单击仅开始追踪，不发送任何按键
                 },
                 onDoubleClick: (): void => {
-                  // 双击触发 L3/R3 短按+自动释放（与 AnalogStick 一致）
                   const stickAction = key.action as AnalogStickAction;
                   doKeyHaptic(key.haptic ?? 'light');
                   this.onAnalogStickClick(stickAction.stick);
                 },
                 onRevoke: (): void => {
-                  // 手指抬起：无需额外操作（L3/R3 已自动释放）
                 },
                 isEditMode: (): boolean => this.editMode,
               })
@@ -279,7 +255,6 @@ export struct CustomKeyOverlay {
                 y: key.yPercent * this.screenHeightVp - Math.max(key.width, key.height) / 2,
               })
           } else if (key.action.type === 'dpad' && !this.editMode) {
-            // 十字键盘：非编辑模式时渲染 VirtualDPad 控件
             Column() {
               VirtualDPad({
                 dpadSize: Math.max(key.width, key.height),
@@ -299,7 +274,6 @@ export struct CustomKeyOverlay {
                 y: key.yPercent * this.screenHeightVp - Math.max(key.width, key.height) / 2,
               })
           } else if (key.action.type === 'wheelPad' && !this.editMode) {
-            // 轮盘菜单：非编辑模式时渲染 VirtualWheelPad 控件
             Column() {
               VirtualWheelPad({
                 wheelSize: Math.max(key.width, key.height),
@@ -321,7 +295,6 @@ export struct CustomKeyOverlay {
                 y: key.yPercent * this.screenHeightVp - Math.max(key.width, key.height) / 2,
               })
           } else if (key.action.type === 'digitalStick' && !this.editMode) {
-            // 数字摇杆：外观同模拟摇杆，输出离散四方向
             Column() {
               VirtualJoystick({
                 joystickSize: Math.max(key.width, key.height),
@@ -354,7 +327,6 @@ export struct CustomKeyOverlay {
                 y: key.yPercent * this.screenHeightVp - Math.max(key.width, key.height) / 2,
               })
           } else {
-            // 普通按键（含编辑模式下的 analogStick 占位）
             Column() {
               CustomKeyBtn({
                 keyDef: key,
@@ -386,50 +358,39 @@ export struct CustomKeyOverlay {
               })
           }
         }, (key: CustomKeyDef) => {
-          // key 包含位置和外观属性，任何变化都触发组件重建
-          // 加上 editMode 以在模式切换时强制重建（切换 VirtualJoystick ↔ CustomKeyBtn）
           return `${key.id}|${this.editMode}|${key.xPercent.toFixed(4)}|${key.yPercent.toFixed(4)}|${key.width}|${key.height}|${key.opacity}|${key.fontSize}|${key.borderRadius}|${key.borderWidth}|${key.shape}|${key.behavior}|${key.label}|${key.bgColor}|${key.textColor}`;
         })
 
-        // 缩放手柄：选中按键时显示在右下角
         if (this.editMode && this.selectedKeyId) {
           this.ResizeHandle()
         }
 
-        // 编辑模式空状态引导
         if (this.editMode && this.keys.length === 0) {
           this.EmptyStateGuide()
         }
 
-        // 配色主题面板
         if (this.showThemePanel) {
           this.ThemePanel()
         }
 
-        // 添加按键面板
         if (this.showAddPanel) {
           this.AddKeyPanel()
         }
 
-        // 属性编辑面板
         if (this.showPropertyPanel && this.selectedKeyId) {
           this.PropertyPanel()
         }
 
-        // 配置档案面板
         if (this.showProfilePanel) {
           this.ProfilePanel()
         }
 
-        // 二维码分享面板
         if (this.showSharePanel) {
           this.SharePanel()
         }
 
-        // 科幻扫描线取色动画
         if (this.captureAnimActive) {
           Stack() {
-            // 扫描过的区域渐变染色
             Column()
               .width('100%')
               .height(this.scanLineY + '%')
@@ -439,7 +400,6 @@ export struct CustomKeyOverlay {
               })
               .opacity(this.scanTintOpacity)
 
-            // 扫描线（发光横条）
             Column()
               .width('100%')
               .height(3)
@@ -453,7 +413,6 @@ export struct CustomKeyOverlay {
               .opacity(this.scanLineY > 0 && this.scanLineY < 100 ? 0.9 : 0)
               .position({ x: 0, y: this.scanLineY + '%' })
 
-            // 扫描线两侧的装饰短线
             Row() {
               Column().width(40).height(1).backgroundColor(this.captureAnimColor).opacity(0.6)
               Blank()
@@ -464,14 +423,12 @@ export struct CustomKeyOverlay {
             .opacity(this.scanLineY > 0 && this.scanLineY < 100 ? 1 : 0)
             .position({ x: 0, y: this.scanLineY + '%' })
 
-            // 完成时全屏闪烁
             Column()
               .width('100%')
               .height('100%')
               .backgroundColor(this.captureAnimColor)
               .opacity(this.scanFlashOpacity)
 
-            // 颜色标签
             Column({ space: 4 }) {
               Text('SCAN COMPLETE')
                 .fontSize(11)
@@ -503,10 +460,8 @@ export struct CustomKeyOverlay {
       .layoutWeight(1)
       .alignContent(Alignment.BottomStart)
       .hitTestBehavior(HitTestMode.Transparent)
-      // hitTestReady: 微小 opacity 变化触发父层重渲染，刷新命中测试树
       .opacity(this.hidingForCapture ? 0 : (this.hitTestReady > 0 ? 1 : 0.99))
 
-      // 编辑模式工具栏（面板打开时隐藏，避免遮挡面板）
       if (this.editMode && !this.showAddPanel && !this.showPropertyPanel && !this.showSharePanel && !this.showThemePanel && !this.showProfilePanel) {
         Row({ space: 12 }) {
           Row({ space: 4 }) {
@@ -660,10 +615,9 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 撤销/重做
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /** 保存当前状态到撤销栈（在操作之前调用） */
+  /**
   private pushUndoState(): void {
     this.undoStack.push(this.keys.map(k => cloneKeyDef(k)));
     if (this.undoStack.length > CustomKeyOverlay.MAX_UNDO) {
@@ -674,12 +628,10 @@ export struct CustomKeyOverlay {
     this.canRedo = false;
   }
 
-  /** 撤销：恢复上一个状态 */
+  /**
   private async performUndo(): Promise<void> {
     if (this.undoStack.length === 0) return;
-    // 当前状态压入重做栈
     this.redoStack.push(this.keys.map(k => cloneKeyDef(k)));
-    // 弹出上一个状态
     const prev = this.undoStack.pop()!;
     this.keys = prev;
     this.selectedKeyId = '';
@@ -688,12 +640,10 @@ export struct CustomKeyOverlay {
     await CustomKeyStore.saveKeys(this.keys);
   }
 
-  /** 重做：恢复下一个状态 */
+  /**
   private async performRedo(): Promise<void> {
     if (this.redoStack.length === 0) return;
-    // 当前状态压入撤销栈
     this.undoStack.push(this.keys.map(k => cloneKeyDef(k)));
-    // 弹出重做状态
     const next = this.redoStack.pop()!;
     this.keys = next;
     this.selectedKeyId = '';
@@ -703,13 +653,8 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 编辑操作
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /**
-   * 数字摇杆移动：将连续 x/y → 离散四方向 pressed/released
-   * 阈值 0.5，支持对角线同时激活相邻方向
-   */
   private handleDigitalStickMovement(keyId: string, action: DigitalStickAction, x: number, y: number): void {
     let state = this.digitalStickStates.get(keyId);
     if (!state) {
@@ -718,7 +663,6 @@ export struct CustomKeyOverlay {
     }
     const threshold = 0.5;
 
-    // 左右轴
     if (x < -threshold && !state.left) {
       state.left = true;
       this.onKeyAction(action.leftAction, true);
@@ -734,7 +678,6 @@ export struct CustomKeyOverlay {
       this.onKeyAction(action.rightAction, false);
     }
 
-    // 上下轴（y 负=上，正=下）
     if (y < -threshold && !state.up) {
       state.up = true;
       this.onKeyAction(action.upAction, true);
@@ -751,7 +694,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 数字摇杆释放：释放所有仍处于按下状态的方向 */
+  /**
   private releaseAllDigitalDirections(keyId: string, action: DigitalStickAction): void {
     const state = this.digitalStickStates.get(keyId);
     if (!state) return;
@@ -761,11 +704,6 @@ export struct CustomKeyOverlay {
     if (state.right) { this.onKeyAction(action.rightAction, false); state.right = false; }
   }
 
-  /**
-   * PPT 风格元素对齐吸附计算。
-   * 检查拖拽中按键的边缘/中心是否与其他按键的边缘/中心对齐，
-   * 在阈值范围内则吸附到对齐位置，并更新辅助线坐标。
-   */
   private calcAlignmentSnap(keyId: string, rawDx: number, rawDy: number): SnapResult | null {
     if (!this.snapEnabled) return null;
     const key = this.keys.find(k => k.id === keyId);
@@ -775,15 +713,13 @@ export struct CustomKeyOverlay {
     const W = this.screenWidthVp;
     const H = this.screenHeightVp;
 
-    // 当前拖拽候选位置（中心，vp）
     const candCx = key.xPercent * W + rawDx;
     const candCy = key.yPercent * H + rawDy;
     const halfW = key.width / 2;
     const halfH = key.height / 2;
 
-    // 收集其他元素的对齐目标（vp）
-    const targetsX: number[] = [0, W / 2, W]; // 屏幕左、中、右
-    const targetsY: number[] = [0, H / 2, H]; // 屏幕上、中、下
+    const targetsX: number[] = [0, W / 2, W];
+    const targetsY: number[] = [0, H / 2, H];
 
     for (const other of this.keys) {
       if (other.id === keyId) continue;
@@ -791,11 +727,10 @@ export struct CustomKeyOverlay {
       const ocy = other.yPercent * H;
       const ohw = other.width / 2;
       const ohh = other.height / 2;
-      targetsX.push(ocx - ohw, ocx, ocx + ohw); // 左边缘、中心、右边缘
-      targetsY.push(ocy - ohh, ocy, ocy + ohh); // 上边缘、中心、下边缘
+      targetsX.push(ocx - ohw, ocx, ocx + ohw);
+      targetsY.push(ocy - ohh, ocy, ocy + ohh);
     }
 
-    // X 轴：检查左边缘、中心、右边缘与目标的距离
     const candXPoints: number[] = [candCx - halfW, candCx, candCx + halfW];
     let bestDx = rawDx;
     let bestDistX = THRESHOLD;
@@ -806,13 +741,12 @@ export struct CustomKeyOverlay {
         const dist = Math.abs(candXPoints[i] - target);
         if (dist < bestDistX) {
           bestDistX = dist;
-          bestDx = rawDx + (target - candXPoints[i]); // 修正偏移使候选点对齐到目标
+          bestDx = rawDx + (target - candXPoints[i]);
           guideX = target;
         }
       }
     }
 
-    // Y 轴：检查上边缘、中心、下边缘与目标的距离
     const candYPoints: number[] = [candCy - halfH, candCy, candCy + halfH];
     let bestDy = rawDy;
     let bestDistY = THRESHOLD;
@@ -829,11 +763,9 @@ export struct CustomKeyOverlay {
       }
     }
 
-    // 更新辅助线（-1 = 隐藏）
     this.alignGuideX = guideX;
     this.alignGuideY = guideY;
 
-    // 有任何一个轴发生吸附就返回结果
     if (guideX >= 0 || guideY >= 0) {
       return { dx: bestDx, dy: bestDy };
     }
@@ -845,11 +777,9 @@ export struct CustomKeyOverlay {
     if (idx === -1) return;
     this.pushUndoState();
     const updated = cloneKeyDef(this.keys[idx]);
-    // vp 偏移量 → 百分比偏移量
     if (this.screenWidthVp > 0 && this.screenHeightVp > 0) {
       updated.xPercent = updated.xPercent + deltaX / this.screenWidthVp;
       updated.yPercent = updated.yPercent + deltaY / this.screenHeightVp;
-      // 边界约束: 0.0~1.0
       updated.xPercent = Math.max(0.0, Math.min(1.0, updated.xPercent));
       updated.yPercent = Math.max(0.0, Math.min(1.0, updated.yPercent));
     }
@@ -860,11 +790,9 @@ export struct CustomKeyOverlay {
   }
 
   private async addKeyFromPreset(preset: KeyPreset): Promise<void> {
-    // 随机偏移让多个按键不完全重叠（偏移量约 ±5% 屏幕宽度）
     const centerXPercent = 0.5 + (Math.random() - 0.5) * 0.1;
     const centerYPercent = 0.5 + (Math.random() - 0.5) * 0.1;
 
-    // 根据按键类型设定智能默认外观
     let shape: KeyShape = 'rect';
     let width = 60;
     let height = 60;
@@ -878,7 +806,6 @@ export struct CustomKeyOverlay {
       case 'gamepadButton':
       case 'gamepadTrigger':
       case 'gamepadStick':
-        // 手柄按键：圆形、略大、绿色系
         shape = 'circle';
         width = 56;
         height = 56;
@@ -889,7 +816,6 @@ export struct CustomKeyOverlay {
         fontSize = 13;
         break;
       case 'special':
-        // 特殊功能：宽矩形、蓝色系
         shape = 'rect';
         width = 72;
         height = 44;
@@ -899,7 +825,6 @@ export struct CustomKeyOverlay {
         fontSize = 12;
         break;
       case 'shortcut':
-        // 快捷键：宽矩形、橙色系
         shape = 'rect';
         width = 76;
         height = 44;
@@ -910,7 +835,6 @@ export struct CustomKeyOverlay {
         break;
       case 'mouse':
       case 'mouseScroll':
-        // 鼠标：圆形、紫色系
         shape = 'circle';
         width = 52;
         height = 52;
@@ -919,10 +843,8 @@ export struct CustomKeyOverlay {
         borderRadius = 26;
         break;
       case 'analogStick':
-        // 模拟摇杆：大圆形、绿色系（与手柄按键同色调）
         shape = 'circle';
         if ((preset.action as AnalogStickAction).invisible === true) {
-          // 隐形摇杆：更大触摸区域、半透明
           width = 200;
           height = 200;
         } else {
@@ -936,7 +858,6 @@ export struct CustomKeyOverlay {
         fontSize = 12;
         break;
       case 'dpad':
-        // 十字键盘：大正方形、绿色系
         shape = 'rect';
         width = 120;
         height = 120;
@@ -947,7 +868,6 @@ export struct CustomKeyOverlay {
         fontSize = 12;
         break;
       case 'wheelPad':
-        // 轮盘菜单：大圆形、紫蓝色系
         shape = 'circle';
         width = 150;
         height = 150;
@@ -958,7 +878,6 @@ export struct CustomKeyOverlay {
         fontSize = 11;
         break;
       case 'digitalStick':
-        // 数字摇杆：与模拟摇杆同外观，橙色系区分
         shape = 'circle';
         width = 120;
         height = 120;
@@ -1005,14 +924,13 @@ export struct CustomKeyOverlay {
     this.showPropertyPanel = false;
   }
 
-  /** 克隆选中按键：复制全部属性，位置略微偏移避免完全重叠 */
+  /**
   private async cloneSelectedKey(): Promise<void> {
     const src = this.getSelectedKey();
     if (!src) return;
     this.pushUndoState();
     const cloned = cloneKeyDef(src);
     cloned.id = generateKeyId();
-    // 偏移 3% 避免完全重叠
     cloned.xPercent = Math.min(1.0, cloned.xPercent + 0.03);
     cloned.yPercent = Math.min(1.0, cloned.yPercent + 0.03);
     const newArr: CustomKeyDef[] = this.keys.slice();
@@ -1023,7 +941,7 @@ export struct CustomKeyOverlay {
     promptAction.showToast({ message: '已复制按键', duration: 1200 });
   }
 
-  /** 微调选中按键位置，单位 vp */
+  /**
   private nudgeSelectedKey(dx: number, dy: number): void {
     const idx = this.keys.findIndex(k => k.id === this.selectedKeyId);
     if (idx === -1 || this.screenWidthVp <= 0) return;
@@ -1105,10 +1023,9 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 智能配色
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /** 将配色主题应用到所有按键 */
+  /**
   private async applyThemeToAllKeys(theme: ColorTheme): Promise<void> {
     if (this.keys.length === 0) return;
     this.pushUndoState();
@@ -1126,15 +1043,10 @@ export struct CustomKeyOverlay {
     promptAction.showToast({ message: `已应用「${theme.name}」配色`, duration: 1500 });
   }
 
-  /**
-   * 从当前屏幕截图提取主色调，生成智能配色方案
-   * 使用 window.snapshot() 获取窗口截图，然后采样像素提取主色
-   */
   private async extractColorsFromScreen(): Promise<void> {
     this.themeExtracting = true;
     this.extractedAccentColor = '';
 
-    // ── 步骤1：隐藏覆盖层 UI，等一帧让渲染生效 ──
     this.showThemePanel = false;
     this.hidingForCapture = true;
     await new Promise<void>((resolve) => setTimeout(resolve, 150));
@@ -1144,7 +1056,6 @@ export struct CustomKeyOverlay {
       const win = await window.getLastWindow(context);
       const pixelMap = await win.snapshot();
 
-      // ── 步骤2：截图完成后立刻恢复 UI 显示 ──
       this.hidingForCapture = false;
       this.showThemePanel = true;
 
@@ -1152,21 +1063,18 @@ export struct CustomKeyOverlay {
       const width = info.size.width;
       const height = info.size.height;
 
-      // 采样区域：聚焦中心 60% 区域
       const startX = Math.floor(width * 0.2);
       const endX = Math.floor(width * 0.8);
       const startY = Math.floor(height * 0.15);
       const endY = Math.floor(height * 0.75);
       const sampleCount = 300;
 
-      // 读取整图像素
       const bufferSize = width * height * 4; // RGBA
       const buffer = new ArrayBuffer(bufferSize);
       await pixelMap.readPixelsToBuffer(buffer);
       const view = new Uint8Array(buffer);
       pixelMap.release();
 
-      // 随机采样像素，过滤接近纯黑的点
       const samples: RGBPixel[] = [];
       for (let i = 0; i < sampleCount; i++) {
         const sx = startX + Math.floor(Math.random() * (endX - startX));
@@ -1189,12 +1097,10 @@ export struct CustomKeyOverlay {
         return;
       }
 
-      // ── 步骤3：K-means++ 聚类提取主色调 ──
       const clusters = kMeansPlusPlus(samples, 5);
       const accent = pickAccentFromClusters(clusters, samples.length);
       const accentHex = toHexARGB(255, accent.r, accent.g, accent.b);
 
-      // ── 步骤4：科幻扫描线动画 ──
       this.captureAnimColor = accentHex;
       this.scanLineY = 0;
       this.scanTintOpacity = 0;
@@ -1202,23 +1108,18 @@ export struct CustomKeyOverlay {
       this.scanFlashOpacity = 0;
       this.captureAnimActive = true;
 
-      // 阶段1：扫描线从上往下扫（0→600ms）
       animateTo({ duration: 600, curve: Curve.Linear }, () => {
         this.scanLineY = 100;
       });
-      // 扫过区域同步染色
       animateTo({ duration: 600, curve: Curve.EaseIn }, () => {
         this.scanTintOpacity = 0.3;
       });
 
-      // 动画播放期间同时应用主题
       this.extractedAccentColor = accentHex;
       const theme = generateThemeFromAccent(accent.r, accent.g, accent.b);
       await this.applyThemeToAllKeys(theme);
 
-      // 阶段2：扫描完成 → 全屏闪烁 + 标签淡入（600ms后）
       setTimeout(() => {
-        // 闪光
         animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
           this.scanFlashOpacity = 0.25;
         });
@@ -1227,13 +1128,11 @@ export struct CustomKeyOverlay {
             this.scanFlashOpacity = 0;
           });
         }, 150);
-        // 标签淡入
         animateTo({ duration: 300, curve: Curve.EaseInOut }, () => {
           this.scanLabelOpacity = 1;
         });
       }, 600);
 
-      // 阶段3：整体淡出（1200ms后开始）
       setTimeout(() => {
         animateTo({ duration: 400, curve: Curve.EaseIn }, () => {
           this.scanTintOpacity = 0;
@@ -1258,22 +1157,19 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 配置档案切换
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /** 打开配置档案面板 */
+  /**
   private async openProfilePanel(): Promise<void> {
     this.profileNames = await CustomKeyStore.getProfileNames();
     this.activeProfileName = await CustomKeyStore.getActiveProfileName();
     this.showProfilePanel = true;
   }
 
-  /** 切换到指定配置 */
+  /**
   private async switchToProfile(name: string): Promise<void> {
     if (name === this.activeProfileName) return;
-    // 先保存当前配置
     await CustomKeyStore.saveKeys(this.keys);
-    // 切换
     const profile = await CustomKeyStore.switchProfile(name);
     if (profile) {
       this.activeProfileName = name;
@@ -1288,9 +1184,8 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 新建空配置 */
+  /**
   private async createNewProfile(): Promise<void> {
-    // 生成不重复的名称
     let idx = this.profileNames.length + 1;
     let name = `配置 ${idx}`;
     while (this.profileNames.indexOf(name) >= 0) {
@@ -1313,7 +1208,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 复制当前配置 */
+  /**
   private async duplicateCurrentProfile(): Promise<void> {
     let idx = 1;
     let name = `${this.activeProfileName} (复制)`;
@@ -1337,7 +1232,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 删除指定配置 */
+  /**
   private async deleteProfileByName(name: string): Promise<void> {
     if (this.profileNames.length <= 1) {
       promptAction.showToast({ message: '至少保留一个配置', duration: 1500 });
@@ -1375,7 +1270,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 循环切换到下一个配置（SpecialAction 使用） */
+  /**
   async cycleNextProfile(): Promise<void> {
     const names = await CustomKeyStore.getProfileNames();
     if (names.length <= 1) {
@@ -1391,16 +1286,13 @@ export struct CustomKeyOverlay {
   @Builder
   ProfilePanel() {
     Column() {
-      // 遮罩层
       Column()
         .width('100%')
         .layoutWeight(1)
         .backgroundColor('#40000000')
         .onClick(() => { this.editingProfileName = ''; this.showProfilePanel = false; })
 
-      // 底部面板
       Column({ space: 12 }) {
-        // 标题行
         Row() {
           Text('配置档案')
             .fontSize(16)
@@ -1415,7 +1307,6 @@ export struct CustomKeyOverlay {
         .width('100%')
         .padding({ left: 20, right: 20, top: 16, bottom: 4 })
 
-        // 配置列表 — 水平胶囊
         Scroll() {
           Row({ space: 8 }) {
             ForEach(this.profileNames, (name: string) => {
@@ -1460,7 +1351,6 @@ export struct CustomKeyOverlay {
                   .onAction(() => {
                     if (this.editingProfileName) return;
                     if (name === this.activeProfileName) {
-                      // 长按当前配置 → 重命名
                       this.editingProfileName = name;
                       this.editingProfileNewName = name;
                     } else if (this.profileNames.length > 1) {
@@ -1476,7 +1366,6 @@ export struct CustomKeyOverlay {
         .scrollBar(BarState.Off)
         .width('100%')
 
-        // 操作按钮行
         Row({ space: 10 }) {
           Row({ space: 4 }) {
             Text('+')
@@ -1503,7 +1392,6 @@ export struct CustomKeyOverlay {
         .width('100%')
         .padding({ left: 20, right: 20, bottom: 16 })
 
-        // 提示
         Text('长按当前配置可重命名，长按其他配置可删除')
           .fontSize(OV_FONT_SM)
           .fontColor(OV_TEXT_DIM)
@@ -1522,10 +1410,9 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 二维码分享
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  /** 打开分享面板并生成二维码 */
+  /**
   private async openSharePanel(): Promise<void> {
     this.showSharePanel = true;
     this.showImportConfirm = false;
@@ -1553,7 +1440,7 @@ export struct CustomKeyOverlay {
     this.qrLoading = false;
   }
 
-  /** 复制配置 JSON 到剪贴板 */
+  /**
   private async copyToClipboard(): Promise<void> {
     try {
       const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.shareJson);
@@ -1565,7 +1452,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 通过系统分享面板分享美化卡片（含二维码 + 标题） */
+  /**
   private async shareToFriend(): Promise<void> {
     try {
       const context = getContext(this) as common.UIAbilityContext;
@@ -1573,13 +1460,11 @@ export struct CustomKeyOverlay {
       const keyCount = this.keys.length;
       const qrPixel = this.qrPixelMap;
 
-      // 先关闭自身面板，避免与系统分享面板冲突
       this.showSharePanel = false;
 
       let shareData: systemShare.SharedData;
 
       if (qrPixel) {
-        // 用 componentSnapshot 渲染美化卡片
         const cardPixelMap = await componentSnapshot.createFromBuilder((): void => {
           this.ShareCardBuilder(qrPixel, profileName, keyCount);
         }, 300, true);
@@ -1599,7 +1484,6 @@ export struct CustomKeyOverlay {
           description: `${keyCount} 个自定义按键`,
         });
       } else {
-        // 无二维码：分享文本
         shareData = new systemShare.SharedData({
           utd: 'general.plain-text',
           content: this.shareJson,
@@ -1621,8 +1505,6 @@ export struct CustomKeyOverlay {
   @Builder
   ShareCardBuilder(qrPixel: image.PixelMap, profileName: string, keyCount: number) {
     Stack() {
-      // ── 装饰背景层 ──
-      // 主渐变背景
       Column()
         .width('100%').height('100%')
         .linearGradient({
@@ -1630,7 +1512,6 @@ export struct CustomKeyOverlay {
           colors: [['#FF0F1628', 0], ['#FF162040', 0.35], ['#FF1A1040', 0.65], ['#FF10101E', 1]],
         })
 
-      // 右上角装饰光晕
       Circle()
         .width(180).height(180)
         .fill('#00000000')
@@ -1641,7 +1522,6 @@ export struct CustomKeyOverlay {
         })
         .position({ right: -40, top: -40 })
 
-      // 左下角装饰光晕
       Circle()
         .width(140).height(140)
         .fill('#00000000')
@@ -1652,9 +1532,7 @@ export struct CustomKeyOverlay {
         })
         .position({ left: -30, bottom: -30 })
 
-      // ── 内容层 ──
       Column() {
-        // 顶部品牌区
         Row({ space: 10 }) {
           Image($r('app.media.app_icon'))
             .width(36).height(36)
@@ -1670,9 +1548,7 @@ export struct CustomKeyOverlay {
         .width('100%')
         .padding({ left: 24, right: 24, top: 24, bottom: 16 })
 
-        // 二维码区域 — 带渐变边框和内阴影效果
         Stack() {
-          // 外层渐变边框
           Column()
             .width(244).height(244)
             .borderRadius(18)
@@ -1681,7 +1557,6 @@ export struct CustomKeyOverlay {
               colors: [['#40A8D8EA', 0], ['#208060C0', 0.5], ['#30A8D8EA', 1]],
             })
 
-          // 白色内容区
           Column() {
             Image(qrPixel)
               .width(200).height(200)
@@ -1694,7 +1569,6 @@ export struct CustomKeyOverlay {
         }
         .alignContent(Alignment.Center)
 
-        // 配置名称 + 按键数
         Column({ space: 6 }) {
           Text(profileName)
             .fontSize(16).fontColor('#FFFFFFFF').fontWeight(FontWeight.Bold)
@@ -1710,7 +1584,6 @@ export struct CustomKeyOverlay {
         .alignItems(HorizontalAlign.Center)
         .padding({ top: 16, bottom: 14 })
 
-        // 底部提示
         Divider().color('#20A8D8EA').width('60%')
         Text('打开 Moonlight V+ → 扫一扫即可导入')
           .fontSize(11).fontColor('#60FFFFFF')
@@ -1725,7 +1598,7 @@ export struct CustomKeyOverlay {
     .clip(true)
   }
 
-  /** 从剪贴板粘贴导入 */
+  /**
   private async pasteFromClipboard(): Promise<void> {
     try {
       const sysBoard = pasteboard.getSystemPasteboard();
@@ -1741,7 +1614,7 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 调用系统相机扫码导入 */
+  /**
   private async scanAndImport(): Promise<void> {
     const result = await QrShareService.scanQrCode();
     if (!result) {
@@ -1751,7 +1624,7 @@ export struct CustomKeyOverlay {
     this.handleImportJson(result);
   }
 
-  /** 解析 JSON 并显示导入确认 */
+  /**
   private handleImportJson(json: string): void {
     const parsed = QrShareService.deserialize(json);
     if (!parsed) {
@@ -1764,7 +1637,7 @@ export struct CustomKeyOverlay {
     this.showImportConfirm = true;
   }
 
-  /** 执行替换导入 — 替换当前所有按键 */
+  /**
   private async doImportReplace(): Promise<void> {
     this.pushUndoState();
     this.keys = this.importPreviewKeys;
@@ -1777,7 +1650,7 @@ export struct CustomKeyOverlay {
     });
   }
 
-  /** 执行合并导入 — 追加到现有按键 */
+  /**
   private async doImportMerge(): Promise<void> {
     this.pushUndoState();
     const merged = this.keys.slice();
@@ -1819,7 +1692,6 @@ export struct CustomKeyOverlay {
 
   @Builder
   AlignmentGuides() {
-    // 对齐辅助线 — 拖拽吸附时在对齐位置绘制蓝色参考线
     Stack() {
       if (this.alignGuideX >= 0) {
         Divider()
@@ -1846,7 +1718,6 @@ export struct CustomKeyOverlay {
   @Builder
   ThemePanel() {
     Column() {
-      // 标题栏
       Row() {
         Text('🎨 智能配色').fontSize(16).fontColor(OV_TEXT_WHITE).fontWeight(FontWeight.Bold)
         Blank()
@@ -1860,7 +1731,6 @@ export struct CustomKeyOverlay {
 
       Scroll() {
         Column({ space: 12 }) {
-          // ── 从画面取色 ──
           Column({ space: 8 }) {
             Text('从当前画面取色')
               .fontSize(13).fontColor(OV_TEXT_MEDIUM)
@@ -1898,7 +1768,6 @@ export struct CustomKeyOverlay {
 
           Divider().color('#20FFFFFF').width('90%')
 
-          // ── 预设主题 ──
           Column({ space: 8 }) {
             Text('预设主题')
               .fontSize(13).fontColor(OV_TEXT_MEDIUM)
@@ -1908,7 +1777,6 @@ export struct CustomKeyOverlay {
               space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
               ForEach(COLOR_THEMES, (theme: ColorTheme) => {
                 Column({ space: 4 }) {
-                  // 预览色卡：模拟按键外观
                   Stack() {
                     Text('A')
                       .fontSize(13).fontColor(theme.textColor).fontWeight(FontWeight.Bold)
@@ -1934,12 +1802,10 @@ export struct CustomKeyOverlay {
 
           Divider().color('#20FFFFFF').width('90%')
 
-          // ── 提示 ──
           Text('提示：配色会应用到所有按键，可用撤销恢复')
             .fontSize(11).fontColor(OV_TEXT_DIM)
             .padding({ left: 16, right: 16 })
 
-          // 间距
           Row().height(8)
         }
       }
@@ -1959,7 +1825,6 @@ export struct CustomKeyOverlay {
   @Builder
   SharePanel() {
     Column() {
-      // 标题栏
       Row() {
         Text('分享 / 导入').fontSize(16).fontColor(OV_TEXT_WHITE).fontWeight(FontWeight.Bold)
         Blank()
@@ -1975,7 +1840,6 @@ export struct CustomKeyOverlay {
       .padding({ left: 16, right: 16, top: 12, bottom: 8 })
 
       if (this.showImportConfirm) {
-        // ── 导入确认视图 ──
         Column({ space: 12 }) {
           Text(`配置: ${this.importPreviewName}`)
             .fontSize(14).fontColor(OV_TEXT_WHITE).fontWeight(FontWeight.Bold)
@@ -2006,10 +1870,8 @@ export struct CustomKeyOverlay {
         .width('100%')
         .padding({ left: 16, right: 16, top: 8, bottom: 16 })
       } else {
-        // ── 分享 + 导入主视图 ──
         Scroll() {
           Row({ space: 16 }) {
-            // 左侧：二维码
             Column({ space: 8 }) {
               Text('当前配置二维码')
                 .fontSize(12).fontColor(OV_TEXT_MEDIUM)
@@ -2057,7 +1919,6 @@ export struct CustomKeyOverlay {
                 .borderRadius(8).backgroundColor('#20FFFFFF')
                 .border({ width: 1, color: '#20FFFFFF' })
               }
-              // 操作按钮
               Row({ space: 8 }) {
                 Text('复制')
                   .fontSize(12).fontColor(OV_TEXT_WHITE).fontWeight(FontWeight.Medium)
@@ -2079,7 +1940,6 @@ export struct CustomKeyOverlay {
                 .fontSize(10).fontColor(OV_TEXT_DIM)
             }
 
-            // 右侧：导入选项
             Column({ space: 10 }) {
               Text('导入配置')
                 .fontSize(12).fontColor(OV_TEXT_MEDIUM)
@@ -2123,7 +1983,6 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 缩放手柄
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   private static readonly RESIZE_HANDLE_SIZE = 20;
@@ -2190,7 +2049,6 @@ export struct CustomKeyOverlay {
         const dy = touch.windowY - this.resizeStartY;
         this.resizeDragDX = dx;
         this.resizeDragDY = dy;
-        // 实时预览：更新按键尺寸
         const minS = CustomKeyOverlay.MIN_KEY_SIZE;
         const maxS = CustomKeyOverlay.MAX_KEY_SIZE;
         const newW = Math.max(minS, Math.min(maxS, this.resizeOrigWidth + dx));
@@ -2211,13 +2069,12 @@ export struct CustomKeyOverlay {
     }
   }
 
-  /** 直接更新选中按键的宽高（不推 undo，缩放结束时由 touch up 保存） */
+  /**
   private applyResize(newWidth: number, newHeight: number): void {
     const idx = this.keys.findIndex(k => k.id === this.selectedKeyId);
     if (idx === -1) return;
     const updated = cloneKeyDef(this.keys[idx]);
     if (updated.shape === 'circle') {
-      // 圆形按键：保持等比
       const s = Math.max(newWidth, newHeight);
       updated.width = s;
       updated.height = s;
@@ -2231,13 +2088,11 @@ export struct CustomKeyOverlay {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // Builders: 面板
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   @Builder
   AddKeyPanel() {
     Column() {
-      // 标题栏
       Row() {
         Text('添加按键').fontSize(16).fontColor(OV_TEXT_WHITE).fontWeight(FontWeight.Bold)
         Blank()
@@ -2249,7 +2104,6 @@ export struct CustomKeyOverlay {
       .width('100%')
       .padding({ left: 16, right: 16, top: 12, bottom: 6 })
 
-      // 水平分类标签
       Scroll() {
         Row({ space: 6 }) {
           ForEach(KEY_PRESET_CATEGORIES, (category: KeyPresetCategory, index: number) => {
@@ -2275,7 +2129,6 @@ export struct CustomKeyOverlay {
       .width('100%')
       .height(38)
 
-      // 选中分类的按键网格
       Scroll() {
         Flex({ wrap: FlexWrap.Wrap,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(6) } }) {
@@ -2322,7 +2175,6 @@ export struct CustomKeyOverlay {
 
       Scroll() {
         Column({ space: 8 }) {
-          // 标签编辑
           Row() {
             Text('标签').fontSize(12).fontColor(OV_TEXT_MEDIUM).width(36)
             TextInput({ text: this.getSelectedKey()?.label ?? '' })
@@ -2334,7 +2186,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 尺寸/样式 滑块 — 两列紧凑排列
           Row({ space: 12 }) {
             this.PropertySliderCompact('宽', 30, 200, this.getSelectedKey()?.width ?? 60, 'width')
             this.PropertySliderCompact('高', 30, 200, this.getSelectedKey()?.height ?? 60, 'height')
@@ -2353,7 +2204,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 位置微调
           Row({ space: 8 }) {
             Text('微调').fontSize(11).fontColor(OV_TEXT_MEDIUM).width(28)
             Text('←')
@@ -2390,7 +2240,6 @@ export struct CustomKeyOverlay {
           .width('100%').padding({ left: 4, right: 4 })
 
           Row({ space: 12 }) {
-            // 形状 + 模式 — 紧凑行内
             Row({ space: 6 }) {
               this.ShapeChip('方', 'rect')
               this.ShapeChip('圆', 'circle')
@@ -2402,7 +2251,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 颜色行 — 底色 + 字色 并排
           Row({ space: 16 }) {
             Row() {
               Text('底色').fontSize(12).fontColor(OV_TEXT_MEDIUM).margin({ right: 6 })
@@ -2438,7 +2286,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 按压色
           Row() {
             Text('按压').fontSize(12).fontColor(OV_TEXT_MEDIUM).margin({ right: 6 })
             Row({ space: 5 }) {
@@ -2456,7 +2303,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 振动反馈
           Row({ space: 6 }) {
             Text('振动').fontSize(12).fontColor(OV_TEXT_MEDIUM).width(36)
             ForEach(HAPTIC_OPTIONS, (opt: [string, string]) => {
@@ -2473,7 +2319,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 层级管理
           Row({ space: 8 }) {
             Text('层级').fontSize(12).fontColor(OV_TEXT_MEDIUM).width(36)
             Text(`${this.getSelectedKey()?.layer ?? 0}`)
@@ -2493,7 +2338,6 @@ export struct CustomKeyOverlay {
           }
           .width('100%').padding({ left: 4, right: 4 })
 
-          // 轮盘分区编辑器（仅 wheelPad 类型显示）
           if (this.getSelectedKey()?.action?.type === 'wheelPad') {
             Column({ space: 6 }) {
               Row() {
@@ -2545,7 +2389,6 @@ export struct CustomKeyOverlay {
                   }
                   .width('100%')
 
-                  // 按键选择器（展开时显示）
                   if (this.segmentPickerIndex === (index ?? 0)) {
                     this.SegmentActionPicker(index ?? 0)
                   }
@@ -2573,9 +2416,7 @@ export struct CustomKeyOverlay {
     .transition(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 200 }))
   }
 
-  // ── 轮盘分区编辑 ──
-
-  /** 获取选中按键的轮盘分区（安全访问） */
+  /**
   private getWheelPadSegments(): WheelPadSegment[] {
     const key = this.getSelectedKey();
     if (key && key.action.type === 'wheelPad') {
@@ -2584,7 +2425,7 @@ export struct CustomKeyOverlay {
     return [];
   }
 
-  /** 更新分区标签 */
+  /**
   private updateSegmentLabel(segIndex: number, label: string): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2596,7 +2437,7 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /** 更新分区绑定的按键动作 */
+  /**
   private updateSegmentAction(segIndex: number, action: KeyAction): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2609,7 +2450,7 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /** 添加新分区 */
+  /**
   private addWheelPadSegment(): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2624,7 +2465,7 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /** 删除指定分区（至少保留 2 个） */
+  /**
   private removeWheelPadSegment(segIndex: number): void {
     const key = this.getSelectedKey();
     if (!key || key.action.type !== 'wheelPad') return;
@@ -2638,20 +2479,19 @@ export struct CustomKeyOverlay {
     this.forceRefreshSelectedKey();
   }
 
-  /** 强制刷新选中按键的 UI（触发 @State keys 变更） */
+  /**
   private forceRefreshSelectedKey(): void {
     const idx = this.keys.findIndex(k => k.id === this.selectedKeyId);
     if (idx >= 0) {
       const newKeys = this.keys.slice();
       newKeys[idx] = cloneKeyDef(this.keys[idx]);
-      // 保留 action 引用（cloneKeyDef 浅拷贝 action）
       newKeys[idx].action = this.keys[idx].action;
       this.keys = newKeys;
       CustomKeyStore.saveKeys(this.keys);
     }
   }
 
-  /** 用于分区编辑的简化预设列表（排除复合类型） */
+  /**
   private static readonly SEGMENT_PICKER_CATEGORIES: string[] = [
     '常用键', '功能键', '鼠标', '手柄', '方向键', '字母', '数字', '符号',
   ];
@@ -2659,7 +2499,6 @@ export struct CustomKeyOverlay {
   @Builder
   SegmentActionPicker(segIndex: number) {
     Column({ space: 4 }) {
-      // 分类选择
       Scroll() {
         Row({ space: 4 }) {
           ForEach(CustomKeyOverlay.SEGMENT_PICKER_CATEGORIES, (catName: string, catIdx?: number) => {
@@ -2679,7 +2518,6 @@ export struct CustomKeyOverlay {
       .scrollBar(BarState.Off)
       .width('100%')
 
-      // 按键列表
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(4), cross: LengthMetrics.vp(4) } }) {
         ForEach(this.getSegmentPickerPresets(), (preset: KeyPreset) => {
           Text(preset.label)
@@ -2700,13 +2538,12 @@ export struct CustomKeyOverlay {
     .borderRadius(6)
   }
 
-  /** 获取当前分类下的按键预设 */
+  /**
   private getSegmentPickerPresets(): KeyPreset[] {
     const catName = CustomKeyOverlay.SEGMENT_PICKER_CATEGORIES[this.segmentPickerCategoryIdx];
     if (!catName) return [];
     for (let i = 0; i < KEY_PRESET_CATEGORIES.length; i++) {
       if (KEY_PRESET_CATEGORIES[i].name === catName) {
-        // 过滤掉复合类型（摇杆、十字键、轮盘等不适合作为分区动作的类型）
         return KEY_PRESET_CATEGORIES[i].presets.filter((p: KeyPreset): boolean => {
           const t = p.action.type;
           return t !== 'analogStick' && t !== 'dpad' && t !== 'wheelPad' && t !== 'digitalStick';

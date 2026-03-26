@@ -9,87 +9,87 @@
  */
 
 /**
- * 隐藏式虚拟摇杆组件（Invisible Joystick）
+ * Invisible Joystick Component
  *
- * 参照 Android InvisibleAnalogStick.java 的设计：
- * - 不触摸时完全透明（仅编辑模式显示虚线边框）
- * - 手指触摸时，触摸点成为摇杆圆心，摇杆在该位置出现
- * - 手指滑动产生相对于触摸点的模拟输入
- * - 手指抬起后摇杆消失，输入归零
+ * Based on Android InvisibleAnalogStick.java design:
+ * - Completely transparent when not touched (edit mode shows dashed border)
+ * - On touch, touch point becomes joystick center, joystick appears at that position
+ * - Finger sliding produces analog input relative to touch point
+ * - On finger lift, joystick disappears, input zeros
  *
- * 提供 JoystickMovementCallback 输出归一化 x/y (-1.0 ~ 1.0)
+ * Provides JoystickMovementCallback outputting normalized x/y (-1.0 ~ 1.0)
  */
 
 /**
- * 摇杆移动回调
- * @param x 水平轴 -1.0(左) ~ 0 ~ 1.0(右)
- * @param y 垂直轴 -1.0(上) ~ 0 ~ 1.0(下)（屏幕坐标系）
+ * Joystick movement callback
+ * @param x Horizontal axis -1.0(left) ~ 0 ~ 1.0(right)
+ * @param y Vertical axis -1.0(up) ~ 0 ~ 1.0(down) (screen coordinate system)
  */
 export type InvisibleJoystickMovementCallback = (x: number, y: number) => void;
 
-/** 摇杆双击回调（L3/R3 短按触发） */
+/** Joystick double tap callback (L3/R3 short press trigger) */
 export type InvisibleJoystickClickCallback = () => void;
 
-/** 摇杆释放回调（手指抬起，摇杆归零） */
+/** Joystick release callback (finger lifted, joystick zeros) */
 export type InvisibleJoystickRevokeCallback = () => void;
 
-/** 是否处于编辑模式（编辑模式下禁用摇杆输入，但显示边框） */
+/** Whether in edit mode (edit mode disables joystick input but shows border) */
 export type InvisibleEditModeGetter = () => boolean;
 
 @Component
 export struct InvisibleJoystick {
-  /** 触摸区域宽度 (vp) */
+  /** Touch area width (vp) */
   @Prop areaWidth: number = 200;
-  /** 触摸区域高度 (vp) */
+  /** Touch area height (vp) */
   @Prop areaHeight: number = 200;
-  /** 摇杆可视半径 (vp)，触摸后出现的圆的半径 */
+  /** Joystick visible radius (vp), radius of circle that appears on touch */
   @Prop stickRadius: number = 60;
-  /** 外圆颜色 */
+  /** Outer ring color */
   @Prop ringColor: string = '#6050C080';
-  /** 内摇杆颜色 */
+  /** Inner joystick color */
   @Prop stickColor: string = '#A050C080';
-  /** 按下时颜色 */
+  /** Pressed color */
   @Prop pressedColor: string = '#C070E090';
-  /** 编辑模式下边框颜色 */
+  /** Border color in edit mode */
   @Prop editBorderColor: string = '#80FFFFFF';
-  /** 透明度 0-100 */
+  /** Opacity 0-100 */
   @Prop opacity_: number = 80;
 
-  // 回调
+  // Callbacks
   onMovement: InvisibleJoystickMovementCallback = (_x: number, _y: number): void => {};
   onStickClick: InvisibleJoystickClickCallback = (): void => {};
   onDoubleClick: InvisibleJoystickClickCallback = (): void => {};
   onRevoke: InvisibleJoystickRevokeCallback = (): void => {};
   isEditMode: InvisibleEditModeGetter = (): boolean => false;
 
-  // === 内部状态 ===
-  /** 是否有手指按下 */
+  // === Internal state ===
+  /** Whether finger is pressed */
   @State private isPressed: boolean = false;
-  /** 摇杆圆心 X（相对于触摸区域，动态等于 ACTION_DOWN 坐标） */
+  /** Joystick center X (relative to touch area, dynamically equals ACTION_DOWN coordinate) */
   @State private centerX: number = 0;
-  /** 摇杆圆心 Y */
+  /** Joystick center Y */
   @State private centerY: number = 0;
-  /** 内摇杆头视觉偏移 X（相对于圆心，px 单位，用于 translate） */
+  /** Inner joystick head visual offset X (relative to center, px unit, for translate) */
   @State private stickOffsetX: number = 0;
-  /** 内摇杆头视觉偏移 Y */
+  /** Inner joystick head visual offset Y */
   @State private stickOffsetY: number = 0;
 
-  // 预计算的尺寸值
+  // Pre-calculated size values
   private innerRadius: number = 15;
   private maxTravel: number = 45;
 
-  // 死区比例
+  // Dead zone ratio
   private deadzone: number = 0.15;
 
-  // 死区超时（150ms 后自动解除死区，允许精细操作）
+  // Dead zone timeout (150ms then auto-release dead zone, allowing fine control)
   private static readonly DEADZONE_TIMEOUT_MS: number = 150;
   private touchDownTime: number = 0;
   private deadzoneActive: boolean = true;
 
-  // 触摸追踪
+  // Touch tracking
   private trackingTouchId: number = -1;
 
-  // 双击检测
+  // Double tap detection
   private lastTapTime: number = 0;
   private static readonly DOUBLE_TAP_MS: number = 300;
 
@@ -100,13 +100,13 @@ export struct InvisibleJoystick {
 
   build() {
     Stack() {
-      // 透明触摸区域（始终存在用于命中测试）
+      // Transparent touch area (always present for hit testing)
       Rect()
         .width('100%')
         .height('100%')
         .fill('#01000000')
 
-      // 编辑模式下显示虚线边框提示触摸区域
+      // Edit mode shows dashed border indicating touch area
       if (this.isEditMode()) {
         Rect()
           .width('100%')
@@ -117,7 +117,7 @@ export struct InvisibleJoystick {
           .strokeDashArray([6, 4])
           .borderRadius(4)
 
-        // 编辑模式下在中心画预览摇杆轮廓
+        // Edit mode draws preview joystick outline at center
         Circle()
           .width(this.stickRadius * 2)
           .height(this.stickRadius * 2)
@@ -131,9 +131,9 @@ export struct InvisibleJoystick {
           })
       }
 
-      // 按下时在触摸点显示摇杆
+      // On press, show joystick at touch point
       if (this.isPressed) {
-        // 外圆环
+        // Outer ring
         Circle()
           .width(this.stickRadius * 2)
           .height(this.stickRadius * 2)
@@ -145,7 +145,7 @@ export struct InvisibleJoystick {
             y: this.centerY - this.stickRadius
           })
 
-        // 死区圆
+        // Dead zone circle
         Circle()
           .width(this.stickRadius * 2 * this.deadzone)
           .height(this.stickRadius * 2 * this.deadzone)
@@ -158,7 +158,7 @@ export struct InvisibleJoystick {
             y: this.centerY - this.stickRadius * this.deadzone
           })
 
-        // 内摇杆头
+        // Inner joystick head
         Circle()
           .width(this.innerRadius * 2)
           .height(this.innerRadius * 2)
@@ -188,19 +188,19 @@ export struct InvisibleJoystick {
       if (changed.length === 0) return;
       const touch: TouchObject = changed[0];
 
-      // 只追踪一个手指
+      // Only track one finger
       if (this.trackingTouchId >= 0) return;
 
       this.trackingTouchId = touch.id;
       this.isPressed = true;
 
-      // ★ 核心：触摸点成为摇杆圆心
+      // ★ Core: touch point becomes joystick center
       this.centerX = touch.x;
       this.centerY = touch.y;
       this.stickOffsetX = 0;
       this.stickOffsetY = 0;
 
-      // 记录按下时间用于死区超时
+      // Record press time for dead zone timeout
       this.touchDownTime = Date.now();
       this.deadzoneActive = true;
 
@@ -248,33 +248,33 @@ export struct InvisibleJoystick {
   }
 
   /**
-   * 更新摇杆位置并发送移动事件
-   * 参照 Android InvisibleAnalogStick.updatePosition + 死区超时机制
+   * Update joystick position and send movement events
+   * Based on Android InvisibleAnalogStick.updatePosition + dead zone timeout mechanism
    */
   private updateStickPosition(dx: number, dy: number): void {
-    // 极坐标
+    // Polar coordinates
     let distance: number = Math.sqrt(dx * dx + dy * dy);
     const angle: number = Math.atan2(dy, dx);
 
-    // 限制在可移动范围内
+    // Limit to movable range
     if (distance > this.maxTravel) {
       distance = this.maxTravel;
     }
 
-    // 视觉偏移
+    // Visual offset
     this.stickOffsetX = distance * Math.cos(angle);
     this.stickOffsetY = distance * Math.sin(angle);
 
-    // 归一化坐标
+    // Normalized coordinates
     const normalizedX: number = this.stickOffsetX / this.maxTravel;
     const normalizedY: number = this.stickOffsetY / this.maxTravel;
     const magnitude: number = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
-    // 死区超时检查（150ms 后自动解除死区，与 Android 一致）
+    // Dead zone timeout check (150ms then auto-release dead zone, consistent with Android)
     if (this.deadzoneActive && Date.now() - this.touchDownTime > InvisibleJoystick.DEADZONE_TIMEOUT_MS) {
       this.deadzoneActive = false;
     }
-    // 一旦超出死区范围也永久解除
+    // Once outside dead zone range, permanently release
     if (magnitude > this.deadzone) {
       this.deadzoneActive = false;
     }
@@ -283,11 +283,11 @@ export struct InvisibleJoystick {
     let outY: number = 0;
 
     if (this.deadzoneActive && magnitude < this.deadzone) {
-      // 在死区内且未超时，不发送移动
+      // In dead zone and not timed out, don't send movement
       outX = 0;
       outY = 0;
     } else {
-      // 死区已解除，连续重映射
+      // Dead zone released, continuous remapping
       if (magnitude > 0) {
         const effectiveDeadzone: number = this.deadzoneActive ? this.deadzone : 0;
         if (magnitude > effectiveDeadzone) {
@@ -305,7 +305,7 @@ export struct InvisibleJoystick {
   }
 
   /**
-   * 双击检测（与 VirtualJoystick 一致的 300ms 阈值）
+   * Double tap detection (300ms threshold consistent with VirtualJoystick)
    */
   private checkDoubleTap(): void {
     const now: number = Date.now();

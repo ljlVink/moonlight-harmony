@@ -1,7 +1,5 @@
 /**
- * SDL3 游戏手柄管理器实现
  * 
- * 使用 SDL3 的 Gamepad/Joystick API
  */
 
 #include "gamepad_manager.h"
@@ -19,30 +17,25 @@
 #define LOGW(...) OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, __VA_ARGS__)
 
-// 最大支持的手柄数量
 #define MAX_GAMEPADS 4
 
-// 手柄实例结构
 typedef struct {
     bool active;
     SDL_JoystickID instanceId;
-    SDL_Gamepad* gamepad;      // 如果是支持的手柄
-    SDL_Joystick* joystick;    // 如果是通用 joystick
+    SDL_Gamepad* gamepad;
+    SDL_Joystick* joystick;
     GamepadInfo info;
     GamepadState state;
 } GamepadInstance;
 
-// 全局状态
 static bool g_initialized = false;
 static GamepadInstance g_gamepads[MAX_GAMEPADS];
 static int g_connectedCount = 0;
 
-// 回调函数
 static GamepadConnectedCallback g_connectedCallback = NULL;
 static GamepadDisconnectedCallback g_disconnectedCallback = NULL;
 static GamepadStateCallback g_stateCallback = NULL;
 
-// 内部函数声明
 static int FindFreeSlot(void);
 static int FindSlotByInstanceId(SDL_JoystickID instanceId);
 static void UpdateGamepadState(GamepadInstance* inst);
@@ -56,24 +49,20 @@ int GamepadManager_Init(void) {
     
     LOGI("Initializing SDL3 GamepadManager...");
     
-    // 初始化 SDL
     if (!SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK)) {
         LOGE("SDL_Init failed: %s", SDL_GetError());
         return -1;
     }
     
-    // 清空手柄数组
     memset(g_gamepads, 0, sizeof(g_gamepads));
     g_connectedCount = 0;
     
-    // 启用 HIDAPI 驱动
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_XBOX, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
     
-    // 扫描已连接的手柄
     int numJoysticks = 0;
     SDL_JoystickID* joysticks = SDL_GetJoysticks(&numJoysticks);
     
@@ -88,7 +77,6 @@ int GamepadManager_Init(void) {
             GamepadInstance* inst = &g_gamepads[slot];
             inst->instanceId = joyId;
             
-            // 尝试作为 Gamepad 打开
             if (SDL_IsGamepad(joyId)) {
                 inst->gamepad = SDL_OpenGamepad(joyId);
                 if (inst->gamepad) {
@@ -101,7 +89,6 @@ int GamepadManager_Init(void) {
                 }
             }
             
-            // 如果不是 Gamepad，作为 Joystick 打开
             if (!inst->gamepad) {
                 inst->joystick = SDL_OpenJoystick(joyId);
                 if (inst->joystick) {
@@ -141,7 +128,6 @@ void GamepadManager_Quit(void) {
     
     LOGI("Shutting down GamepadManager...");
     
-    // 关闭所有手柄
     for (int i = 0; i < MAX_GAMEPADS; i++) {
         if (g_gamepads[i].active) {
             if (g_gamepads[i].gamepad) {
@@ -207,7 +193,6 @@ void GamepadManager_PollEvents(void) {
             }
             
             case SDL_EVENT_JOYSTICK_ADDED: {
-                // 只处理不是 Gamepad 的 Joystick
                 if (!SDL_IsGamepad(event.jdevice.which)) {
                     LOGI("Joystick added: instance_id=%d", event.jdevice.which);
                     int slot = FindFreeSlot();
@@ -263,7 +248,6 @@ void GamepadManager_PollEvents(void) {
         }
     }
     
-    // 更新所有手柄状态
     for (int i = 0; i < MAX_GAMEPADS; i++) {
         if (g_gamepads[i].active) {
             UpdateGamepadState(&g_gamepads[i]);
@@ -331,10 +315,6 @@ int GamepadManager_Rumble(int32_t deviceId, uint16_t lowFreq, uint16_t highFreq,
 int GamepadManager_OpenUsbDevice(uint16_t vendorId, uint16_t productId, int fd) {
     LOGI("OpenUsbDevice: VID=0x%04X PID=0x%04X fd=%d", vendorId, productId, fd);
     
-    // SDL3 HIDAPI 可能需要特殊处理来打开已有的 fd
-    // 这里先返回 -1，后续实现
-    // TODO: 实现 USB 设备直接打开
-    
     return -1;
 }
 
@@ -363,8 +343,6 @@ void GamepadManager_CloseUsbDevice(int32_t deviceId) {
     memset(inst, 0, sizeof(GamepadInstance));
     g_connectedCount--;
 }
-
-// ==================== 内部函数实现 ====================
 
 static int FindFreeSlot(void) {
     for (int i = 0; i < MAX_GAMEPADS; i++) {
@@ -406,8 +384,6 @@ static int GetGamepadType(SDL_Gamepad* gamepad) {
     }
 }
 
-// 检查是否是需要特殊L3/R3映射修复的手柄
-// VID 0x413D PID 0x2103: L3->RS_CLK(0x80), R3->GUIDE(0x400) 需要交换
 static bool NeedsL3R3Fix(uint16_t vid, uint16_t pid) {
     bool needsFix = (vid == 0x413D && pid == 0x2103);
     static bool loggedOnce = false;
@@ -425,10 +401,8 @@ static void UpdateGamepadState(GamepadInstance* inst) {
     state->deviceId = inst->info.deviceId;
     state->buttons = 0;
     
-    // 检查是否需要 L3/R3 修复
     bool needsL3R3Fix = NeedsL3R3Fix(inst->info.vendorId, inst->info.productId);
     
-    // 一次性日志：设备信息
     static bool deviceLogged = false;
     if (!deviceLogged) {
         LOGI("UpdateGamepadState: isGamepad=%d VID=0x%04X PID=0x%04X needsL3R3Fix=%d",
@@ -437,7 +411,6 @@ static void UpdateGamepadState(GamepadInstance* inst) {
     }
     
     if (inst->info.isGamepad && inst->gamepad) {
-        // 使用 Gamepad API (有标准化的按钮映射)
         SDL_UpdateGamepads();
         
         // D-Pad
@@ -467,20 +440,14 @@ static void UpdateGamepadState(GamepadInstance* inst) {
             state->buttons |= GAMEPAD_RB_FLAG;
         
         // Stick buttons (L3/R3)
-        // 某些手柄 (VID 0x413D PID 0x2103) SDL映射错误:
-        // - SDL的 RIGHT_STICK 实际是 L3
-        // - SDL的 GUIDE 实际是 R3
         if (needsL3R3Fix) {
-            // 特殊映射修复
             if (SDL_GetGamepadButton(inst->gamepad, SDL_GAMEPAD_BUTTON_RIGHT_STICK))
                 state->buttons |= GAMEPAD_LS_CLK_FLAG;  // RIGHT_STICK -> L3
             if (SDL_GetGamepadButton(inst->gamepad, SDL_GAMEPAD_BUTTON_GUIDE))
                 state->buttons |= GAMEPAD_RS_CLK_FLAG;  // GUIDE -> R3
-            // LEFT_STICK 保持原样
             if (SDL_GetGamepadButton(inst->gamepad, SDL_GAMEPAD_BUTTON_LEFT_STICK))
                 state->buttons |= GAMEPAD_GUIDE_FLAG;   // LEFT_STICK -> GUIDE
         } else {
-            // 标准映射
             if (SDL_GetGamepadButton(inst->gamepad, SDL_GAMEPAD_BUTTON_LEFT_STICK))
                 state->buttons |= GAMEPAD_LS_CLK_FLAG;
             if (SDL_GetGamepadButton(inst->gamepad, SDL_GAMEPAD_BUTTON_RIGHT_STICK))
@@ -508,14 +475,12 @@ static void UpdateGamepadState(GamepadInstance* inst) {
         state->rightTrigger = (uint8_t)((rightTrigger * 255) / 32767);
         
     } else if (inst->joystick) {
-        // 使用 Joystick API (通用映射)
         SDL_UpdateJoysticks();
         
         int numButtons = SDL_GetNumJoystickButtons(inst->joystick);
         int numAxes = SDL_GetNumJoystickAxes(inst->joystick);
         int numHats = SDL_GetNumJoystickHats(inst->joystick);
         
-        // 通用按钮映射 (可能需要针对特定设备调整)
         if (numButtons > 0 && SDL_GetJoystickButton(inst->joystick, 0))
             state->buttons |= GAMEPAD_A_FLAG;
         if (numButtons > 1 && SDL_GetJoystickButton(inst->joystick, 1))
@@ -539,7 +504,6 @@ static void UpdateGamepadState(GamepadInstance* inst) {
         if (numButtons > 10 && SDL_GetJoystickButton(inst->joystick, 10))
             state->buttons |= GAMEPAD_RS_CLK_FLAG;
         
-        // 通用轴映射
         if (numAxes > 0)
             state->leftStickX = SDL_GetJoystickAxis(inst->joystick, 0);
         if (numAxes > 1)

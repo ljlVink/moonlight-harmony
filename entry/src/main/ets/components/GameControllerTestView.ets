@@ -8,10 +8,7 @@
  * (at your option) any later version.
  */
 
-/**
- * Game Controller Kit 测试视图
- * 用于测试蓝牙/系统手柄的输入（非 USB 直连模式）
- */
+
 
 import { gameControllerService, GameControllerService, ButtonCode } from '../service/GameControllerService';
 import { GamepadManager } from '../service/GamepadManager';
@@ -19,14 +16,14 @@ import { UsbDriverService } from '../service/usbdriver';
 import { gcButtonMap, AXIS_MAX, TRIGGER_MAX } from '../service/GamepadTypes';
 import { AppColors } from '../common/Theme';
 
-// @Builder 按引用传参接口
+
 interface ButtonIndicatorParams {
   name: string;
   buttons: number;
   flag: number;
 }
 
-// 手柄状态类
+
 class ControllerInputState {
   buttons: number = 0;
   leftStickX: number = 0;
@@ -37,14 +34,14 @@ class ControllerInputState {
   rightTrigger: number = 0;
 }
 
-// 设备信息类
+
 class GCDeviceInfo {
   deviceId: string = '';
   name: string = '';
   productId: number = 0;
 }
 
-// 按键事件历史记录
+
 class ButtonEventLog {
   timestamp: string;
   deviceId: string;
@@ -61,7 +58,7 @@ class ButtonEventLog {
   }
   
   static getButtonName(code: number): string {
-    // 根据实际测试调整的映射
+    // Button name mapping based on actual testing
     switch (code) {
       case 2301: return 'A';
       case 2302: return 'B';
@@ -71,11 +68,11 @@ class ButtonEventLog {
       case 2306: return 'Z';
       case 2307: return 'L1';
       case 2308: return 'R1';
-      case 2309: return 'LT (按钮)';
-      case 2310: return 'RT (按钮)';
+      case 2309: return 'LT (Button)';
+      case 2310: return 'RT (Button)';
       case 2311: return 'Select';
       case 2312: return 'Start';
-      case 2313: return 'Home/Mode (可自定义)';  // 设置 → 手柄 → Home 键动作
+      case 2313: return 'Home/Mode (Customizable)';
       case 2314: return 'L3';
       case 2315: return 'R3';
       // D-Pad
@@ -83,7 +80,7 @@ class ButtonEventLog {
       case 2013: return 'D-Down';
       case 2014: return 'D-Left';
       case 2015: return 'D-Right';
-      default: return `未知(${code})`;
+      default: return `Unknown(${code})`;
     }
   }
 }
@@ -93,7 +90,7 @@ export struct GameControllerTestView {
   @State isMonitoring: boolean = false;
   @State isAvailable: boolean = false;
   @State connectedDevices: GCDeviceInfo[] = [];
-  // 使用纯原始类型 @State —— ArkUI 对 number/boolean 的变化检测最可靠
+
   @State displayButtons: number = 0;
   @State displayLSX: number = 0;
   @State displayLSY: number = 0;
@@ -101,17 +98,16 @@ export struct GameControllerTestView {
   @State displayRSY: number = 0;
   @State displayLT: number = 0;
   @State displayRT: number = 0;
-  @State hasInput: boolean = false;  // 是否收到过输入数据
+  @State hasInput: boolean = false;
   @State logMessages: string[] = [];
   @State buttonEventLogs: ButtonEventLog[] = [];
   @State rawButtonEvents: string[] = [];
   @State keyEventLogs: string[] = [];
   
-  // 接收来自父组件的 KeyEvent 处理器注册函数
+
   onKeyEventRef?: (handler: (event: KeyEvent) => boolean) => void;
 
-  // 内部缓冲区：GCK 回调在系统线程，直接写 @State 不可靠且导致卡顿
-  // 所有回调数据先写入缓冲区，由 30Hz UI 刷新定时器统一同步到 @State
+
   private internalState: ControllerInputState = new ControllerInputState();
   private stateDirty: boolean = false;
   private internalLogs: string[] = [];
@@ -124,11 +120,11 @@ export struct GameControllerTestView {
   private uiRefreshTimer: number = -1;
 
   aboutToAppear(): void {
-    this.addLog('Game Controller Kit 测试视图初始化');
+    this.addLog('Game Controller Kit test view initialized');
     this.checkAvailability();
     this.startUiRefreshTimer();
     
-    // 注册 KeyEvent 处理器
+
     if (this.onKeyEventRef) {
       this.onKeyEventRef((event: KeyEvent) => this.handleKeyEvent(event));
     }
@@ -139,11 +135,10 @@ export struct GameControllerTestView {
     this.stopMonitoring();
   }
 
-  // 30Hz UI 刷新定时器：将内部缓冲区统一同步到 @State 变量
-  // GCK 回调运行在系统线程，直接赋值 @State 不可靠且会引发高频重渲染
+
   private startUiRefreshTimer(): void {
     this.uiRefreshTimer = setInterval(() => {
-      // 同步手柄状态（纯原始类型赋值，ArkUI 可靠检测变化）
+
       if (this.stateDirty) {
         const s = this.internalState;
         this.displayButtons = s.buttons;
@@ -156,18 +151,18 @@ export struct GameControllerTestView {
         this.hasInput = true;
         this.stateDirty = false;
       }
-      // 同步日志
+
       if (this.logsDirty) {
         this.logMessages = [...this.internalLogs];
         this.logsDirty = false;
       }
-      // 同步按键事件
+
       if (this.buttonEventsDirty) {
         this.rawButtonEvents = [...this.internalRawButtonEvents];
         this.buttonEventLogs = [...this.internalButtonEventLogs];
         this.buttonEventsDirty = false;
       }
-      // 同步 KeyEvent 日志
+
       if (this.keyEventsDirty) {
         this.keyEventLogs = [...this.internalKeyEventLogs];
         this.keyEventsDirty = false;
@@ -183,8 +178,8 @@ export struct GameControllerTestView {
   }
   
   /**
-   * 处理 KeyEvent (API 15+ 支持 2311-2315 手柄按键)
-   * 注意：GC Kit 不支持 2313 (Mode)，只能通过 KeyEvent 捕获
+   * Handle KeyEvent (API 15+ supports 2311-2315 gamepad buttons)
+   * Note: GC Kit does not support 2313 (Mode), can only be captured via KeyEvent
    */
   private handleKeyEvent(event: KeyEvent): boolean {
     const keyCode = event.keyCode;
@@ -192,33 +187,33 @@ export struct GameControllerTestView {
     const isPressed = event.type === 0;
     const timestamp = new Date().toLocaleTimeString();
     
-    // 记录所有 2300+ 范围的按键（手柄相关）
+    // Record all 2300+ range keys (gamepad related)
     if (keyCode >= 2300 && keyCode <= 2320) {
       const buttonName = ButtonEventLog.getButtonName(keyCode);
-      const logEntry = `[${timestamp}] KeyEvent: code=${keyCode} (${buttonName}) ${isPressed ? '按下' : '释放'}`;
+      const logEntry = `[${timestamp}] KeyEvent: code=${keyCode} (${buttonName}) ${isPressed ? 'Down' : 'Up'}`;
       this.internalKeyEventLogs = [logEntry, ...this.internalKeyEventLogs.slice(0, 29)];
       this.keyEventsDirty = true;
-      this.addLog(`KeyEvent: ${keyCode} (${buttonName}) ${isPressed ? '按下' : '释放'}`);
+      this.addLog(`KeyEvent: ${keyCode} (${buttonName}) ${isPressed ? 'Down' : 'Up'}`);
       
-      // 特别标记 2313
+      // Specifically mark 2313
       if (keyCode === 2313) {
-        this.addLog(`⭐ 收到 2313 (Mode) 按键！GC Kit 不支持此按键，通过 KeyEvent 捕获`);
+        this.addLog(`⭐ Received 2313 (Mode) key! GC Kit does not support this key, captured via KeyEvent`);
       }
       
-      return true;  // 已处理
+      return true;  // Handled
     }
     
-    return false;  // 未处理
+    return false;  // Not handled
   }
   
   private checkAvailability(): void {
     this.isAvailable = gameControllerService.isAvailable();
-    this.addLog(`Game Controller Kit 可用性: ${this.isAvailable ? '可用' : '不可用'}`);
+    this.addLog(`Game Controller Kit availability: ${this.isAvailable ? 'Available' : 'Unavailable'}`);
     
     if (this.isAvailable) {
-      this.addLog('可以测试蓝牙/系统手柄输入');
+      this.addLog('Can test Bluetooth/System gamepad input');
     } else {
-      this.addLog('警告: Game Controller Kit 不可用，可能需要 API 21+');
+      this.addLog('Warning: Game Controller Kit unavailable, may require API 21+');
     }
   }
 
@@ -231,38 +226,38 @@ export struct GameControllerTestView {
   private addButtonEventLog(deviceId: string, buttonCode: number, isPressed: boolean): void {
     const log = new ButtonEventLog(deviceId, buttonCode, isPressed);
     this.internalButtonEventLogs = [log, ...this.internalButtonEventLogs.slice(0, 49)];
-    this.internalRawButtonEvents = [`[${log.timestamp}] ${isPressed ? '按下' : '释放'} buttonCode=${buttonCode} (${log.buttonName})`, 
+    this.internalRawButtonEvents = [`[${log.timestamp}] ${isPressed ? 'Down' : 'Up'} buttonCode=${buttonCode} (${log.buttonName})`,
                             ...this.internalRawButtonEvents.slice(0, 29)];
     this.buttonEventsDirty = true;
   }
   
   private startMonitoring(): void {
     if (!this.isAvailable) {
-      this.addLog('错误: Game Controller Kit 不可用');
+      this.addLog('Error: Game Controller Kit unavailable');
       return;
     }
     
     if (this.isMonitoring) {
-      this.addLog('已在监听中');
+      this.addLog('Already monitoring');
       return;
     }
 
-    // 优先释放 USB 驱动独占，避免 GC Kit 测试时抓不到设备
-    // （例如当前是强制 USB 模式，或刚从 USB 测试页切换过来）
+    // Release USB driver exclusive access first to avoid GC Kit missing devices
+    // (e.g., currently in forced USB mode, or just switched from USB test page)
     try {
       UsbDriverService.getInstance().stop();
-      this.addLog('已释放 USB 驱动独占，等待 GC Kit 重新识别设备...');
+      this.addLog('Released USB driver exclusive access, waiting for GC Kit to re-detect devices...');
     } catch (err) {
-      this.addLog(`释放 USB 驱动独占失败（可忽略）: ${err}`);
+      this.addLog(`Failed to release USB driver exclusive access (can ignore): ${err}`);
     }
     
-    // 初始化
+    // Initialize
     if (!gameControllerService.init()) {
-      this.addLog('错误: 初始化失败');
+      this.addLog('Error: Initialization failed');
       return;
     }
     
-    // 临时接管回调（覆盖 GamepadManager 的回调用于测试）
+    // Temporarily take over callbacks (override GamepadManager's callbacks for testing)
     gameControllerService.setDeviceCallback((deviceId, isConnected, info) => {
       this.onDeviceChanged(deviceId, isConnected, info);
     });
@@ -275,23 +270,24 @@ export struct GameControllerTestView {
       this.handleAxisEvent(deviceId, axisType, x, y);
     });
     
-    // 开始监听（如果已在监听中会直接返回 true）
+    // Start monitoring (returns true if already monitoring)
     if (!gameControllerService.startMonitor()) {
-      this.addLog('错误: 开始监听失败');
+      this.addLog('Error: Failed to start monitoring');
       return;
     }
     
     this.isMonitoring = true;
-    this.addLog('开始监听 Game Controller Kit 事件');
+    this.addLog('Started monitoring Game Controller Kit events');
     
-    // 立即从缓存读取当前设备（可能为空）
+    // Immediately read current devices from cache (may be empty)
     const cachedCount = gameControllerService.getDeviceCount();
-    this.addLog(`当前 GCK 缓存设备数: ${cachedCount}`);
+    this.addLog(`Current GCK cached device count: ${cachedCount}`);
     this.refreshConnectedDevices();
     
-    // USB 驱动释放设备后，UsbDriverService 会在 300ms 后通过 native ioctl (USBDEVFS_CONNECT)
-    // 重绑定内核 HID 驱动。GCK 需要额外时间才能检测到重新绑定的设备。
-    // 分多次延迟刷新，覆盖不同设备重新枚举的时间差异。
+    // After USB driver releases device, UsbDriverService will rebind kernel HID driver
+    // via native ioctl (USBDEVFS_CONNECT) after 300ms.
+    // GCK needs extra time to detect the rebound device.
+    // Multiple delayed refreshes to cover different device re-enumeration timings.
     const refreshDelays = [1000, 2000, 4000, 7000];
     for (const delay of refreshDelays) {
       setTimeout(() => {
@@ -299,15 +295,15 @@ export struct GameControllerTestView {
           const newCount = gameControllerService.refreshDeviceCache();
           const totalCount = gameControllerService.getDeviceCount();
           if (newCount > 0) {
-            this.addLog(`刷新(${delay}ms): 新发现 ${newCount} 个设备，总计 ${totalCount}`);
+            this.addLog(`Refresh(${delay}ms): Found ${newCount} new devices, total ${totalCount}`);
             this.refreshConnectedDevices();
           } else if (newCount < 0) {
-            this.addLog(`刷新(${delay}ms): 查询失败`);
+            this.addLog(`Refresh(${delay}ms): Query failed`);
           }
           
-          // 最后一次刷新：如果仍然没有设备，给出重插提示
+          // Last refresh: if still no devices, suggest re-plugging
           if (delay === 7000 && totalCount === 0) {
-            this.addLog('⚠ 未检测到手柄设备。如果之前使用过 USB 驱动测试，可能需要重新插拔手柄。');
+            this.addLog('⚠ No gamepad device detected. If USB driver test was used before, may need to re-plug the gamepad.');
           }
         }
       }, delay);
@@ -315,29 +311,29 @@ export struct GameControllerTestView {
   }
   
   /**
-   * 停止监听 Game Controller Kit 事件
+   * Stop monitoring Game Controller Kit events
    */
   private stopMonitoring(): void {
     if (!this.isMonitoring) {
       return;
     }
     
-    // 不调用 stopMonitor()，避免停止全局监听影响 GamepadManager
-    // 只需恢复 GamepadManager 的回调即可
+    // Don't call stopMonitor() to avoid stopping global monitoring affecting GamepadManager
+    // Just restore GamepadManager's callbacks
     this.restoreGamepadManagerCallbacks();
     
     this.isMonitoring = false;
-    this.addLog('停止监听（已恢复 GamepadManager 回调）');
+    this.addLog('Stopped monitoring (GamepadManager callbacks restored)');
   }
   
   /**
-   * 恢复 GamepadManager 的回调，避免测试页面退出后串流手柄输入丢失
+   * Restore GamepadManager callbacks to avoid losing gamepad input after test page exit
    */
   private restoreGamepadManagerCallbacks(): void {
     try {
       GamepadManager.getInstance().reattachInputCallbacks();
     } catch (err) {
-      console.error('[GameControllerTest] 恢复 GamepadManager 回调失败:', err);
+      console.error('[GameControllerTest] Failed to restore GamepadManager callbacks:', err);
     }
   }
   
@@ -345,23 +341,23 @@ export struct GameControllerTestView {
     const devices = gameControllerService.getAllDevices();
     this.connectedDevices = [];
 
-    // 按 physicalAddress 去重：同一物理设备的多个 HID 接口只保留第一个
+    // Deduplicate by physicalAddress: keep only first interface for devices with multiple HID interfaces
     const seenPhysicalAddresses = new Set<string>();
     const seenNameProduct = new Set<string>();
 
     for (const device of devices) {
-      // 主去重：physicalAddress
+      // Primary dedup: physicalAddress
       if (device.physicalAddress && device.physicalAddress.length > 0) {
         if (seenPhysicalAddresses.has(device.physicalAddress)) {
-          this.addLog(`跳过重复接口: ${device.name} (物理地址: ${device.physicalAddress})`);
+          this.addLog(`Skipped duplicate interface: ${device.name} (physical address: ${device.physicalAddress})`);
           continue;
         }
         seenPhysicalAddresses.add(device.physicalAddress);
       } else {
-        // 备用去重：name + product
+        // Backup dedup: name + product
         const key = `${device.name}::${device.product}`;
         if (seenNameProduct.has(key)) {
-          this.addLog(`跳过重复接口: ${device.name} (name+product去重)`);
+          this.addLog(`Skipped duplicate interface: ${device.name} (name+product dedup)`);
           continue;
         }
         seenNameProduct.add(key);
@@ -372,32 +368,32 @@ export struct GameControllerTestView {
       info.name = device.name;
       info.productId = device.product;
       this.connectedDevices.push(info);
-      this.addLog(`发现设备: ${device.name} (ID: ${device.deviceId})`);
+      this.addLog(`Found device: ${device.name} (ID: ${device.deviceId})`);
     }
     
     if (this.connectedDevices.length === 0) {
-      this.addLog('未发现已连接的手柄设备');
+      this.addLog('No connected gamepad devices found');
     }
   }
   
   private onDeviceChanged(deviceId: string, isConnected: boolean, info: object | null): void {
     if (isConnected) {
-      this.addLog(`设备连接: ${deviceId}`);
+      this.addLog(`Device connected: ${deviceId}`);
       this.refreshConnectedDevices();
     } else {
-      this.addLog(`设备断开: ${deviceId}`);
+      this.addLog(`Device disconnected: ${deviceId}`);
       this.connectedDevices = this.connectedDevices.filter(d => d.deviceId !== deviceId);
-      // 重置状态
+      // Reset state
       this.internalState = new ControllerInputState();
       this.stateDirty = true;
     }
   }
   
   private onButtonEvent(deviceId: string, buttonCode: number, isPressed: boolean): void {
-    // 记录原始事件（写入缓冲区，由 timer 同步）
+    // Record raw event (write to buffer, synced by timer)
     this.addButtonEventLog(deviceId, buttonCode, isPressed);
     
-    // 更新内部缓冲区状态
+    // Update internal buffer state
     const state = this.internalState;
     
     const flag = this.buttonCodeToFlag(buttonCode);
@@ -407,7 +403,7 @@ export struct GameControllerTestView {
       } else {
         state.buttons &= ~flag;
       }
-      // 标记脏数据，由定时器同步到 @State
+      // Mark dirty for timer to sync to @State
       this.stateDirty = true;
     }
   }
@@ -419,20 +415,20 @@ export struct GameControllerTestView {
   private handleAxisEvent(deviceId: string, axisType: number, x: number, y: number): void {
     const state = this.internalState;
     
-    // AxisType: 0=左摇杆, 1=右摇杆, 2=D-Pad, 3=左扳机, 4=右扳机
+    // AxisType: 0=Left Stick, 1=Right Stick, 2=D-Pad, 3=Left Trigger, 4=Right Trigger
     switch (axisType) {
-      case 0: // 左摇杆
+      case 0: // Left Stick
         state.leftStickX = Math.floor(x * AXIS_MAX);
         state.leftStickY = Math.floor(-y * AXIS_MAX);
         break;
-      case 1: // 右摇杆
+      case 1: // Right Stick
         state.rightStickX = Math.floor(x * AXIS_MAX);
         state.rightStickY = Math.floor(-y * AXIS_MAX);
         break;
-      case 3: // 左扳机
+      case 3: // Left Trigger
         state.leftTrigger = Math.floor(x * TRIGGER_MAX);
         break;
-      case 4: // 右扳机
+      case 4: // Right Trigger
         state.rightTrigger = Math.floor(x * TRIGGER_MAX);
         break;
     }
@@ -455,20 +451,20 @@ export struct GameControllerTestView {
   build() {
     Scroll() {
       Column({ space: 16 }) {
-        // 状态标题
+        // Status title
         Row({ space: 8 }) {
           Circle()
             .width(12)
             .height(12)
             .fill(this.isAvailable ? (this.isMonitoring ? AppColors.Success : AppColors.Warning) : AppColors.Error)
-          Text(this.isAvailable ? (this.isMonitoring ? '监听中' : '就绪') : '不可用')
+          Text(this.isAvailable ? (this.isMonitoring ? 'Monitoring' : 'Ready') : 'Unavailable')
             .fontSize(14)
             .fontColor(AppColors.TextPrimary)
         }
         
-        // 控制按钮
+        // Control buttons
         Row({ space: 12 }) {
-          Button(this.isMonitoring ? '停止监听' : '开始监听')
+          Button(this.isMonitoring ? 'Stop Monitoring' : 'Start Monitoring')
             .onClick(() => {
               if (this.isMonitoring) {
                 this.stopMonitoring();
@@ -484,12 +480,12 @@ export struct GameControllerTestView {
             .borderRadius(20)
             .enabled(this.isAvailable)
 
-          Button('刷新设备')
+          Button('Refresh Devices')
             .onClick(() => {
-              // 先查询系统设备列表更新缓存，再从缓存读取
+              // First query system device list to update cache, then read from cache
               const newCount = gameControllerService.refreshDeviceCache();
               if (newCount > 0) {
-                this.addLog(`手动刷新: 新发现 ${newCount} 个设备`);
+                this.addLog(`Manual refresh: Found ${newCount} new devices`);
               }
               this.refreshConnectedDevices();
             })
@@ -502,16 +498,16 @@ export struct GameControllerTestView {
             .enabled(this.isMonitoring)
         }
 
-        // 已连接设备
+        // Connected devices
         Column({ space: 8 }) {
-          Text(`已连接设备 (${this.connectedDevices.length})`)
+          Text(`Connected Devices (${this.connectedDevices.length})`)
             .fontSize(16)
             .fontWeight(FontWeight.Bold)
             .fontColor(AppColors.TextPrimary)
             .width('100%')
 
           if (this.connectedDevices.length === 0) {
-            Text('未检测到手柄设备\n请确保蓝牙手柄已配对连接')
+            Text('No gamepad device detected\nPlease ensure Bluetooth gamepad is paired and connected'))
               .fontSize(13)
               .fontColor(AppColors.TextSecondary)
               .textAlign(TextAlign.Center)
@@ -549,7 +545,7 @@ export struct GameControllerTestView {
         .backgroundColor(AppColors.Surface)
         .borderRadius(12)
 
-        // 原始按键事件（重要诊断信息）
+        // Raw button events (important diagnostic info)
         Column({ space: 8 }) {
           Row() {
             Text('🔑 原始按键事件')
@@ -557,14 +553,14 @@ export struct GameControllerTestView {
               .fontWeight(FontWeight.Bold)
               .fontColor(AppColors.TextPrimary)
             Blank()
-            Text('按手柄按键查看码值')
+            Text('Press gamepad button to view code',)
               .fontSize(11)
               .fontColor(AppColors.TextTertiary)
           }
           .width('100%')
 
           if (this.rawButtonEvents.length === 0) {
-            Text('等待按键输入...\n按下手柄上的任意按键')
+            Text('Waiting for button input...\nPress any button on gamepad')
               .fontSize(13)
               .fontColor(AppColors.TextSecondary)
               .textAlign(TextAlign.Center)
@@ -585,12 +581,12 @@ export struct GameControllerTestView {
         .backgroundColor(AppColors.Surface)
         .borderRadius(12)
 
-        // 按键状态可视化
+        // Button state visualization
         if (this.hasInput) {
           this.buildButtonsDisplay()
         }
 
-        // 日志
+        // Logs
         Column({ space: 8 }) {
           Text('📋 日志')
             .fontSize(16)
@@ -619,7 +615,7 @@ export struct GameControllerTestView {
     .backgroundColor(AppColors.Background)
   }
   
-  // 获取第一个设备的状态（现在使用纯原始类型 @State 变量）
+  // Get first device state (now using pure primitive @State variables)
   
   @Builder
   buildButtonsDisplay() {
@@ -630,7 +626,7 @@ export struct GameControllerTestView {
         .fontColor(AppColors.TextPrimary)
         .width('100%')
 
-      // 按键网格
+      // Button grid
       Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
         this.buildButtonIndicator({ name: 'A', buttons: this.displayButtons, flag: 0x1000 })
         this.buildButtonIndicator({ name: 'B', buttons: this.displayButtons, flag: 0x2000 })
@@ -650,10 +646,10 @@ export struct GameControllerTestView {
       }
       .width('100%')
 
-      // 摇杆和扳机
+      // Sticks and triggers
       Row({ space: 16 }) {
         Column({ space: 4 }) {
-          Text('左摇杆')
+          Text('Left Stick'))
             .fontSize(11)
             .fontColor(AppColors.TextSecondary)
           Text(`X: ${this.formatStickValue(this.displayLSX)}`)
@@ -665,7 +661,7 @@ export struct GameControllerTestView {
         }
         
         Column({ space: 4 }) {
-          Text('右摇杆')
+          Text('Right Stick'))
             .fontSize(11)
             .fontColor(AppColors.TextSecondary)
           Text(`X: ${this.formatStickValue(this.displayRSX)}`)
@@ -677,7 +673,7 @@ export struct GameControllerTestView {
         }
         
         Column({ space: 4 }) {
-          Text('扳机')
+          Text('Triggers'))
             .fontSize(11)
             .fontColor(AppColors.TextSecondary)
           Text(`LT: ${this.displayLT}`)

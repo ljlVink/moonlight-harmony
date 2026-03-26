@@ -8,10 +8,7 @@
  * (at your option) any later version.
  */
 
-/**
- * 手柄测试页面
- * 支持 USB 驱动、Game Controller Kit (蓝牙/系统) 和设备传感器三种测试模式
- */
+
 
 import { router } from '@kit.ArkUI';
 import { UsbControllerTestView } from '../components/UsbControllerTestView';
@@ -23,54 +20,47 @@ import { GamepadManager } from '../service/GamepadManager';
 @Entry
 @Component
 struct ControllerTestPage {
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;  // 动态状态栏安全区高度
+  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
   @State currentTabIndex: number = 0;
-  @State keyEventLogs: string[] = [];  // 按键事件日志
+  @State keyEventLogs: string[] = [];
   
-  // KeyEvent 处理器引用
   private gcKeyEventHandler: ((event: KeyEvent) => boolean) | null = null;
   
   /**
-   * 页面销毁时恢复 GamepadManager 的完整回调链路。
-   *
-   * 子 Tab 的 aboutToDisappear 会在 Page 销毁前触发，但
-   * UsbControllerTestView.stopDriver() 在释放设备后不再重启驱动
-   * （避免切到 GCK Tab 时设备被立即重新独占）。
-   * 因此当整个测试页面退出时，需要在此处完整恢复 GamepadManager。
+   * Restore GamepadManager callbacks when page is destroyed.
    */
   aboutToDisappear(): void {
     try {
       GamepadManager.getInstance().reattachInputCallbacks();
-      console.info('[ControllerTestPage] 页面销毁，已恢复 GamepadManager 回调');
+      console.info('[ControllerTestPage] Page destroyed, GamepadManager callbacks restored');
     } catch (err) {
-      console.error('[ControllerTestPage] 恢复 GamepadManager 回调失败:', err);
+      console.error('[ControllerTestPage] Failed to restore GamepadManager callbacks:', err);
     }
   }
   
   /**
-   * 处理所有按键事件
+   * Handle all key events
    */
   handleKeyEvent(event: KeyEvent): boolean {
     const timestamp = new Date().toLocaleTimeString();
     const keyCode = event.keyCode;
     const isPressed = event.type === KeyType.Down;
     
-    // 记录日志
+
     const logEntry = `[${timestamp}] KeyEvent: code=${keyCode} ${isPressed ? 'DOWN' : 'UP'}`;
     this.keyEventLogs = [logEntry, ...this.keyEventLogs.slice(0, 19)];
     
-    // 如果在 GC Kit 标签页，转发给 GameControllerTestView
+
     if (this.currentTabIndex === 1 && this.gcKeyEventHandler) {
       return this.gcKeyEventHandler(event);
     }
     
-    // 返回 true 阻止系统默认行为
+
     return true;
   }
   
   build() {
     Column() {
-      // 标题栏 — 与 SettingsPageV2 等页面风格统一
       Row() {
         Button({ type: ButtonType.Circle }) {
           Image($r('app.media.ic_back'))
@@ -102,7 +92,6 @@ struct ControllerTestPage {
         
         Blank()
         
-        // 模式指示器
         Row({ space: 4 }) {
           Circle()
             .width(8)
@@ -124,7 +113,6 @@ struct ControllerTestPage {
         bottom: AppSpacing.Medium
       })
 
-      // 标签页切换
       Row({ space: 0 }) {
         this.TabButton('USB 驱动', '有线手柄', 0)
         this.TabButton('系统/蓝牙', 'GC Kit', 1)
@@ -135,7 +123,6 @@ struct ControllerTestPage {
       .backgroundColor(AppColors.Surface)
       .border({ width: { bottom: 1 }, color: AppColors.Divider })
 
-      // 内容区域
       if (this.currentTabIndex === 0) {
         UsbControllerTestView()
       } else if (this.currentTabIndex === 1) {
@@ -148,7 +135,6 @@ struct ControllerTestPage {
         SensorTestView()
       }
       
-      // KeyEvent 日志显示区域
       if (this.keyEventLogs.length > 0) {
         Column() {
           Text('KeyEvent 日志 (直接按键)')

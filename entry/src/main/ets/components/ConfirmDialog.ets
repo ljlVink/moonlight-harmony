@@ -8,71 +8,46 @@
  * (at your option) any later version.
  */
 
-/**
- * 确认弹窗和信息弹窗组件
- * 
- * 使用 CustomDialogController 实现的弹窗
- */
 import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
 
-/**
- * 确认弹窗按钮配置
- */
 export interface DialogButton {
-  /** 按钮文字 */
   text: string;
-  /** 按钮颜色（可选）*/
   color?: ResourceColor;
-  /** 点击回调 */
   onClick: () => void;
 }
 
-/**
- * 确认弹窗配置
- */
 export interface ConfirmDialogConfig {
-  /** 弹窗标题 */
   title: string;
-  /** 弹窗消息 */
   message: string;
-  /** 取消按钮（可选，默认显示"取消"）*/
   cancelButton?: DialogButton;
-  /** 确认按钮 */
   confirmButton: DialogButton;
 }
 
-/**
- * 确认弹窗组件
- */
 @CustomDialog
 export struct ConfirmDialog {
   controller: CustomDialogController;
   config: ConfirmDialogConfig = {
     title: '',
     message: '',
-    confirmButton: { text: '确定', onClick: () => {} }
+    confirmButton: { text: 'OK', onClick: () => {} }
   };
-  
+
   build() {
     Column() {
-      // 标题
       Text(this.config.title)
         .fontSize(AppSizes.FontTitle)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .margin({ bottom: AppSpacing.Medium })
-      
-      // 消息内容
+
       Text(this.config.message)
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
         .textAlign(TextAlign.Center)
         .margin({ bottom: AppSpacing.Large })
-      
-      // 按钮区域
+
       Row({ space: AppSpacing.Medium }) {
-        // 取消按钮
-        Button(this.config.cancelButton?.text ?? '取消')
+        Button(this.config.cancelButton?.text ?? 'Cancel')
           .layoutWeight(1)
           .height(48)
           .fontSize(AppSizes.FontBody)
@@ -85,9 +60,7 @@ export struct ConfirmDialog {
             }
             this.controller.close();
           })
-        
-        // 确认按钮
-        // 如果指定了颜色（如 Error 红色），使用该颜色作为背景，文字始终为白色
+
         Button(this.config.confirmButton.text)
           .layoutWeight(1)
           .height(48)
@@ -111,23 +84,13 @@ export struct ConfirmDialog {
   }
 }
 
-/**
- * 信息弹窗配置
- */
 export interface InfoDialogConfig {
-  /** 弹窗标题 */
   title: string;
-  /** 弹窗内容 */
   content: string;
-  /** 关闭按钮文字（可选，默认"知道了"）*/
   closeButtonText?: string;
-  /** 关闭回调（可选）*/
   onClose?: () => void;
 }
 
-/**
- * 信息弹窗组件
- */
 @CustomDialog
 export struct InfoDialog {
   controller: CustomDialogController;
@@ -135,17 +98,15 @@ export struct InfoDialog {
     title: '',
     content: ''
   };
-  
+
   build() {
     Column() {
-      // 标题
       Text(this.config.title)
         .fontSize(AppSizes.FontTitle)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .margin({ bottom: AppSpacing.Medium })
-      
-      // 内容
+
       Scroll() {
         Text(this.config.content)
           .fontSize(AppSizes.FontBody)
@@ -156,9 +117,8 @@ export struct InfoDialog {
       .constraintSize({ maxHeight: 300 })
       .width('100%')
       .margin({ bottom: AppSpacing.Large })
-      
-      // 关闭按钮
-      Button(this.config.closeButtonText ?? '知道了')
+
+      Button(this.config.closeButtonText ?? 'OK')
         .width('100%')
         .height(48)
         .fontSize(AppSizes.FontBody)
@@ -181,42 +141,22 @@ export struct InfoDialog {
   }
 }
 
-/**
- * 选项按钮配置（带副标题）
- */
 export interface ActionButton {
-  /** 按钮主文字 */
   text: string;
-  /** 副标题说明（可选） */
   subtitle?: string;
-  /** 按钮文字颜色（可选）*/
   color?: ResourceColor;
-  /** 按钮背景颜色（可选）*/
   backgroundColor?: ResourceColor;
-  /** 点击回调 */
   onClick: () => void;
 }
 
-/**
- * 操作选择弹窗配置
- */
 export interface ActionDialogConfig {
-  /** 弹窗标题 */
   title: string;
-  /** 弹窗消息（可选） */
   message?: string;
-  /** 操作按钮列表 */
   actions: ActionButton[];
-  /** 取消按钮文字（可选，默认"取消"）*/
   cancelText?: string;
-  /** 取消回调（可选）*/
   onCancel?: () => void;
 }
 
-/**
- * 操作选择弹窗组件
- * 支持多个带副标题的操作按钮
- */
 @CustomDialog
 export struct ActionDialog {
   controller: CustomDialogController;
@@ -224,17 +164,15 @@ export struct ActionDialog {
     title: '',
     actions: []
   };
-  
+
   build() {
     Column() {
-      // 标题
       Text(this.config.title)
         .fontSize(AppSizes.FontTitle)
         .fontWeight(FontWeight.Bold)
         .fontColor(AppColors.TextPrimary)
         .margin({ bottom: this.config.message ? AppSpacing.Small : AppSpacing.Medium })
-      
-      // 消息内容（可选）
+
       if (this.config.message) {
         Text(this.config.message)
           .fontSize(AppSizes.FontBody)
@@ -242,8 +180,7 @@ export struct ActionDialog {
           .textAlign(TextAlign.Center)
           .margin({ bottom: AppSpacing.Medium })
       }
-      
-      // 操作按钮列表
+
       ForEach(this.config.actions, (action: ActionButton) => {
         Button() {
           Column() {
@@ -269,9 +206,8 @@ export struct ActionDialog {
           this.controller.close();
         })
       })
-      
-      // 取消按钮
-      Button(this.config.cancelText ?? '取消')
+
+      Button(this.config.cancelText ?? 'Cancel')
         .width('100%')
         .height(48)
         .fontSize(AppSizes.FontBody)

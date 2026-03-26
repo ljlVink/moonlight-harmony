@@ -9,16 +9,11 @@
  */
 
 /**
- * 快捷键编辑对话框
  *
- * 用于添加或编辑自定义快捷键
  */
 import { ShortcutManager, Shortcut, KeyOption } from './ShortcutManager';
 import { AppAnimation } from '../common/Theme';
 
-/**
- * 快捷键编辑数据（不包含 id 和 isBuiltin）
- */
 export interface ShortcutEditData {
   name: string;
   keys: number[];
@@ -35,38 +30,32 @@ export interface ShortcutEditorCallbacks {
 @CustomDialog
 export struct ShortcutEditorDialog {
   controller: CustomDialogController;
-  editingShortcut?: Shortcut;  // 如果传入则为编辑模式
+  editingShortcut?: Shortcut;
   callbacks: ShortcutEditorCallbacks = {
     onSave: () => {},
     onCancel: () => {}
   };
   
-  // 编辑状态
   @State private name: string = '';
   @State private selectedKeys: number[] = [];
   @State private selectedIcon: string = '';
-  @State private selectedColor: string = '#9DABB2';  // 莫兰迪蓝灰
+  @State private selectedColor: string = '#9DABB2';
   
-  // 序列模式状态
   @State private isSequenceMode: boolean = false;
   @State private sequenceSteps: number[][] = [];
   
-  // UI 状态
   @State private showKeyPicker: boolean = false;
   
   private shortcutManager = ShortcutManager.getInstance();
   private availableKeys: KeyOption[] = [];
   
-  // 可选图标（空字符串表示不使用图标）
   private iconOptions: string[] = ['', '⌨️', '🎮', '🖥️', '📁', '🔧', '⚡', '🎯', '💡', '🔒', '🔓'];
   
-  // 可选颜色 - 莫兰迪色系（低饱和度、温和柔和）
   private colorOptions: string[] = [
     '#9DABB2', '#A7B5AA', '#C5B4A0', '#B8A9C0', 
     '#C9A9A6', '#D4C5A9', '#8FA3AD', '#A8B4A5'
   ];
   
-  // 保存编辑数据的临时对象
   private editData: ShortcutEditData = {
     name: '',
     keys: [],
@@ -74,9 +63,6 @@ export struct ShortcutEditorDialog {
     color: undefined
   };
   
-  /**
-   * 保存快捷键
-   */
   private saveShortcut(): void {
     this.editData.name = this.name;
     if (this.isSequenceMode) {
@@ -95,13 +81,11 @@ export struct ShortcutEditorDialog {
   aboutToAppear(): void {
     this.availableKeys = this.shortcutManager.getAvailableKeys();
     
-    // 如果是编辑模式，加载现有数据
     if (this.editingShortcut) {
       this.name = this.editingShortcut.name;
       this.selectedKeys = [...this.editingShortcut.keys];
       this.selectedIcon = this.editingShortcut.icon || '';
-      this.selectedColor = this.editingShortcut.color || '#9DABB2';  // 莫兰迪蓝灰
-      // 加载序列模式数据
+      this.selectedColor = this.editingShortcut.color || '#9DABB2';
       if (this.editingShortcut.keySequence && this.editingShortcut.keySequence.length > 0) {
         this.isSequenceMode = true;
         this.sequenceSteps = this.editingShortcut.keySequence.map(step => [...step]);
@@ -111,7 +95,6 @@ export struct ShortcutEditorDialog {
   
   build() {
     Column() {
-      // 标题栏
       Row() {
         Text(this.editingShortcut ? '编辑快捷键' : '添加快捷键')
           .fontSize(16)
@@ -129,12 +112,9 @@ export struct ShortcutEditorDialog {
       .width('100%')
       .margin({ bottom: 12 })
       
-      // 可滚动内容区
       Scroll() {
         Column() {
-      // 名称和图标颜色在一行
       Row() {
-        // 名称输入
         Column() {
           Text('名称')
             .fontSize(11)
@@ -151,7 +131,6 @@ export struct ShortcutEditorDialog {
         }
         .layoutWeight(1)
         
-        // 图标选择
         Column() {
           Text('图标')
             .fontSize(11)
@@ -176,7 +155,6 @@ export struct ShortcutEditorDialog {
       .width('100%')
       .margin({ bottom: 10 })
       
-      // 颜色选择
       Row() {
         Text('颜色')
           .fontSize(11)
@@ -194,12 +172,11 @@ export struct ShortcutEditorDialog {
             })
             .margin({ left: 6 })
             .onClick(() => { this.selectedColor = color; })
-        }, (color: string) => color)  // 使用颜色值作为唯一 key
+        }, (color: string) => color)
       }
       .width('100%')
       .margin({ bottom: 10 })
       
-      // 模式切换
       Row() {
         Text('模式')
           .fontSize(11)
@@ -229,7 +206,6 @@ export struct ShortcutEditorDialog {
       .width('100%')
       .margin({ bottom: 10 })
 
-      // 按键序列步骤列表（序列模式）
       if (this.isSequenceMode) {
         Column() {
           Row() {
@@ -250,7 +226,6 @@ export struct ShortcutEditorDialog {
           .width('100%')
           .margin({ bottom: 4 })
 
-          // 已有步骤
           if (this.sequenceSteps.length > 0) {
             Scroll() {
               Row() {
@@ -292,7 +267,6 @@ export struct ShortcutEditorDialog {
         .margin({ bottom: 4 })
       }
 
-      // 按键选择区
       Column() {
         Row() {
           Text(this.isSequenceMode ? '选择当前步骤按键' : '按键组合')
@@ -321,7 +295,6 @@ export struct ShortcutEditorDialog {
         .width('100%')
         .margin({ bottom: 4 })
         
-        // 已选按键显示
         Row() {
           if (this.selectedKeys.length === 0) {
             Text(this.isSequenceMode ? '选择按键后点击「添加步骤」' : '点击下方选择按键')
@@ -355,13 +328,11 @@ export struct ShortcutEditorDialog {
         .borderRadius(6)
         .alignItems(VerticalAlign.Center)
         
-        // 按键选择器（由外层 Scroll 统一滚动，不再嵌套）
         this.KeyPicker()
       }
       .width('100%')
       .margin({ bottom: 10 })
       
-      // 预览
       Row() {
         if (this.selectedIcon) {
           Text(this.selectedIcon)
@@ -400,7 +371,6 @@ export struct ShortcutEditorDialog {
       .layoutWeight(1)
       .scrollBar(BarState.Off)
       
-      // 操作按钮
       Row() {
         Button('取消')
           .fontSize(13)
@@ -439,23 +409,14 @@ export struct ShortcutEditorDialog {
   @Builder
   KeyPicker() {
     Column() {
-      // 修饰键
       this.KeySection('修饰键', 'modifier')
-      // 功能键
       this.KeySection('功能键', 'function')
-      // 方向键
       this.KeySection('方向键', 'arrow')
-      // F键
       this.KeySection('F1-F12', 'fkey')
-      // 字母
       this.KeySection('字母', 'letter')
-      // 数字
       this.KeySection('数字', 'number')
-      // 符号
       this.KeySection('符号', 'symbol')
-      // 小键盘
       this.KeySection('小键盘', 'numpad')
-      // 媒体键
       this.KeySection('媒体', 'media')
     }
     .width('100%')
@@ -485,7 +446,7 @@ export struct ShortcutEditorDialog {
   KeyButton(key: KeyOption) {
     Text(key.shortName)
       .fontSize(10)
-      .fontColor(this.selectedKeys.includes(key.code) ? '#B8CCD0' : '#AAA')  // 莫兰迪淡蓝
+      .fontColor(this.selectedKeys.includes(key.code) ? '#B8CCD0' : '#AAA')
       .padding({ left: 6, right: 6, top: 4, bottom: 4 })
       .backgroundColor(this.selectedKeys.includes(key.code) ? '#334ECDC4' : '#333')
       .borderRadius(4)
@@ -546,9 +507,6 @@ export struct ShortcutEditorDialog {
     return this.selectedKeys.length > 0;
   }
 
-  /**
-   * 获取预览显示文本
-   */
   private getPreviewText(): string {
     if (this.isSequenceMode) {
       if (this.sequenceSteps.length === 0) return '--';

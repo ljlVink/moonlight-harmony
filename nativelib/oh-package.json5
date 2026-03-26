@@ -2,7 +2,7 @@
   "modelVersion": "5.0.0",
   "name": "nativelib",
   "version": "1.0.0",
-  "description": "Moonlight Native 串流核心库",
+  "description": "Moonlight Native Streaming Core Library",
   "main": "./src/main/ets/Index.ets",
   "types": "",
   "author": "",

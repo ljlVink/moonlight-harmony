@@ -9,9 +9,7 @@
  */
 
 /**
- * DualShock 4 控制器驱动
  * 
- * 参考 Android moonlight-android Dualshock4Controller
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -34,9 +32,6 @@ export class Dualshock4Controller extends AbstractDualSenseController {
     this.deviceName = 'DualShock 4 Controller';
   }
   
-  /**
-   * 检查是否可以驱动该设备
-   */
   static canClaimDevice(device: usbManager.USBDevice): boolean {
     if (device.vendorId !== DualShock4.VID) {
       return false;
@@ -59,31 +54,20 @@ export class Dualshock4Controller extends AbstractDualSenseController {
     return true;
   }
   
-  /**
-   * 标准化摇杆轴值
-   */
   private normalizeThumbStickAxis(value: number): number {
     return (2.0 * value / TRIGGER_MAX) - 1.0;
   }
   
-  /**
-   * 标准化扳机轴值
-   */
   private normalizeTriggerAxis(value: number): number {
     return value / TRIGGER_MAX;
   }
   
-  /**
-   * 处理输入报告
-   * https://www.psdevwiki.com/ps4/DS4-USB 参考
-   */
   protected handleRead(buffer: Uint8Array): boolean {
     if (buffer.length < 64) {
       console.warn(`${TAG} 数据太短: ${buffer.length}`);
       return false;
     }
     
-    // 检查报告 ID (0x01=USB, 0x11=Bluetooth)
     const reportId = buffer[0];
     if (reportId !== 0x01 && reportId !== 0x11) {
       return false;
@@ -100,14 +84,12 @@ export class Dualshock4Controller extends AbstractDualSenseController {
     this.setButtonFlag(ButtonFlags.RIGHT_FLAG, 
       (dpad === DPadDirection.RIGHT || dpad === DPadDirection.UP_RIGHT || dpad === DPadDirection.DOWN_RIGHT) ? 1 : 0);
     
-    // 面板按钮 (byte 5)
     const b5 = buffer[5];
     this.setButtonFlag(ButtonFlags.X_FLAG, b5 & 0x10);  // Square
     this.setButtonFlag(ButtonFlags.A_FLAG, b5 & 0x20);  // Cross
     this.setButtonFlag(ButtonFlags.B_FLAG, b5 & 0x40);  // Circle
     this.setButtonFlag(ButtonFlags.Y_FLAG, b5 & 0x80);  // Triangle
     
-    // 肩键和功能键 (byte 6)
     const b6 = buffer[6];
     this.setButtonFlag(ButtonFlags.LB_FLAG, b6 & 0x01);  // L1
     this.setButtonFlag(ButtonFlags.RB_FLAG, b6 & 0x02);  // R1
@@ -116,16 +98,14 @@ export class Dualshock4Controller extends AbstractDualSenseController {
     this.setButtonFlag(ButtonFlags.LS_CLK_FLAG, b6 & 0x40); // L3
     this.setButtonFlag(ButtonFlags.RS_CLK_FLAG, b6 & 0x80); // R3
     
-    // PS 按钮和触摸板 (byte 7)
     const b7 = buffer[7];
     this.setButtonFlag(ButtonFlags.SPECIAL_BUTTON_FLAG, b7 & 0x01);  // PS
     this.setButtonFlag(ButtonFlags.TOUCHPAD_FLAG, b7 & 0x02);  // Touchpad click
     
-    // 触摸板数据 (bytes 35-38: touch point 0)
     // DualShock 4 touchpad resolution: 1920 x 942
     if (buffer.length >= 39) {
       const contactByte = buffer[35];
-      const isActive = (contactByte & 0x80) === 0; // bit 7 = 0 表示有手指
+      const isActive = (contactByte & 0x80) === 0;
       this.touchpadActive = isActive;
       if (isActive) {
         this.touchpadX = buffer[36] | ((buffer[37] & 0x0F) << 8);
@@ -133,17 +113,14 @@ export class Dualshock4Controller extends AbstractDualSenseController {
       }
     }
     
-    // 摇杆 (bytes 1-4) - 不在此反转 Y 轴，由 GamepadManager 统一处理
     this.leftStickX = this.normalizeThumbStickAxis(buffer[1]);
     this.leftStickY = this.normalizeThumbStickAxis(buffer[2]);
     this.rightStickX = this.normalizeThumbStickAxis(buffer[3]);
     this.rightStickY = this.normalizeThumbStickAxis(buffer[4]);
     
-    // 扳机
     this.leftTrigger = this.normalizeTriggerAxis(buffer[8]);
     this.rightTrigger = this.normalizeTriggerAxis(buffer[9]);
     
-    // IMU 数据
     if (buffer.length >= 24) {
       const GYRO_SCALE = 2000.0 / 32768.0;
       const ACCEL_SCALE = 4.0 / 32768.0;
@@ -169,17 +146,10 @@ const gyrox = readShortLE(buffer, 13);
     return true;
   }
   
-  /**
-   * 获取初始化数据
-   */
   protected getInitData(): Uint8Array {
-    // DualShock 4 不需要特殊初始化
     return new Uint8Array(0);
   }
   
-  /**
-   * 初始化
-   */
   protected doInit(): boolean {
     console.info(`${TAG} 初始化 DualShock 4 控制器`);
     const initData = this.getInitData();
@@ -189,28 +159,19 @@ const gyrox = readShortLE(buffer, 13);
     return true;
   }
   
-  /**
-   * 震动反馈
-   */
   rumble(lowFreqMotor: number, highFreqMotor: number): void {
-    // DualShock 4 震动命令
     const data = new Uint8Array(32);
-    data[0] = 0x05;  // 报告 ID
-    data[1] = 0xFF;  // 标志
-    data[4] = (highFreqMotor >> 8) & 0xFF;  // 小马达
-    data[5] = (lowFreqMotor >> 8) & 0xFF;   // 大马达
-    // 灯光颜色 (可选)
+    data[0] = 0x05;
+    data[1] = 0xFF;
+    data[4] = (highFreqMotor >> 8) & 0xFF;
+    data[5] = (lowFreqMotor >> 8) & 0xFF;
     data[6] = 0x00;  // R
     data[7] = 0x00;  // G
-    data[8] = 0xFF;  // B (蓝色)
+    data[8] = 0xFF;
     
     this.bulkWrite(data);
   }
   
-  /**
-   * 扳机震动（DualShock 4 不支持）
-   */
   rumbleTriggers(_leftTrigger: number, _rightTrigger: number): void {
-    // DualShock 4 不支持扳机震动
   }
 }

@@ -24,19 +24,17 @@ interface AppListPageParams {
   computerId: string;
 }
 
-/**
- * 应用列表页面 (现代化版本)
- */
-// 竖屏时，app数量小于等于此阈值时使用1行
+
+
 const VERTICAL_SINGLE_ROW_THRESHOLD = 5;
-// 默认行数
+
 const DEFAULT_VERTICAL_ROW_COUNT = 2;
 const DEFAULT_HORIZONTAL_ROW_COUNT = 1;
 
 @Entry
 @Component
 struct AppListPageV2 {
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;  // 动态状态栏安全区高度
+  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
   @State viewModel: AppListViewModel = new AppListViewModel();
   @State computerName: string = '';
   @State isLoading: boolean = true;
@@ -45,26 +43,19 @@ struct AppListPageV2 {
   @State showSearch: boolean = false;
   @State gridColumns: number = 3;
   @State backgroundImageUrl: string = '';
-  @State backgroundOpacity: number = 0; // 背景透明度（用于淡入动画）
+  @State backgroundOpacity: number = 0;
   @State rowCount: number = DEFAULT_HORIZONTAL_ROW_COUNT;
   @State isLandscape: boolean = true;
-  // 显示器选择相关
   @State availableDisplays: DisplayInfo[] = [];
-  @State selectedDisplayIndex: number = -1; // -1 表示使用默认显示器
-  @State useVirtualDisplay: boolean = false; // 是否使用虚拟显示器
-  @State supportsDisplayApi: boolean = false; // 服务器是否支持 displays API
-  
+  @State selectedDisplayIndex: number = -1;  @State useVirtualDisplay: boolean = false;  @State supportsDisplayApi: boolean = false;  
   private computerId: string = '';
   private computerManager: ComputerManager = ComputerManager.getInstance();
   private nvHttp: NvHttp | null = null;
-  private searchDebounceTimer: number = -1; // 搜索防抖定时器
-  private iconPollIntervalId: number = -1; // 图标轮询定时器ID
+  private searchDebounceTimer: number = -1;  private iconPollIntervalId: number = -1;
 
-  // 空列表重试常量（匹配 Android EMPTY_LIST_THRESHOLD）
   private static readonly EMPTY_LIST_THRESHOLD = 3;
   private static readonly EMPTY_LIST_RETRY_DELAY_MS = 2000;
   
-  // CustomDialogController 配置
   private optionPickerDialogConfig: OptionPickerDialogConfig = {
     title: '',
     options: [],
@@ -76,12 +67,11 @@ struct AppListPageV2 {
     confirmButton: { text: '', onClick: () => {} }
   };
   
-  // CustomDialogController 实例
   private optionPickerDialogController: CustomDialogController | null = null;
   private confirmDialogController: CustomDialogController | null = null;
 
-  /**
-   * 显示确认弹窗
+/**
+   * Show confirm dialog
    */
   private showConfirmDialog(config: ConfirmDialogConfig): void {
     this.confirmDialogConfig = config;
@@ -110,12 +100,12 @@ struct AppListPageV2 {
 
   aboutToDisappear(): void {
     this.viewModel.cancelIconLoading();
-    // 清理图标轮询定时器
+
     if (this.iconPollIntervalId !== -1) {
       clearInterval(this.iconPollIntervalId);
       this.iconPollIntervalId = -1;
     }
-    // 清理搜索防抖定时器
+
     if (this.searchDebounceTimer !== -1) {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = -1;
@@ -127,8 +117,8 @@ struct AppListPageV2 {
     return false;
   }
 
-  /**
-   * 页面重新显示时刷新应用列表状态
+/**
+   * Refresh app list when page reappears
    */
   onPageShow(): void {
     this.updateLayoutConfig();
@@ -142,18 +132,17 @@ struct AppListPageV2 {
       this.isLoading = false;
     }
     
-    // 页面重新展示时的自动刷新使用静默模式，不弹 toast
-    // （退出串流或唤醒主机时 GFE 可能还未就绪，短暂失败是正常的）
+
     this.refreshApps(true);
     
-    // 从串流返回时延迟刷新，等待服务器状态更新
+
     if (this.viewModel.hasRunningApp) {
       setTimeout(() => this.refreshApps(true), 1000);
     }
   }
 
-  /**
-   * 更新布局配置（根据屏幕方向和app数量）
+/**
+   * Update layout config (based on screen orientation and app count)
    */
   private updateLayoutConfig(): void {
     try {
@@ -166,15 +155,15 @@ struct AppListPageV2 {
     }
   }
 
-  /**
-   * 计算最优行数（参考Android项目的逻辑）
+/**
+   * Calculate optimal row count
    */
   private calculateOptimalRowCount(): void {
     if (this.isLandscape) {
-      // 横屏：固定1行
+
       this.rowCount = DEFAULT_HORIZONTAL_ROW_COUNT;
     } else {
-      // 竖屏：根据app数量判断
+
       const appCount = this.viewModel.filteredApps.length;
       if (appCount === 0) {
         this.rowCount = DEFAULT_VERTICAL_ROW_COUNT;
@@ -192,13 +181,13 @@ struct AppListPageV2 {
     try {
       const computer = this.computerManager.getComputer(this.computerId);
       if (!computer) {
-        promptAction.showToast({ message: '找不到电脑' });
+        promptAction.showToast({ message: 'Computer not found' });
         router.back();
         return;
       }
       
       if (computer.pairState !== PairState.PAIRED) {
-        promptAction.showToast({ message: '设备未配对，请重新配对' });
+        promptAction.showToast({ message: 'Device not paired, please re-pair' });
         router.back();
         return;
       }
@@ -208,21 +197,19 @@ struct AppListPageV2 {
       const context = getContext(this) as common.UIAbilityContext;
       this.nvHttp = new NvHttp(selectBestAddress(computer), computer.serverCert, context, computer.httpPort);
 
-      // 空列表重试机制（匹配 Android ApplistPoller 的 EMPTY_LIST_THRESHOLD 逻辑）
-      // 服务端可能因瞬时原因返回空列表，连续多次为空才认定真的为空
+
       let apps: AppEntry[] = [];
       for (let attempt = 0; attempt < AppListPageV2.EMPTY_LIST_THRESHOLD; attempt++) {
         apps = await this.nvHttp.getAppList();
         if (apps.length > 0) {
           break;
         }
-        console.warn(`AppListPageV2: 收到空列表 (${attempt + 1}/${AppListPageV2.EMPTY_LIST_THRESHOLD})`);
+        console.warn(`AppListPageV2: Received empty list (${attempt + 1}/${AppListPageV2.EMPTY_LIST_THRESHOLD})`);
         if (attempt < AppListPageV2.EMPTY_LIST_THRESHOLD - 1) {
           await new Promise<void>(resolve => setTimeout(resolve, AppListPageV2.EMPTY_LIST_RETRY_DELAY_MS));
         }
       }
 
-      // 标记正在运行的应用
       const runningGameId = computer.runningGameId;
       if (runningGameId > 0) {
         for (const app of apps) {
@@ -235,17 +222,17 @@ struct AppListPageV2 {
       this.loadDisplays();
       this.waitForFirstAppIcon();
     } catch (err) {
-      promptAction.showToast({ message: `加载失败: ${(err as Error).message}` });
+      promptAction.showToast({ message: `Load failed: ${(err as Error).message}` });
     } finally {
       this.isLoading = false;
     }
   }
   
-  /**
-   * 等待第一个 app 图标加载完成后设置背景
+/**
+   * Wait for first app icon to load before setting background
    */
   private waitForFirstAppIcon(): void {
-    // 先清理之前的定时器
+
     if (this.iconPollIntervalId !== -1) {
       clearInterval(this.iconPollIntervalId);
       this.iconPollIntervalId = -1;
@@ -270,7 +257,7 @@ struct AppListPageV2 {
     
     if (setBackground()) return;
     
-    // 轮询等待（最多3秒）
+
     let attempts = 0;
     this.iconPollIntervalId = setInterval(() => {
       if (setBackground() || ++attempts >= 30) {
@@ -282,8 +269,8 @@ struct AppListPageV2 {
     }, 100);
   }
 
-  /**
-   * 更新背景图
+/**
+   * Update background image
    */
   private updateBackgroundForApp(app: ObservableApp): void {
     if (!app.localIconPath || !app.iconLoaded) return;
@@ -302,36 +289,36 @@ struct AppListPageV2 {
     try {
       const computer = this.computerManager.getComputer(this.computerId);
       if (computer && computer.pairState !== PairState.PAIRED) {
-        promptAction.showToast({ message: '配对已失效，请重新配对' });
+        promptAction.showToast({ message: 'Pairing expired, please re-pair' });
         router.back();
         return;
       }
       
       if (this.nvHttp) {
-        // 获取最新的服务器状态
+
         try {
           const serverInfo = await this.nvHttp.getServerInfo();
           if (computer) {
             computer.runningGameId = serverInfo.currentGame;
           }
         } catch {
-          // 忽略服务器状态获取失败
+
         }
         
-        // 空列表重试机制
+
         let apps: AppEntry[] = [];
         for (let attempt = 0; attempt < AppListPageV2.EMPTY_LIST_THRESHOLD; attempt++) {
           apps = await this.nvHttp.getAppList();
           if (apps.length > 0) {
             break;
           }
-          console.warn(`AppListPageV2: 刷新收到空列表 (${attempt + 1}/${AppListPageV2.EMPTY_LIST_THRESHOLD})`);
+          console.warn(`AppListPageV2: Refresh received empty list (${attempt + 1}/${AppListPageV2.EMPTY_LIST_THRESHOLD})`);
           if (attempt < AppListPageV2.EMPTY_LIST_THRESHOLD - 1) {
             await new Promise<void>(resolve => setTimeout(resolve, AppListPageV2.EMPTY_LIST_RETRY_DELAY_MS));
           }
         }
 
-        // 标记正在运行的应用
+
         const runningGameId = computer?.runningGameId || 0;
         for (const app of apps) {
           app.isRunning = runningGameId > 0 && app.id === runningGameId;
@@ -343,16 +330,15 @@ struct AppListPageV2 {
     } catch (err) {
       const errMsg = (err as Error).message || '';
       if (errMsg.includes('401') || errMsg.includes('not authorized') || errMsg.includes('Certificate verification')) {
-        promptAction.showToast({ message: '配对已失效，请重新配对' });
+        promptAction.showToast({ message: 'Pairing expired, please re-pair' });
         router.back();
         return;
       }
-      // 静默刷新（如 onPageShow 自动触发的后台刷新）不弹 toast
-      // 已有数据时也不弹——用户仍能看到之前的列表
+
       if (!silent && this.viewModel.appCount === 0) {
-        promptAction.showToast({ message: '刷新失败' });
+        promptAction.showToast({ message: 'Refresh failed' });
       } else {
-        console.warn('AppListPageV2: 刷新失败（静默）:', errMsg);
+        console.warn('AppListPageV2: Refresh failed (silent):', errMsg);
       }
     } finally {
       this.isRefreshing = false;
@@ -361,13 +347,13 @@ struct AppListPageV2 {
 
   build() {
     Stack() {
-      // 纯色基础背景
+
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor(AppColors.Background)
       
-      // 背景图层（使用 app 封面，带淡入动画）
+
       if (this.backgroundImageUrl.length > 0) {
         Image(this.backgroundImageUrl)
           .width('100%')
@@ -375,7 +361,7 @@ struct AppListPageV2 {
           .objectFit(ImageFit.Cover)
           .opacity(this.backgroundOpacity)
         
-        // 渐变叠加层
+
         Column()
           .width('100%')
           .height('100%')
@@ -390,12 +376,12 @@ struct AppListPageV2 {
           .opacity(this.backgroundOpacity > 0 ? 1 : 0)
       }
       
-      // 主内容
+
       Column() {
-        // 标题栏
+
         this.TitleBar()
         
-        // 内容区域
+
         Stack() {
           if (this.isLoading) {
             this.LoadingState()
@@ -403,7 +389,7 @@ struct AppListPageV2 {
             this.EmptyState()
           } else {
             Column() {
-              // 搜索栏 (放在内容区域顶部，紧贴 AppGrid)
+
               if (this.showSearch) {
                 this.SearchBar()
               }
@@ -416,7 +402,7 @@ struct AppListPageV2 {
         }
         .layoutWeight(1)
         
-        // 显示器选择栏（底部，服务器支持 displays API 时显示）
+
         if (this.supportsDisplayApi) {
           this.DisplaySelector()
         }
@@ -433,7 +419,7 @@ struct AppListPageV2 {
   @Builder
   TitleBar() {
     Row() {
-      // 返回按钮 - 霓虹风格
+
       Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_back'))
           .width(AppSizes.IconMedium)
@@ -447,7 +433,7 @@ struct AppListPageV2 {
       .borderColor(AppColors.CardBorder)
       .onClick(() => router.back())
 
-      // 标题
+
       Column() {
         Text(this.computerName || '应用列表')
           .fontSize(AppSizes.FontTitle)
@@ -459,7 +445,7 @@ struct AppListPageV2 {
             Text('🎮')
               .fontSize(12)
               .margin({ right: 4 })
-            Text(`${this.viewModel.filteredCount} 个应用`)
+            Text(`${this.viewModel.filteredCount} apps`)
               .fontSize(AppSizes.FontCaption)
               .fontColor(AppColors.TextSecondary)
           }
@@ -471,7 +457,7 @@ struct AppListPageV2 {
 
       Blank()
 
-      // 搜索按钮 - 霓虹风格
+
       Button({ type: ButtonType.Circle }) {
         SymbolGlyph($r('sys.symbol.magnifyingglass'))
           .fontSize(20)
@@ -492,7 +478,7 @@ struct AppListPageV2 {
         });
       })
       
-      // 刷新按钮 - 霓虹风格
+
       Button({ type: ButtonType.Circle }) {
         if (this.isRefreshing) {
           LoadingProgress()
@@ -527,13 +513,13 @@ struct AppListPageV2 {
   SearchBar() {
     Row() {
       Row() {
-        // 搜索图标
+
         SymbolGlyph($r('sys.symbol.magnifyingglass'))
           .fontSize(16)
           .fontColor([AppColors.TextTertiary])
           .margin({ right: 8 })
 
-        TextInput({ placeholder: '搜索游戏...', text: this.searchText })
+        TextInput({ placeholder: 'Search games...', text: this.searchText })
           .layoutWeight(1)
           .height(32)
           .fontSize(14)
@@ -543,7 +529,7 @@ struct AppListPageV2 {
           .backgroundColor(Color.Transparent)
           .onChange((value: string) => {
             this.searchText = value;
-            // 防抖：300ms 内不重复触发搜索
+
             if (this.searchDebounceTimer !== -1) {
               clearTimeout(this.searchDebounceTimer);
             }
@@ -553,7 +539,7 @@ struct AppListPageV2 {
             }, 300);
           })
 
-        // 清空按钮
+
         if (this.searchText.length > 0) {
           Button({ type: ButtonType.Circle }) {
             SymbolGlyph($r('sys.symbol.xmark'))
@@ -564,7 +550,7 @@ struct AppListPageV2 {
           .height(24)
           .backgroundColor(AppColors.Surface)
           .onClick(() => {
-            // 清除防抖定时器
+
             if (this.searchDebounceTimer !== -1) {
               clearTimeout(this.searchDebounceTimer);
               this.searchDebounceTimer = -1;
@@ -591,30 +577,30 @@ struct AppListPageV2 {
   @Builder
   DisplaySelector() {
     Column() {
-      // 提示说明
-      Text('Foundation Sunshine 专属功能')
+
+      Text('Foundation Sunshine exclusive feature')
         .fontSize(10)
         .fontColor(AppColors.TextTertiary)
         .margin({ bottom: 4 })
       
       Row() {
-        // 显示器图标和标签
+
         Row() {
           SymbolGlyph($r('sys.symbol.display'))
             .fontSize(18)
             .fontColor([AppColors.TextSecondary])
             .margin({ right: 6 })
-          Text('串流屏幕')
+          Text('Stream display')
             .fontSize(13)
             .fontColor(AppColors.TextSecondary)
         }
         .margin({ right: AppSpacing.Small })
 
-        // 横向滚动的选项
+
         Scroll() {
           Row({ space: 8 }) {
-            // 默认选项（不选择任何显示器）
-            Text('默认')
+
+            Text('Default')
               .fontSize(12)
               .fontWeight((!this.useVirtualDisplay && this.selectedDisplayIndex === -1) ? FontWeight.Medium : FontWeight.Normal)
               .fontColor((!this.useVirtualDisplay && this.selectedDisplayIndex === -1) ? AppColors.TextOnPrimary : AppColors.TextSecondary)
@@ -628,7 +614,7 @@ struct AppListPageV2 {
                 this.selectedDisplayIndex = -1;
               })
 
-            // 物理显示器选项
+
             ForEach(this.availableDisplays, (disp: DisplayInfo, index: number) => {
               Text(disp.name)
                 .fontSize(12)
@@ -645,8 +631,8 @@ struct AppListPageV2 {
                 })
             }, (disp: DisplayInfo) => `display_${disp.index}`)
 
-            // 虚拟显示器选项
-            Text('虚拟显示器')
+
+            Text('Virtual display')
               .fontSize(12)
               .fontWeight(this.useVirtualDisplay ? FontWeight.Medium : FontWeight.Normal)
               .fontColor(this.useVirtualDisplay ? AppColors.TextOnPrimary : AppColors.TextSecondary)
@@ -676,7 +662,7 @@ struct AppListPageV2 {
   @Builder
   LoadingState() {
     Column() {
-      // 加载动画容器
+
       Column() {
         LoadingProgress()
           .width(48)
@@ -692,12 +678,12 @@ struct AppListPageV2 {
       .borderColor(AppColors.Primary)
       .shadow({ radius: 20, color: AppColors.GlowGreen, offsetX: 0, offsetY: 0 })
 
-      Text('正在加载应用列表...')
+      Text('Loading app list...')
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.Primary)
         .margin({ top: AppSpacing.Large })
 
-      Text('请稍候')
+      Text('Please wait')
         .fontSize(AppSizes.FontCaption)
         .fontColor(AppColors.TextTertiary)
         .margin({ top: AppSpacing.Small })
@@ -714,12 +700,12 @@ struct AppListPageV2 {
         .fontSize(40)
         .margin({ bottom: AppSpacing.Medium })
 
-      Text(this.viewModel.isSearchEmpty ? '没有找到匹配的应用' : '没有可用的应用')
+      Text(this.viewModel.isSearchEmpty ? 'No matching apps found' : 'No apps available')
         .fontSize(AppSizes.FontBody)
         .fontColor(AppColors.TextSecondary)
 
       if (!this.viewModel.isSearchEmpty) {
-        Text('刷新')
+        Text('Refresh')
           .fontSize(AppSizes.FontCaption)
           .fontColor(AppColors.Accent)
           .margin({ top: AppSpacing.Medium })
@@ -734,9 +720,9 @@ struct AppListPageV2 {
   @Builder
   AppGrid() {
     Refresh({ refreshing: $$this.isRefreshing }) {
-      // 横向滚动的布局（参考Android项目的布局方式）
+      
       Scroll() {
-        // 使用Column布局，支持多行横向排列
+        
         Column() {
           ForEach(this.generateRows(), (rowApps: ObservableApp[], rowIndex: number) => {
             Row({ space: AppSpacing.Medium }) {
@@ -753,7 +739,7 @@ struct AppListPageV2 {
             }
             .margin({ bottom: rowIndex < this.rowCount - 1 ? AppSpacing.Medium : 0 })
           }, (rowApps: ObservableApp[], rowIndex: number) => {
-            // 行的 key 需要包含该行所有应用的 ID 和运行状态
+            
             const appIds = rowApps.map(a => `${a.id}:${a.isRunning ? 1 : 0}`).join(',');
             return `row_${rowIndex}_apps_${appIds}`;
           })
@@ -778,7 +764,7 @@ struct AppListPageV2 {
   }
 
   /**
-   * 将应用列表按行分组
+   * Group apps into rows
    */
   private generateRows(): ObservableApp[][] {
     const apps = this.viewModel.filteredApps;
@@ -788,10 +774,10 @@ struct AppListPageV2 {
       return rows;
     }
     
-    // 计算每行的应用数量
+    
     const appsPerRow = Math.ceil(apps.length / this.rowCount);
     
-    // 按行分组
+    
     for (let i = 0; i < this.rowCount; i++) {
       const rowApps: ObservableApp[] = [];
       for (let j = 0; j < appsPerRow; j++) {
@@ -809,7 +795,7 @@ struct AppListPageV2 {
   }
 
   /**
-   * 根据行数生成rowsTemplate（保留用于可能的后续使用）
+   * Generate rowsTemplate based on row count
    */
   private generateRowsTemplate(): string {
     const templates: string[] = [];
@@ -820,7 +806,7 @@ struct AppListPageV2 {
   }
 
   /**
-   * 加载可用的显示器列表 (Sunshine 功能)
+   * Load available display list (Sunshine feature)
    */
   private async loadDisplays(): Promise<void> {
     if (!this.nvHttp) return;
@@ -835,27 +821,27 @@ struct AppListPageV2 {
   }
 
   /**
-   * 获取当前选择的显示器 GUID
+   * Get selected display GUID
    */
   private getSelectedDisplayGuid(): string {
     if (this.useVirtualDisplay) {
-      return ''; // 虚拟显示器不需要 GUID
+      return '';
     }
     if (this.selectedDisplayIndex >= 0 && this.selectedDisplayIndex < this.availableDisplays.length) {
       const display = this.availableDisplays[this.selectedDisplayIndex];
       return display.guid || display.name;
     }
-    return ''; // 使用默认显示器
+    return '';
   }
 
   private async launchApp(app: ObservableApp): Promise<void> {
-    // 如果有正在运行的应用
+    
     if (this.viewModel.hasRunningApp && this.viewModel.runningApp?.id !== app.id) {
       this.showConfirmDialog({
-        title: '确认',
-        message: `${this.viewModel.runningApp?.name} 正在运行。\n启动 ${app.name} 将会退出当前应用。`,
+        title: 'Confirm',
+        message: `${this.viewModel.runningApp?.name} is running.\nLaunching ${app.name} will quit the current app.`,
         confirmButton: {
-          text: '继续',
+          text: 'Continue',
           onClick: () => {
             this.doLaunchApp(app);
           }
@@ -883,7 +869,7 @@ struct AppListPageV2 {
   }
 
   private openAppMenu(app: ObservableApp): void {
-    // 长按时更新背景图
+    
     this.updateBackgroundForApp(app);
     
     const options: OptionItem[] = [];
@@ -893,71 +879,71 @@ struct AppListPageV2 {
     const hasOtherRunningApp = this.viewModel.hasRunningApp && this.viewModel.runningApp?.id !== app.id;
     
     if (app.isRunning) {
-      // 当前应用正在运行
+      
       const resumeKey = `action_${actionIndex++}`;
       actionMap.set(resumeKey, () => this.doLaunchApp(app));
       options.push({
-        title: '恢复',
-        subtitle: '继续当前游戏',
+        title: 'Resume',
+        subtitle: 'Continue current game',
         value: resumeKey
       });
       
       const quitKey = `action_${actionIndex++}`;
       actionMap.set(quitKey, () => this.quitApp());
       options.push({
-        title: '退出',
-        subtitle: '关闭当前运行的应用',
+        title: 'Quit',
+        subtitle: 'Close current running app',
         value: quitKey
       });
     } else if (hasOtherRunningApp) {
-      // 其他应用正在运行，显示"退出并启动"选项
+      
       const quitAndStartKey = `action_${actionIndex++}`;
       actionMap.set(quitAndStartKey, () => this.quitAndStartApp(app));
       options.push({
-        title: '退出并启动',
-        subtitle: `退出 ${this.viewModel.runningApp?.name} 并启动此应用`,
+        title: 'Quit & Launch',
+        subtitle: `Quit ${this.viewModel.runningApp?.name} and launch this app`,
         value: quitAndStartKey
       });
     } else {
-      // 没有应用在运行
+      
       const launchKey = `action_${actionIndex++}`;
       actionMap.set(launchKey, () => this.launchApp(app));
       options.push({
-        title: '启动',
-        subtitle: '开始串流',
+        title: 'Launch',
+        subtitle: 'Start streaming',
         value: launchKey
       });
     }
     
-    // HDR 选项（如果支持）
+    
     if (app.isHdrSupported && !app.isRunning) {
       const hdrKey = `action_${actionIndex++}`;
       actionMap.set(hdrKey, () => {
-        // TODO: 以 HDR 模式启动
+        
         this.doLaunchApp(app);
       });
       options.push({
-        title: '启动 (HDR)',
-        subtitle: '以 HDR 模式启动',
+        title: 'Launch (HDR)',
+        subtitle: 'Launch in HDR mode',
         value: hdrKey
       });
     }
     
-    // 查看详情
+    
     const detailsKey = `action_${actionIndex++}`;
     actionMap.set(detailsKey, () => this.showAppDetails(app));
     options.push({
-      title: '查看详情',
-      subtitle: '显示应用信息',
+      title: 'View Details',
+      subtitle: 'Show app info',
       value: detailsKey
     });
 
-    // 状态副标题
+    
     let subtitle = '';
     if (app.isRunning) {
-      subtitle = '正在运行';
+      subtitle = 'Running';
     } else if (app.isHdrSupported) {
-      subtitle = '支持 HDR';
+      subtitle = 'HDR supported';
     }
 
     this.optionPickerDialogConfig = {
@@ -973,7 +959,7 @@ struct AppListPageV2 {
       }
     };
     
-    // 创建并打开弹窗
+    
     this.optionPickerDialogController = new CustomDialogController({
       builder: OptionPickerDialog({
         config: this.optionPickerDialogConfig
@@ -986,38 +972,38 @@ struct AppListPageV2 {
   }
 
   /**
-   * 退出当前应用并启动新应用
+   * Quit current app and launch new app
    */
   private async quitAndStartApp(app: ObservableApp): Promise<void> {
     if (!this.nvHttp) return;
     
     try {
       if (await this.nvHttp.quitApp()) {
-        promptAction.showToast({ message: '正在启动新应用...' });
+        promptAction.showToast({ message: 'Starting new app...' });
         setTimeout(() => this.doLaunchApp(app), 500);
       } else {
-        promptAction.showToast({ message: '退出失败' });
+        promptAction.showToast({ message: 'Quit failed' });
       }
     } catch {
-      promptAction.showToast({ message: '退出失败' });
+      promptAction.showToast({ message: 'Quit failed' });
     }
   }
 
   /**
-   * 显示应用详情
+   * Show app details
    */
   private showAppDetails(app: ObservableApp): void {
     const lines: string[] = [
-      `应用名称: ${app.name}`,
-      `应用 ID: ${app.id}`,
-      `HDR 支持: ${app.isHdrSupported ? '是' : '否'}`,
-      `运行状态: ${app.isRunning ? '运行中' : '未运行'}`
+      `App name: ${app.name}`,
+      `App ID: ${app.id}`,
+      `HDR support: ${app.isHdrSupported ? 'Yes' : 'No'}`,
+      `Status: ${app.isRunning ? 'Running' : 'Not running'}`
     ];
     
-    // 如果有超级指令，显示在详情中
+    
     if (app.cmdList && app.cmdList.length > 0) {
       lines.push('');
-      lines.push('服务端指令:');
+      lines.push('Server commands:');
       for (const cmd of app.cmdList) {
         lines.push(`  • ${cmd.name} (${cmd.id})`);
       }
@@ -1026,10 +1012,10 @@ struct AppListPageV2 {
     const details = lines.join('\n');
     
     this.confirmDialogConfig = {
-      title: '应用详情',
+      title: 'App Details',
       message: details,
       confirmButton: {
-        text: '确定',
+        text: 'OK',
         onClick: () => {}
       }
     };
@@ -1050,13 +1036,13 @@ struct AppListPageV2 {
     
     try {
       if (await this.nvHttp.quitApp()) {
-        promptAction.showToast({ message: '应用已退出' });
+        promptAction.showToast({ message: 'App quit' });
         await this.refreshApps();
       } else {
-        promptAction.showToast({ message: '退出失败' });
+        promptAction.showToast({ message: 'Quit failed' });
       }
     } catch {
-      promptAction.showToast({ message: '退出失败' });
+      promptAction.showToast({ message: 'Quit failed' });
     }
   }
 }

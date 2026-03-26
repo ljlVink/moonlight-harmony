@@ -11,17 +11,11 @@
 import { preferences } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
 
-/**
- * Preferences 工具类
- */
 export class PreferencesUtil {
   private static readonly PREFERENCES_NAME = 'moonlight_settings';
   private static preferencesInstance: preferences.Preferences | null = null;
   private static contextRef: Context | null = null;
 
-  /**
-   * 初始化（需要在应用启动时调用）
-   */
   static init(context: Context): void {
     PreferencesUtil.contextRef = context;
   }
@@ -44,15 +38,10 @@ export class PreferencesUtil {
     return PreferencesUtil.preferencesInstance;
   }
 
-  /**
-   * 通用获取方法
-   * 注意：对于数字类型，如果存储的是字符串会自动转换
-   */
   static async get<T>(key: string, defaultValue: T): Promise<T> {
     const prefs = await PreferencesUtil.getPreferences();
     const value = await prefs.get(key, defaultValue as preferences.ValueType);
     
-    // 如果期望返回数字但得到字符串，尝试转换
     if (typeof defaultValue === 'number' && typeof value === 'string') {
       const parsed = Number(value);
       if (!isNaN(parsed)) {
@@ -63,9 +52,6 @@ export class PreferencesUtil {
     return value as T;
   }
 
-  /**
-   * 通用设置方法
-   */
   static async put(key: string, value: preferences.ValueType): Promise<void> {
     const prefs = await PreferencesUtil.getPreferences();
     await prefs.put(key, value);

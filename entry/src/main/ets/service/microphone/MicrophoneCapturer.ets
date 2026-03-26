@@ -8,70 +8,42 @@
  * (at your option) any later version.
  */
 
-/**
- * 麦克风捕获器
- * 使用 HarmonyOS AudioCapturer API 捕获 PCM 音频数据
- */
 import { audio } from '@kit.AudioKit';
 import { MicrophoneConfig, MicrophoneState } from './MicrophoneConfig';
 
 const TAG = '[MicCapturer]';
 
-/**
- * 麦克风数据回调接口
- */
 export interface MicrophoneDataCallback {
-  /**
-   * 当有音频数据可用时调用
-   * @param data PCM 音频数据
-   * @param length 数据长度
-   */
   onMicrophoneData(data: ArrayBuffer, length: number): void;
 }
 
-/**
- * 麦克风捕获器
- * 负责从系统麦克风捕获 PCM 音频数据
- */
 export class MicrophoneCapturer {
   private audioCapturer: audio.AudioCapturer | null = null;
   private dataCallback: MicrophoneDataCallback | null = null;
   private running: boolean = false;
   private state: MicrophoneState = MicrophoneState.STOPPED;
   
-  // 帧缓冲区 - 用于累积完整的 Opus 帧
   private frameBuffer: ArrayBuffer;
   private frameBufferView: Uint8Array;
   private frameBufferPos: number = 0;
   
-  // 统计信息
   private frameCount: number = 0;
   private lastLogTime: number = 0;
   
   constructor(callback: MicrophoneDataCallback) {
     this.dataCallback = callback;
-    // 初始化帧缓冲区
     this.frameBuffer = new ArrayBuffer(MicrophoneConfig.BYTES_PER_FRAME);
     this.frameBufferView = new Uint8Array(this.frameBuffer);
   }
   
-  /**
-   * 获取当前状态
-   */
   getState(): MicrophoneState {
     return this.state;
   }
   
-  /**
-   * 是否正在运行
-   */
   isRunning(): boolean {
     return this.running;
   }
   
-  /**
-   * 启动麦克风捕获
-   */
   async start(): Promise<boolean> {
     if (this.running) {
       console.info(TAG, '麦克风捕获已在运行');
@@ -81,7 +53,6 @@ export class MicrophoneCapturer {
     this.state = MicrophoneState.INITIALIZING;
     
     try {
-      // 配置 AudioCapturer
       const audioStreamInfo: audio.AudioStreamInfo = {
         samplingRate: audio.AudioSamplingRate.SAMPLE_RATE_48000,
         channels: audio.AudioChannel.CHANNEL_1,
@@ -90,7 +61,6 @@ export class MicrophoneCapturer {
       };
       
       const audioCapturerInfo: audio.AudioCapturerInfo = {
-        // 使用 VOICE_COMMUNICATION 以获得更好的回声消除效果
         source: audio.SourceType.SOURCE_TYPE_VOICE_COMMUNICATION,
         capturerFlags: 0
       };
@@ -102,7 +72,6 @@ export class MicrophoneCapturer {
       
       console.info(TAG, `创建 AudioCapturer: 采样率=${MicrophoneConfig.SAMPLE_RATE}, 通道=${MicrophoneConfig.CHANNELS}`);
       
-      // 创建 AudioCapturer
       this.audioCapturer = await audio.createAudioCapturer(audioCapturerOptions);
       
       if (!this.audioCapturer) {
@@ -111,17 +80,14 @@ export class MicrophoneCapturer {
         return false;
       }
       
-      // 设置回调
       this.audioCapturer.on('readData', (buffer: ArrayBuffer) => {
         this.processAudioData(buffer);
       });
       
-      // 监听状态变化
       this.audioCapturer.on('stateChange', (state: audio.AudioState) => {
         console.info(TAG, `AudioCapturer 状态变化: ${state}`);
       });
       
-      // 启动捕获
       await this.audioCapturer.start();
       
       this.running = true;
@@ -140,10 +106,6 @@ export class MicrophoneCapturer {
     }
   }
   
-  /**
-   * 处理音频数据
-   * 累积数据直到达到完整的 Opus 帧大小
-   */
   private processAudioData(buffer: ArrayBuffer): void {
     if (!this.running || !this.dataCallback) {
       return;
@@ -154,11 +116,9 @@ export class MicrophoneCapturer {
     let remainingBytes = data.length;
     
     while (remainingBytes > 0) {
-      // 计算当前帧还需要多少字节
       const bytesNeeded = MicrophoneConfig.BYTES_PER_FRAME - this.frameBufferPos;
       const bytesToCopy = Math.min(remainingBytes, bytesNeeded);
       
-      // 复制数据到帧缓冲区
       this.frameBufferView.set(
         data.subarray(dataOffset, dataOffset + bytesToCopy),
         this.frameBufferPos
@@ -167,19 +127,15 @@ export class MicrophoneCapturer {
       dataOffset += bytesToCopy;
       remainingBytes -= bytesToCopy;
       
-      // 如果帧缓冲区满了，发送完整的帧
       if (this.frameBufferPos >= MicrophoneConfig.BYTES_PER_FRAME) {
-        // 发送帧数据
         this.dataCallback.onMicrophoneData(
-          this.frameBuffer.slice(0),  // 复制一份避免并发问题
+          this.frameBuffer.slice(0),
           MicrophoneConfig.BYTES_PER_FRAME
         );
         
-        // 重置缓冲区
         this.frameBufferPos = 0;
         this.frameCount++;
         
-        // 每 5 秒记录一次统计信息
         const now = Date.now();
         if (now - this.lastLogTime >= 5000) {
           const elapsed = (now - this.lastLogTime) / 1000;
@@ -192,9 +148,6 @@ export class MicrophoneCapturer {
     }
   }
   
-  /**
-   * 暂停捕获
-   */
   async pause(): Promise<void> {
     if (this.audioCapturer && this.state === MicrophoneState.CAPTURING) {
       try {
@@ -207,9 +160,6 @@ export class MicrophoneCapturer {
     }
   }
   
-  /**
-   * 恢复捕获
-   */
   async resume(): Promise<void> {
     if (this.audioCapturer && this.state === MicrophoneState.PAUSED) {
       try {
@@ -222,9 +172,6 @@ export class MicrophoneCapturer {
     }
   }
   
-  /**
-   * 停止捕获
-   */
   async stop(): Promise<void> {
     this.running = false;
     
@@ -241,9 +188,6 @@ export class MicrophoneCapturer {
     console.info(TAG, '麦克风捕获已停止');
   }
   
-  /**
-   * 释放资源
-   */
   async release(): Promise<void> {
     await this.stop();
     

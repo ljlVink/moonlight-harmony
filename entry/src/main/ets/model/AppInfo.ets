@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 应用信息模型
- */
 export interface AppInfo {
   id: number;
   name: string;
@@ -22,5 +19,5 @@ export interface AppInfo {
 export interface AppAsset {
   appId: number;
   computerId: string;
-  boxArt?: string;  // Base64 或 URL
+  boxArt?: string;
 }

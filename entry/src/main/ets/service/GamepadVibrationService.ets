@@ -9,43 +9,29 @@
  */
 
 /**
- * 手柄震动处理服务
  * 
- * 从 GamepadManager 中解耦的独立模块，负责：
- * 1. USB 手柄震动（直接发送到控制器）
- * 2. 设备震动回退（使用设备马达模拟手柄震动）
- * 3. 振动模式管理（仅手柄/仅设备/同时/自动）
  */
 
 import { vibrator } from '@kit.SensorServiceKit';
 import { UsbDriverService, AbstractController } from './usbdriver/index';
 import { RUMBLE_MAX } from './GamepadTypes';
 
-// ==================== 震动服务 ====================
-
 export class GamepadVibrationService {
   private usbDriverService: UsbDriverService;
   
-  // 设置
   private deviceVibrateEnabled = false;
   private deviceVibrateStrength = 100;
   private vibrationMode = '自动';
   
-  // 槽位→设备键的查找函数（由 GamepadManager 提供）
   private deviceKeyToSlotLookup: Map<string, number>;
   
-  // 高清振动支持缓存
   private hdHapticSupported: boolean | null = null;
-  // 上次震动参数缓存（用于检测变化）
   private lastLowFreq: number = 0;
   private lastHighFreq: number = 0;
-  // 震动活跃标志
   private isVibrating: boolean = false;
-  // USB 振动 watchdog: 防止 USB 传输失败导致振动卡死
   private rumbleWatchdogTimer: number = -1;
   private lastRumbleControllerNumber: number = 0;
   private static readonly RUMBLE_WATCHDOG_MS = 3000;
-  // USB 停止确认: 延迟重发 stop(0,0) 防止 USB 传输丢失
   private stopConfirmTimer: number = -1;
 
   constructor(usbDriverService: UsbDriverService, deviceKeyToSlot: Map<string, number>) {
@@ -53,29 +39,17 @@ export class GamepadVibrationService {
     this.deviceKeyToSlotLookup = deviceKeyToSlot;
   }
 
-  // ==================== 设置 ====================
-
-  /**
-   * 更新震动设置
-   */
   setSettings(enabled: boolean, strength: number, mode: string): void {
     this.deviceVibrateEnabled = enabled;
     this.deviceVibrateStrength = strength;
     this.vibrationMode = mode;
   }
 
-  // ==================== 公开 API ====================
-
-  /**
-   * 处理震动反馈
-   */
   handleRumble(controllerNumber: number, lowFreqMotor: number, highFreqMotor: number): void {
-    // Watchdog: 防止 USB 传输失败导致振动卡死 (3s 无新回调→强制停止)
     if (this.rumbleWatchdogTimer !== -1) {
       clearTimeout(this.rumbleWatchdogTimer);
       this.rumbleWatchdogTimer = -1;
     }
-    // 取消旧的 stop 确认定时器 (新命令到达, 无论零/非零都以最新为准)
     if (this.stopConfirmTimer !== -1) {
       clearTimeout(this.stopConfirmTimer);
       this.stopConfirmTimer = -1;
@@ -120,7 +94,6 @@ export class GamepadVibrationService {
         break;
     }
 
-    // USB 停止确认: 100ms 后重发 stop(0,0)，防止首次 USB 传输被覆盖或丢失
     if (lowFreqMotor === 0 && highFreqMotor === 0 && hasUsbController) {
       this.stopConfirmTimer = setTimeout(() => {
         this.stopConfirmTimer = -1;
@@ -130,20 +103,12 @@ export class GamepadVibrationService {
     }
   }
 
-  /**
-   * 处理扳机震动
-   */
   handleRumbleTriggers(controllerNumber: number, leftTrigger: number, rightTrigger: number): void {
     const controllers = this.usbDriverService.getControllers();
     const controller = this.findControllerBySlot(controllers, controllerNumber);
     controller?.rumbleTriggers(leftTrigger, rightTrigger);
   }
 
-  /**
-   * 仅向 USB 控制器发送振动（跳过设备马达路由）
-   * 供 AudioVibrationService 独立路由使用，避免经过设备振动的
-   * 防抖逻辑和参数变换，保证最高精度。
-   */
   rumbleUsbControllersOnly(controllerNumber: number, lowFreqMotor: number, highFreqMotor: number): void {
     const controllers = this.usbDriverService.getControllers();
     if (controllers.length > 0) {
@@ -151,36 +116,26 @@ export class GamepadVibrationService {
     }
   }
 
-  /**
-   * 检查是否有 USB 控制器连接
-   */
   hasUsbControllers(): boolean {
     return this.usbDriverService.getControllers().length > 0;
   }
 
-  /**
-   * 停止所有震动（设备马达 + USB 控制器马达）
-   */
   stopAll(): void {
-    // 清除 watchdog
     if (this.rumbleWatchdogTimer !== -1) {
       clearTimeout(this.rumbleWatchdogTimer);
       this.rumbleWatchdogTimer = -1;
     }
-    // 清除 stop 确认定时器
     if (this.stopConfirmTimer !== -1) {
       clearTimeout(this.stopConfirmTimer);
       this.stopConfirmTimer = -1;
     }
 
-    // 停止设备马达
     if (this.isVibrating) {
       this.stopVibrationImmediate();
     }
     this.lastLowFreq = 0;
     this.lastHighFreq = 0;
 
-    // 停止 USB 控制器马达（发送 rumble(0,0)）
     try {
       const controllers = this.usbDriverService.getControllers();
       for (const controller of controllers) {
@@ -189,47 +144,31 @@ export class GamepadVibrationService {
     } catch (_) { /* ignore */ }
   }
 
-  // ==================== 内部实现 ====================
-
-  /**
-   * 根据槽位号查找控制器（带多级后备）
-   */
   private findControllerBySlot(controllers: AbstractController[], slotNumber: number): AbstractController | null {
     if (controllers.length === 0) return null;
 
-    // 优先：槽位精确匹配
     for (const controller of controllers) {
       if (this.deviceKeyToSlotLookup.get(controller.getDeviceKey()) === slotNumber) {
         return controller;
       }
     }
 
-    // 后备：使用索引或第一个
     if (controllers.length === 1) return controllers[0];
     if (slotNumber < controllers.length) return controllers[slotNumber];
     return controllers[0];
   }
 
-  /**
-   * 向 USB 控制器发送震动
-   */
   private rumbleUsbControllers(controllers: AbstractController[], controllerNumber: number, lowFreqMotor: number, highFreqMotor: number): void {
     const controller = this.findControllerBySlot(controllers, controllerNumber);
     controller?.rumble(lowFreqMotor, highFreqMotor);
   }
 
   /**
-   * 触发设备震动（后备方案）
    *
-   * 关键改进：
-   * 1. 使用 continuous 长振（而非 transient 瞬态）实现持续震动
-   * 2. 强度变化时立即停止旧震动再启动新震动
-   * 3. 使用 stopVibrationSync 同步停止确保即时性
    */
   private triggerDeviceVibrate(lowFreqMotor: number, highFreqMotor: number): void {
     if (!this.deviceVibrateEnabled) return;
 
-    // 停止震动
     if (lowFreqMotor === 0 && highFreqMotor === 0) {
       if (this.isVibrating) {
         this.stopVibrationImmediate();
@@ -239,26 +178,22 @@ export class GamepadVibrationService {
       return;
     }
 
-    // 检查是否需要更新震动（强度变化超过阈值才更新，避免过于频繁）
     const lowDelta = Math.abs(lowFreqMotor - this.lastLowFreq);
     const highDelta = Math.abs(highFreqMotor - this.lastHighFreq);
-    const threshold = 3000;  // 约 5% 的变化阈值
+    const threshold = 3000;
 
     if (this.isVibrating && lowDelta < threshold && highDelta < threshold) {
-      return;  // 变化太小，不更新
+      return;
     }
 
     this.lastLowFreq = lowFreqMotor;
     this.lastHighFreq = highFreqMotor;
 
-    // 计算用户强度系数
     const userStrength = this.deviceVibrateStrength / 100;
 
-    // 计算低频和高频马达的强度 (0-100)
     const lowIntensity = Math.floor((lowFreqMotor / RUMBLE_MAX) * userStrength * 100);
     const highIntensity = Math.floor((highFreqMotor / RUMBLE_MAX) * userStrength * 100);
 
-    // 检查是否支持高清振动（首次检查后缓存）
     if (this.hdHapticSupported === null) {
       try {
         this.hdHapticSupported = vibrator.isHdHapticSupported();
@@ -268,7 +203,6 @@ export class GamepadVibrationService {
       }
     }
 
-    // 先停止当前震动（确保即时切换）
     if (this.isVibrating) {
       this.stopVibrationImmediate();
     }
@@ -286,15 +220,10 @@ export class GamepadVibrationService {
     }
   }
 
-  /**
-   * 立即停止震动（同步方式）
-   */
   private stopVibrationImmediate(): void {
     try {
-      // 优先使用同步停止 API (API 12+)
       vibrator.stopVibrationSync();
     } catch (_) {
-      // 回退到异步停止
       try {
         vibrator.stopVibration();
       } catch (_) { /* ignore */ }
@@ -302,9 +231,6 @@ export class GamepadVibrationService {
     this.isVibrating = false;
   }
 
-  /**
-   * 使用 continuous 长振实现持续震动 (API 18+)
-   */
   private triggerContinuousVibration(lowIntensity: number, highIntensity: number): void {
     try {
       const builder = new vibrator.VibratorPatternBuilder();
@@ -312,15 +238,14 @@ export class GamepadVibrationService {
       const combinedIntensity = Math.min(100, Math.max(lowIntensity, highIntensity));
       if (combinedIntensity < 5) return;
 
-      // 根据低频/高频比例计算频率
       let frequency: number;
       if (lowIntensity > 0 && highIntensity > 0) {
         const ratio = highIntensity / (lowIntensity + highIntensity);
         frequency = Math.floor(30 + ratio * 50);  // 30-80
       } else if (lowIntensity > 0) {
-        frequency = 35;  // 低频：沉闷
+        frequency = 35;
       } else {
-        frequency = 70;  // 高频：尖锐
+        frequency = 70;
       }
 
       builder.addContinuousEvent(0, 500, {
@@ -343,9 +268,6 @@ export class GamepadVibrationService {
     }
   }
 
-  /**
-   * 使用时长模式实现持续震动
-   */
   private triggerTimeVibration(lowIntensity: number, highIntensity: number): void {
     const combinedIntensity = Math.max(lowIntensity, highIntensity);
     if (combinedIntensity < 5) return;
@@ -361,9 +283,6 @@ export class GamepadVibrationService {
     });
   }
 
-  /**
-   * 回退的简单时长模式震动
-   */
   private fallbackTimeVibration(intensity: number): void {
     if (intensity < 5) return;
     const duration = Math.floor(50 + intensity * 4.5);  // 50-500ms

@@ -10,17 +10,12 @@
 
 /**
  * @file moonlight_bridge.cpp
- * @brief HarmonyOS NAPI 桥接层实现
  * 
- * 实现所有从 ArkTS 调用到 moonlight-common-c 的函数
- * 参照 Android 的 simplejni.c 实现
  */
 
-// 首先包含 moonlight-common-c 的头文件以避免宏重定义警告
 extern "C" {
 #include "moonlight-common-c/src/Limelight.h"
 
-// 从 MicrophoneStream.c 导出的函数
 int sendMicrophoneOpusData(const unsigned char* data, int length);
 bool isMicrophoneEncryptionEnabled(void);
 }
@@ -44,25 +39,21 @@ bool isMicrophoneEncryptionEnabled(void);
 #define LOG_TAG "MoonlightBridge"
 
 // =============================================================================
-// 全局状态
 // =============================================================================
 
 static bool g_initialized = false;
 static STREAM_CONFIGURATION g_streamConfig;
 static SERVER_INFORMATION g_serverInfo;
 static int g_videoCapabilities = 0;
-static bool g_performanceMode = false;  // 性能模式
+static bool g_performanceMode = false;
 
-// Opus 编码器管理
 static std::mutex g_opusEncoderMutex;
 static std::unordered_map<int64_t, std::unique_ptr<OhosOpusEncoder>> g_opusEncoders;
 static int64_t g_opusEncoderNextHandle = 1;
 
-// Native 麦克风采集器 (低时延)
 static std::unique_ptr<MicCapturer> g_micCapturer;
 static std::mutex g_micCapturerMutex;
 
-// 全局接口：更新 mic 编码器丢包率（供 callbacks.cpp 调用）
 void MicCapturerUpdatePacketLossPercent(int percent) {
     std::lock_guard<std::mutex> lock(g_micCapturerMutex);
     if (g_micCapturer) {
@@ -70,14 +61,13 @@ void MicCapturerUpdatePacketLossPercent(int percent) {
     }
 }
 
-// 回调结构体
 static DECODER_RENDERER_CALLBACKS g_videoCallbacksStruct = {
     .setup = BridgeDrSetup,
     .start = BridgeDrStart,
     .stop = BridgeDrStop,
     .cleanup = BridgeDrCleanup,
     .submitDecodeUnit = (int (*)(PDECODE_UNIT))BridgeDrSubmitDecodeUnit,
-    .capabilities = CAPABILITY_DIRECT_SUBMIT,  // 直接从网络线程提交，减少延迟
+    .capabilities = CAPABILITY_DIRECT_SUBMIT,
 };
 
 static AUDIO_RENDERER_CALLBACKS g_audioCallbacksStruct = {
@@ -86,7 +76,7 @@ static AUDIO_RENDERER_CALLBACKS g_audioCallbacksStruct = {
     .stop = BridgeArStop,
     .cleanup = BridgeArCleanup,
     .decodeAndPlaySample = BridgeArDecodeAndPlaySample,
-    .capabilities = CAPABILITY_SUPPORTS_ARBITRARY_AUDIO_DURATION | CAPABILITY_DIRECT_SUBMIT  // 添加直接提交能力
+    .capabilities = CAPABILITY_SUPPORTS_ARBITRARY_AUDIO_DURATION | CAPABILITY_DIRECT_SUBMIT
 };
 
 static CONNECTION_LISTENER_CALLBACKS g_connCallbacksStruct = {
@@ -106,7 +96,6 @@ static CONNECTION_LISTENER_CALLBACKS g_connCallbacksStruct = {
 };
 
 // =============================================================================
-// 辅助函数
 // =============================================================================
 
 static napi_value GetUndefined(napi_env env) {
@@ -163,14 +152,11 @@ static bool GetBool(napi_env env, napi_value value, bool* result) {
 }
 
 // =============================================================================
-// 模块初始化
 // =============================================================================
 
 napi_value MoonBridge_Init(napi_env env, napi_callback_info info) {
     OH_LOG_INFO(LOG_APP, "MoonBridge_Init");
     
-    // 清理之前的资源（如果有的话）
-    // 修复：增加音频渲染器清理，防止重复进入串流时音频泄漏
     VideoDecoderInstance::Cleanup();
     AudioRendererInstance::Cleanup();
     Callbacks_Cleanup();
@@ -180,7 +166,6 @@ napi_value MoonBridge_Init(napi_env env, napi_callback_info info) {
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
     if (argc >= 1) {
-        // 初始化回调
         Callbacks_Init(env, args[0]);
     }
     
@@ -192,7 +177,6 @@ napi_value MoonBridge_Init(napi_env env, napi_callback_info info) {
 }
 
 // =============================================================================
-// 连接管理
 // =============================================================================
 
 napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
@@ -203,13 +187,12 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
     if (argc < 19) {
-        napi_throw_error(env, nullptr, "参数不足");
+        napi_throw_error(env, nullptr, "Insufficient parameters");
         napi_value result;
         napi_create_int32(env, -1, &result);
         return result;
     }
     
-    // 解析参数
     char address[256] = {0};
     char appVersion[64] = {0};
     char gfeVersion[64] = {0};
@@ -237,13 +220,11 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
     GetInt32(env, args[12], &supportedVideoFormats);
     GetInt32(env, args[13], &clientRefreshRateX100);
     
-    // AES Key 和 IV - 支持 ArrayBuffer 和 TypedArray（如 Uint8Array）
     void* aesKeyData = nullptr;
     size_t aesKeyLength = 0;
     void* aesIvData = nullptr;
     size_t aesIvLength = 0;
     
-    // 获取 AES Key - 先尝试 ArrayBuffer，失败则尝试 TypedArray
     napi_valuetype keyType;
     napi_typeof(env, args[14], &keyType);
     bool isKeyTypedArray = false;
@@ -258,7 +239,6 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
         napi_get_arraybuffer_info(env, args[14], &aesKeyData, &aesKeyLength);
     }
     
-    // 获取 AES IV - 先尝试 ArrayBuffer，失败则尝试 TypedArray
     napi_valuetype ivType;
     napi_typeof(env, args[15], &ivType);
     bool isIvTypedArray = false;
@@ -279,7 +259,7 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
     
     // hdrMode: 0=SDR, 1=HDR10/PQ, 2=HLG
     if (argc > 19) GetInt32(env, args[19], &hdrMode);
-    else hdrMode = 0;  // 默认 SDR
+    else hdrMode = 0;
     
     if (argc > 20) GetBool(env, args[20], &enableMic);
     else enableMic = false;
@@ -287,14 +267,12 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
     if (argc > 21) GetBool(env, args[21], &controlOnly);
     else controlOnly = false;
     
-    // 设置服务器信息
     g_serverInfo.address = strdup(address);
     g_serverInfo.serverInfoAppVersion = strdup(appVersion);
     g_serverInfo.serverInfoGfeVersion = strlen(gfeVersion) > 0 ? strdup(gfeVersion) : nullptr;
     g_serverInfo.rtspSessionUrl = strlen(rtspSessionUrl) > 0 ? strdup(rtspSessionUrl) : nullptr;
     g_serverInfo.serverCodecModeSupport = serverCodecModeSupport;
     
-    // 设置串流配置
     memset(&g_streamConfig, 0, sizeof(g_streamConfig));
     g_streamConfig.width = width;
     g_streamConfig.height = height;
@@ -311,7 +289,6 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
     g_streamConfig.enableMic = enableMic;
     g_streamConfig.controlOnly = controlOnly;
     
-    // 复制 AES 密钥和 IV
     if (aesKeyData && aesKeyLength >= 16) {
         memcpy(g_streamConfig.remoteInputAesKey, aesKeyData, 16);
     } else {
@@ -326,47 +303,37 @@ napi_value MoonBridge_StartConnection(napi_env env, napi_callback_info info) {
     g_videoCapabilities = videoCapabilities;
     g_videoCallbacksStruct.capabilities = videoCapabilities;
     
-    // 判断是否启用 HDR（10位色深视频格式表示 HDR）
     // VIDEO_FORMAT_MASK_10BIT = 0xAA00
     // 0x0200 = HEVC MAIN10 (HDR), 0x2000 = AV1 MAIN10 (HDR)
     bool enableHdr = (supportedVideoFormats & 0xAA00) != 0;
     
-    // 确定 HDR 类型
-    // hdrMode 来自客户端设置: 0=SDR, 1=HDR10 (PQ), 2=HLG
-    // 如果启用 HDR 但没有指定 hdrMode，默认使用 HDR10 (PQ)
-    // 如果 hdrMode 是 HLG (2) 但 HDR 未启用，回退到 SDR
     int hdrType = 0;  // SDR
     if (enableHdr) {
         if (hdrMode == 2) {
-            // HLG 模式 - 需要 Sunshine 支持
             hdrType = 2;
         } else {
-            // HDR10/PQ 模式 (默认)
             hdrType = 1;
         }
     }
     
-    // 设置 StreamConfig 的 hdrMode，这会在 RTSP ANNOUNCE 中发送给 Sunshine
     g_streamConfig.hdrMode = hdrType;
     
     OH_LOG_INFO(LOG_APP, "HDR config: enabled=%{public}d, hdrMode=%{public}d (client request=%{public}d), hdrType=%{public}d (0=SDR,1=HDR10,2=HLG), colorSpace=%{public}d, colorRange=%{public}d, videoFormats=0x%{public}x",
                 enableHdr ? 1 : 0, g_streamConfig.hdrMode, hdrMode, hdrType, colorSpace, colorRange, supportedVideoFormats);
     
-    // 配置视频解码器的 HDR 设置
     VideoDecoderInstance::SetHdrConfig(enableHdr, hdrType, colorSpace, colorRange);
     
     OH_LOG_INFO(LOG_APP, "Starting connection to %{public}s (%{public}dx%{public}d@%{public}d, bitrate=%{public}d)", 
                 address, width, height, fps, bitrate);
     
-    // 开始连接
     int ret = LiStartConnection(
         &g_serverInfo,
         &g_streamConfig,
         &g_connCallbacksStruct,
         &g_videoCallbacksStruct,
         &g_audioCallbacksStruct,
-        nullptr, 0,  // 平台信息
-        nullptr, 0   // HDR 信息
+        nullptr, 0,
+        nullptr, 0
     );
     
     OH_LOG_INFO(LOG_APP, "LiStartConnection returned: %{public}d", ret);
@@ -381,10 +348,8 @@ napi_value MoonBridge_StopConnection(napi_env env, napi_callback_info info) {
     
     LiStopConnection();
     
-    // 重置 HDR 配置 - 在会话完全结束时重置
     VideoDecoderInstance::ResetHdrConfig();
     
-    // 清理服务器信息
     if (g_serverInfo.address) {
         free((void*)g_serverInfo.address);
         g_serverInfo.address = nullptr;
@@ -412,16 +377,14 @@ napi_value MoonBridge_InterruptConnection(napi_env env, napi_callback_info info)
 }
 
 napi_value MoonBridge_ResumeDecoder(napi_env env, napi_callback_info info) {
-    OH_LOG_INFO(LOG_APP, "MoonBridge_ResumeDecoder - 从后台恢复解码器");
+    OH_LOG_INFO(LOG_APP, "MoonBridge_ResumeDecoder - Resume decoder from background");
     
-    // 调用视频解码器的恢复函数
     VideoDecoderInstance::Resume();
     
     return GetUndefined(env);
 }
 
 // =============================================================================
-// 输入处理 - 鼠标
 // =============================================================================
 
 napi_value MoonBridge_SendMouseMove(napi_env env, napi_callback_info info) {
@@ -511,7 +474,6 @@ napi_value MoonBridge_SendMouseHighResHScroll(napi_env env, napi_callback_info i
 }
 
 // =============================================================================
-// 输入处理 - 键盘
 // =============================================================================
 
 napi_value MoonBridge_SendKeyboardInput(napi_env env, napi_callback_info info) {
@@ -545,7 +507,6 @@ napi_value MoonBridge_SendUtf8Text(napi_env env, napi_callback_info info) {
 }
 
 // =============================================================================
-// 输入处理 - 手柄
 // =============================================================================
 
 napi_value MoonBridge_SendMultiControllerInput(napi_env env, napi_callback_info info) {
@@ -688,7 +649,6 @@ napi_value MoonBridge_SendControllerBatteryEvent(napi_env env, napi_callback_inf
 }
 
 // =============================================================================
-// 输入处理 - 触摸/触控笔
 // =============================================================================
 
 napi_value MoonBridge_SendTouchEvent(napi_env env, napi_callback_info info) {
@@ -762,7 +722,6 @@ napi_value MoonBridge_SendPenEvent(napi_env env, napi_callback_info info) {
 }
 
 // =============================================================================
-// 麦克风支持
 // =============================================================================
 
 napi_value MoonBridge_GetMicPortNumber(napi_env env, napi_callback_info info) {
@@ -809,16 +768,8 @@ napi_value MoonBridge_IsMicrophoneEncryptionEnabled(napi_env env, napi_callback_
 }
 
 // =============================================================================
-// Opus 编码器
 // =============================================================================
 
-/**
- * 创建 Opus 编码器实例
- * @param sampleRate 采样率 (48000)
- * @param channels 通道数 (1)
- * @param bitrate 比特率 (64000)
- * @return 编码器句柄 (>0 成功, <=0 失败)
- */
 napi_value MoonBridge_OpusEncoderCreate(napi_env env, napi_callback_info info) {
     size_t argc = 3;
     napi_value args[3];
@@ -854,12 +805,6 @@ napi_value MoonBridge_OpusEncoderCreate(napi_env env, napi_callback_info info) {
     return result;
 }
 
-/**
- * 编码 PCM 数据为 Opus
- * @param handle 编码器句柄
- * @param pcmData PCM 数据 (ArrayBuffer)
- * @return 编码后的 Opus 数据 (ArrayBuffer), 或 null 如果失败/无数据
- */
 napi_value MoonBridge_OpusEncoderEncode(napi_env env, napi_callback_info info) {
     size_t argc = 2;
     napi_value args[2];
@@ -887,7 +832,6 @@ napi_value MoonBridge_OpusEncoderEncode(napi_env env, napi_callback_info info) {
         encoder = it->second.get();
     }
     
-    // 输出缓冲区 (Opus 帧最大约 4000 字节)
     static thread_local uint8_t opusOutput[4096];
     
     int outputLen = encoder->Encode(
@@ -898,11 +842,9 @@ napi_value MoonBridge_OpusEncoderEncode(napi_env env, napi_callback_info info) {
     );
     
     if (outputLen <= 0) {
-        // 0 表示暂无数据，负数表示错误
         return GetUndefined(env);
     }
     
-    // 创建包含编码数据的 ArrayBuffer
     void* resultData = nullptr;
     napi_value result;
     napi_create_arraybuffer(env, outputLen, &resultData, &result);
@@ -911,10 +853,6 @@ napi_value MoonBridge_OpusEncoderEncode(napi_env env, napi_callback_info info) {
     return result;
 }
 
-/**
- * 销毁 Opus 编码器实例
- * @param handle 编码器句柄
- */
 napi_value MoonBridge_OpusEncoderDestroy(napi_env env, napi_callback_info info) {
     size_t argc = 1;
     napi_value args[1];
@@ -940,16 +878,8 @@ napi_value MoonBridge_OpusEncoderDestroy(napi_env env, napi_callback_info info) 
 }
 
 // =============================================================================
-// Native 低时延麦克风采集器
 // =============================================================================
 
-/**
- * 启动 native 低时延麦克风采集
- * @param sampleRate 采样率 (默认 48000)
- * @param channels 声道数 (默认 1)
- * @param bitrate Opus 比特率 bps (默认 64000)
- * @return 0 成功，负数失败
- */
 napi_value MoonBridge_NativeMicStart(napi_env env, napi_callback_info info) {
     size_t argc = 3;
     napi_value args[3];
@@ -963,7 +893,6 @@ napi_value MoonBridge_NativeMicStart(napi_env env, napi_callback_info info) {
     OH_LOG_INFO(LOG_APP, "NativeMicStart: rate=%{public}d ch=%{public}d bitrate=%{public}d",
                 cfg.sampleRate, cfg.channels, cfg.opusBitrate);
 
-    // 先清理旧的
     if (g_micCapturer) {
         g_micCapturer->Cleanup();
         g_micCapturer.reset();
@@ -991,9 +920,6 @@ napi_value MoonBridge_NativeMicStart(napi_env env, napi_callback_info info) {
     return result;
 }
 
-/**
- * 停止 native 麦克风采集
- */
 napi_value MoonBridge_NativeMicStop(napi_env env, napi_callback_info info) {
     if (g_micCapturer) {
         g_micCapturer->Cleanup();
@@ -1003,9 +929,6 @@ napi_value MoonBridge_NativeMicStop(napi_env env, napi_callback_info info) {
     return GetUndefined(env);
 }
 
-/**
- * 暂停 native 麦克风采集
- */
 napi_value MoonBridge_NativeMicPause(napi_env env, napi_callback_info info) {
     if (g_micCapturer) {
         g_micCapturer->Pause();
@@ -1013,9 +936,6 @@ napi_value MoonBridge_NativeMicPause(napi_env env, napi_callback_info info) {
     return GetUndefined(env);
 }
 
-/**
- * 恢复 native 麦克风采集
- */
 napi_value MoonBridge_NativeMicResume(napi_env env, napi_callback_info info) {
     if (g_micCapturer) {
         g_micCapturer->Resume();
@@ -1024,7 +944,6 @@ napi_value MoonBridge_NativeMicResume(napi_env env, napi_callback_info info) {
 }
 
 /**
- * 获取 native 麦克风状态
  * @return {running: boolean, paused: boolean, captured: number, encoded: number, sent: number, dropped: number}
  */
 napi_value MoonBridge_NativeMicGetStats(napi_env env, napi_callback_info info) {
@@ -1064,7 +983,6 @@ napi_value MoonBridge_NativeMicGetStats(napi_env env, napi_callback_info info) {
 }
 
 // =============================================================================
-// 状态和统计
 // =============================================================================
 
 napi_value MoonBridge_GetStageName(napi_env env, napi_callback_info info) {
@@ -1129,7 +1047,6 @@ napi_value MoonBridge_GetLaunchUrlQueryParameters(napi_env env, napi_callback_in
 }
 
 // =============================================================================
-// 工具函数
 // =============================================================================
 
 napi_value MoonBridge_TestClientConnectivity(napi_env env, napi_callback_info info) {
@@ -1231,7 +1148,6 @@ napi_value MoonBridge_GuessControllerType(napi_env env, napi_callback_info info)
     GetInt32(env, args[0], &vendorId);
     GetInt32(env, args[1], &productId);
     
-    // TODO: 实现手柄类型猜测
     napi_value result;
     napi_create_int32(env, LI_CTYPE_UNKNOWN, &result);
     return result;
@@ -1242,7 +1158,6 @@ napi_value MoonBridge_GuessControllerHasPaddles(napi_env env, napi_callback_info
     napi_value args[2];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    // TODO: 实现拨片检测
     napi_value result;
     napi_get_boolean(env, false, &result);
     return result;
@@ -1253,14 +1168,12 @@ napi_value MoonBridge_GuessControllerHasShareButton(napi_env env, napi_callback_
     napi_value args[2];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    // TODO: 实现分享按钮检测
     napi_value result;
     napi_get_boolean(env, false, &result);
     return result;
 }
 
 // =============================================================================
-// 视频 Surface 管理
 // =============================================================================
 
 napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info) {
@@ -1270,7 +1183,6 @@ napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info) {
     
     OHNativeWindow* window = nullptr;
     
-    // 优先使用 NativeRender 的 window（OH_NativeXComponent 架构）
     NativeRender* render = NativeRender::GetInstance();
     if (render != nullptr && render->IsSurfaceReady()) {
         window = render->GetNativeWindow();
@@ -1279,14 +1191,12 @@ napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info) {
         }
     }
     
-    // 如果 NativeRender 没有可用的 window，fallback 到 surfaceId 方式
     if (window == nullptr) {
         if (argc < 1) {
             OH_LOG_ERROR(LOG_APP, "[MoonBridge] SetVideoSurface: missing surfaceId argument and NativeRender not available");
             return GetNull(env);
         }
         
-        // 获取 XComponent 的 surface ID
         char surfaceId[64] = {0};
         size_t strLen = 0;
         napi_get_value_string_utf8(env, args[0], surfaceId, sizeof(surfaceId), &strLen);
@@ -1296,10 +1206,8 @@ napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info) {
             return GetNull(env);
         }
         
-        // 通过 surfaceId 获取 OHNativeWindow
         uint64_t surfaceIdNum = strtoull(surfaceId, nullptr, 10);
         
-        // 使用 OH_NativeWindow_CreateNativeWindowFromSurfaceId 获取 window
         int ret = OH_NativeWindow_CreateNativeWindowFromSurfaceId(surfaceIdNum, &window);
         if (ret != 0 || window == nullptr) {
             OH_LOG_ERROR(LOG_APP, "[MoonBridge] SetVideoSurface: failed to create window from surfaceId %{public}s, ret=%{public}d", surfaceId, ret);
@@ -1308,15 +1216,12 @@ napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info) {
         
         OH_LOG_INFO(LOG_APP, "[MoonBridge] SetVideoSurface: created window from surfaceId %{public}s (legacy mode)", surfaceId);
         
-        // 将 window 设置到 NativeRender，初始化 NativeVSync 用于高帧率优化
         if (render != nullptr) {
-            // 获取 window 的尺寸（暂时使用默认值，后续可从 XComponent 获取）
             render->SetNativeWindow(window, 0, 0);
             OH_LOG_INFO(LOG_APP, "[MoonBridge] SetVideoSurface: NativeRender initialized with surfaceId window");
         }
     }
     
-    // 初始化视频解码器
     bool success = VideoDecoderInstance::Init(window);
     
     napi_value result;
@@ -1327,10 +1232,8 @@ napi_value MoonBridge_SetVideoSurface(napi_env env, napi_callback_info info) {
 napi_value MoonBridge_ReleaseVideoSurface(napi_env env, napi_callback_info info) {
     OH_LOG_INFO(LOG_APP, "[MoonBridge] ReleaseVideoSurface");
     
-    // 清理视频解码器
     VideoDecoderInstance::Cleanup();
     
-    // 清理 NativeRender 的 window 引用
     NativeRender* render = NativeRender::GetInstance();
     if (render != nullptr) {
         render->SetNativeWindow(nullptr, 0, 0);
@@ -1352,17 +1255,15 @@ napi_value MoonBridge_GetVideoStats(napi_env env, napi_callback_info info) {
     napi_create_uint32(env, static_cast<uint32_t>(stats.decodedFrames), &framesDecoded);
     napi_create_uint32(env, static_cast<uint32_t>(stats.droppedFrames), &framesDropped);
     napi_create_double(env, stats.averageDecodeTimeMs, &avgDecodeTime);
-    napi_create_double(env, stats.currentFps, &fps);          // 接收帧率 (Rx)
-    napi_create_double(env, stats.renderedFps, &renderedFps); // 渲染帧率 (Rd)
+    napi_create_double(env, stats.currentFps, &fps);
+    napi_create_double(env, stats.renderedFps, &renderedFps);
     napi_create_double(env, stats.currentBitrate, &bitrate);
-    napi_create_double(env, stats.avgHostProcessingLatency, &hostLatency);  // 主机处理延迟
+    napi_create_double(env, stats.avgHostProcessingLatency, &hostLatency);
     
-    // 网络丢帧统计
     napi_value framesLost, totalFrames;
     napi_create_uint32(env, static_cast<uint32_t>(stats.framesLost), &framesLost);
     napi_create_uint32(env, static_cast<uint32_t>(stats.totalFrames), &totalFrames);
     
-    // 累积值（用于串流结束后计算全局平均）
     napi_value globalAvgFps;
     napi_create_double(env, stats.totalDecodeTimeMs, &totalDecodeTime);
     napi_create_uint32(env, static_cast<uint32_t>(stats.validDecodeFrames), &validDecodeFrames);
@@ -1373,21 +1274,19 @@ napi_value MoonBridge_GetVideoStats(napi_env env, napi_callback_info info) {
     napi_set_named_property(env, result, "framesDecoded", framesDecoded);
     napi_set_named_property(env, result, "framesDropped", framesDropped);
     napi_set_named_property(env, result, "avgDecodeTimeMs", avgDecodeTime);
-    napi_set_named_property(env, result, "fps", fps);             // 接收帧率 (Rx)
-    napi_set_named_property(env, result, "renderedFps", renderedFps); // 渲染帧率 (Rd)
+    napi_set_named_property(env, result, "fps", fps);
+    napi_set_named_property(env, result, "renderedFps", renderedFps);
     napi_set_named_property(env, result, "bitrate", bitrate);
-    napi_set_named_property(env, result, "hostLatency", hostLatency);  // 主机处理延迟（编码时间）
+    napi_set_named_property(env, result, "hostLatency", hostLatency);
     napi_set_named_property(env, result, "framesLost", framesLost);
     napi_set_named_property(env, result, "totalFrames", totalFrames);
     
-    // 累积值
     napi_set_named_property(env, result, "totalDecodeTimeMs", totalDecodeTime);
     napi_set_named_property(env, result, "validDecodeFrames", validDecodeFrames);
     napi_set_named_property(env, result, "totalHostLatencyMs", totalHostLatency);
     napi_set_named_property(env, result, "framesWithHostLatency", framesWithHostLat);
     napi_set_named_property(env, result, "globalAvgFps", globalAvgFps);
     
-    // 分类丢帧统计（用于诊断性能问题）
     napi_value dropL1, dropL2, dropL3, dropL4, dropL5, dropQueue, dropTimeout;
     napi_create_uint32(env, static_cast<uint32_t>(stats.droppedByL1), &dropL1);
     napi_create_uint32(env, static_cast<uint32_t>(stats.droppedByL2), &dropL2);
@@ -1449,7 +1348,7 @@ napi_value MoonBridge_SetDecoderBufferCount(napi_env env, napi_callback_info inf
     napi_value args[1];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    int32_t count = 4;  // 默认值
+    int32_t count = 4;
     if (argc >= 1) {
         GetInt32(env, args[0], &count);
     }
@@ -1467,7 +1366,7 @@ napi_value MoonBridge_SetDecoderSyncMode(napi_env env, napi_callback_info info) 
     napi_value args[1];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    bool syncMode = false;  // 默认异步模式
+    bool syncMode = false;
     if (argc >= 1) {
         napi_get_value_bool(env, args[0], &syncMode);
     }
@@ -1494,7 +1393,7 @@ napi_value MoonBridge_SetVrrEnabled(napi_env env, napi_callback_info info) {
     napi_value args[1];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    bool enabled = false;  // 默认禁用
+    bool enabled = false;
     if (argc >= 1) {
         napi_get_value_bool(env, args[0], &enabled);
     }
@@ -1512,14 +1411,13 @@ napi_value MoonBridge_SetVsyncEnabled(napi_env env, napi_callback_info info) {
     napi_value args[1];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    bool enabled = false;  // 默认关闭（低延迟优先）
+    bool enabled = false;
     if (argc >= 1) {
         napi_get_value_bool(env, args[0], &enabled);
     }
     
     OH_LOG_INFO(LOG_APP, "MoonBridge_SetVsyncEnabled: %{public}s", enabled ? "true" : "false");
     
-    // 设置 NativeRender 的 VSync 模式
     NativeRender* render = NativeRender::GetInstance();
     if (render != nullptr) {
         render->SetVsyncEnabled(enabled);
@@ -1543,7 +1441,6 @@ napi_value MoonBridge_IsVsyncEnabled(napi_env env, napi_callback_info info) {
 }
 
 // =============================================================================
-// 音频设置
 // =============================================================================
 
 napi_value MoonBridge_SetSpatialAudioEnabled(napi_env env, napi_callback_info info) {
@@ -1589,7 +1486,6 @@ napi_value MoonBridge_SetAudioVolume(napi_env env, napi_callback_info info) {
 }
 
 // =============================================================================
-// 性能模式
 // =============================================================================
 
 bool MoonBridge_IsPerformanceModeEnabled() {
@@ -1609,13 +1505,6 @@ napi_value MoonBridge_SetPerformanceModeEnabled(napi_env env, napi_callback_info
     g_performanceMode = enabled;
     OH_LOG_INFO(LOG_APP, "MoonBridge_SetPerformanceModeEnabled: %{public}s", enabled ? "true" : "false");
     
-    // 性能模式会影响后续创建的线程的 QoS 级别
-    // 视频解码线程已经使用 QOS_DEADLINE_REQUEST
-    // 音频渲染器使用低延迟模式
-    // 性能模式主要用于：
-    // 1. 确保网络/音频线程也获得高优先级
-    // 2. 未来可以扩展到控制其他系统资源
-    
     return GetUndefined(env);
 }
 
@@ -1626,7 +1515,6 @@ napi_value MoonBridge_GetPerformanceModeEnabled(napi_env env, napi_callback_info
 }
 
 // =============================================================================
-// 音频振动
 // =============================================================================
 
 extern BassEnergyAnalyzer g_bassAnalyzer;
@@ -1647,7 +1535,6 @@ napi_value MoonBridge_SetBassVibrationConfig(napi_env env, napi_callback_info in
     double sensitivity = 1.0;
     napi_get_value_double(env, argv[1], &sensitivity);
 
-    // 第三个参数可选: sceneMode (0=游戏, 1=音乐, 2=自动)
     int sceneMode = 0;
     if (argc >= 3) {
         napi_get_value_int32(env, argv[2], &sceneMode);
@@ -1664,11 +1551,8 @@ napi_value MoonBridge_SetBassVibrationConfig(napi_env env, napi_callback_info in
 }
 
 // =============================================================================
-// XComponent 帧率设置（通过 FrameNode → ArkUI_NodeHandle，无需 libraryname）
 // =============================================================================
 
-// 动态加载的函数指针（API 12/20，运行时检测可用性）
-// 帧率范围结构体（与 OH_NativeXComponent_ExpectedRateRange 布局一致）
 struct XCFrameRateRange {
     int32_t min;
     int32_t max;
@@ -1694,7 +1578,6 @@ static void CheckAndLoadXCFrameRateApis() {
     g_pfnGetNodeHandle = (PFN_GetNodeHandleFromNapiValue)dlsym(RTLD_DEFAULT, 
         "OH_ArkUI_GetNodeHandleFromNapiValue");
     if (!g_pfnGetNodeHandle) {
-        // RTLD_DEFAULT 可能在某些设备上找不到，回退到显式 dlopen
         void* aceHandle = dlopen("libace_ndk.z.so", RTLD_NOW);
         if (aceHandle) {
             g_pfnGetNodeHandle = (PFN_GetNodeHandleFromNapiValue)dlsym(aceHandle,
@@ -1706,7 +1589,6 @@ static void CheckAndLoadXCFrameRateApis() {
         return;
     }
     
-    // 方式1 (API 20): OH_ArkUI_XComponent_SetExpectedFrameRateRange — 直接通过 NodeHandle
     g_pfnXCSetFrameRateNew = (PFN_XCSetFrameRateNew)dlsym(RTLD_DEFAULT, 
         "OH_ArkUI_XComponent_SetExpectedFrameRateRange");
     if (!g_pfnXCSetFrameRateNew) {
@@ -1718,15 +1600,13 @@ static void CheckAndLoadXCFrameRateApis() {
     }
     if (g_pfnXCSetFrameRateNew) {
         OH_LOG_INFO(LOG_APP, "XCFrameRate: API 20 OH_ArkUI_XComponent_SetExpectedFrameRateRange available");
-        return;  // 优先方式，不需要继续查找
+        return;
     }
     
-    // 方式2 (API 12+11): OH_NativeXComponent_GetNativeXComponent + SetExpectedFrameRateRange
     g_pfnGetNativeXC = (PFN_GetNativeXComponent)dlsym(RTLD_DEFAULT, 
         "OH_NativeXComponent_GetNativeXComponent");
     g_pfnXCSetFrameRateOld = (PFN_XCSetFrameRateOld)dlsym(RTLD_DEFAULT, 
         "OH_NativeXComponent_SetExpectedFrameRateRange");
-    // 回退 dlopen
     if (!g_pfnGetNativeXC || !g_pfnXCSetFrameRateOld) {
         void* aceHandle = dlopen("libace_ndk.z.so", RTLD_NOW);
         if (aceHandle) {
@@ -1759,7 +1639,6 @@ napi_value MoonBridge_SetXComponentFrameRate(napi_env env, napi_callback_info in
     int32_t fps = 60;
     napi_get_value_int32(env, argv[1], &fps);
     
-    // 加载 API
     CheckAndLoadXCFrameRateApis();
     
     if (!g_pfnGetNodeHandle) {
@@ -1775,7 +1654,6 @@ napi_value MoonBridge_SetXComponentFrameRate(napi_env env, napi_callback_info in
         return GetUndefined(env);
     }
     
-    // 方式1 (API 20): 直接通过 ArkUI_NodeHandle 设置
     if (g_pfnXCSetFrameRateNew) {
         XCFrameRateRange range = { fps, fps, fps };
         int32_t xcRet = g_pfnXCSetFrameRateNew(nodeHandle, range);
@@ -1784,7 +1662,6 @@ napi_value MoonBridge_SetXComponentFrameRate(napi_env env, napi_callback_info in
         return GetUndefined(env);
     }
     
-    // 方式2 (API 12+11): NodeHandle → OH_NativeXComponent → SetExpectedFrameRateRange
     if (g_pfnGetNativeXC && g_pfnXCSetFrameRateOld) {
         void* xComp = g_pfnGetNativeXC(nodeHandle);
         if (xComp) {

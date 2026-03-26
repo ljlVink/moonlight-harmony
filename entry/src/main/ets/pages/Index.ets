@@ -13,12 +13,8 @@ import { AppColors } from '../common/Theme';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { common } from '@kit.AbilityKit';
 
-/** 隐私政策同意状态持久化 key */
 const PRIVACY_ACCEPTED_KEY = 'privacy_policy_accepted';
 
-/**
- * 隐私政策章节
- */
 interface PrivacySection {
   title: string;
   content: string;
@@ -32,12 +28,9 @@ struct Index {
   @State logoOpacity: number = 0;
   @State contentOpacity: number = 0;
   @State bottomOpacity: number = 0;
-  /** 是否显示隐私政策同意弹窗 */
   @State showPrivacyConsent: boolean = false;
-  /** 隐私政策弹窗透明度（用于淡入动画） */
   @State privacyDialogOpacity: number = 0;
-
-  /** 隐私政策章节内容 */
+  
   private privacySections: PrivacySection[] = [
     {
       title: '1. 数据收集与存储',
@@ -80,18 +73,14 @@ struct Index {
   }
 
   /**
-   * 检查隐私政策同意状态
-   * 已同意 → 正常启动动画 + 自动跳转
-   * 未同意 → 显示隐私政策同意弹窗（阻止跳转，阻止任何数据收集）
+   * Check privacy policy consent status
    */
   private async checkPrivacyConsent(): Promise<void> {
     try {
       const accepted = await PreferencesUtil.get<boolean>(PRIVACY_ACCEPTED_KEY, false);
       if (accepted) {
-        // 已同意隐私政策，正常启动
         this.startAnimation();
       } else {
-        // 未同意，先显示 Logo 再弹出隐私政策
         animateTo({ duration: 500, curve: Curve.EaseOut }, () => {
           this.logoOpacity = 1;
           this.logoScale = 1;
@@ -104,23 +93,21 @@ struct Index {
         }, 600);
       }
     } catch (err) {
-      console.error('Index: 检查隐私政策状态失败', err);
-      // 出错时也显示弹窗（安全起见）
+      console.error('Index: Failed to check privacy policy status', err);
       this.showPrivacyConsent = true;
       this.privacyDialogOpacity = 1;
     }
   }
 
   /**
-   * 用户同意隐私政策
+   * User accepts privacy policy
    */
   private async onPrivacyAccepted(): Promise<void> {
     try {
       await PreferencesUtil.put(PRIVACY_ACCEPTED_KEY, true);
     } catch (err) {
-      console.error('Index: 保存隐私政策同意状态失败', err);
+      console.error('Index: Failed to save privacy policy consent status', err);
     }
-    // 关闭弹窗，进入主页面
     animateTo({ duration: 200, curve: Curve.EaseOut }, () => {
       this.privacyDialogOpacity = 0;
     });
@@ -131,7 +118,7 @@ struct Index {
   }
 
   /**
-   * 用户拒绝隐私政策 → 退出应用
+   * User declines privacy policy - exit app
    */
   private onPrivacyDeclined(): void {
     const context = getContext(this) as common.UIAbilityContext;
@@ -139,7 +126,7 @@ struct Index {
   }
 
   /**
-   * 同意后快速过渡并跳转到主页面
+   * Navigate to main page after consent
    */
   private proceedToMain(): void {
     animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
@@ -157,7 +144,6 @@ struct Index {
   }
 
   startAnimation(): void {
-    // Logo 淡入
     animateTo({
       duration: 500,
       curve: Curve.EaseOut,
@@ -166,7 +152,6 @@ struct Index {
       this.logoScale = 1;
     });
 
-    // 内容淡入
     setTimeout(() => {
       animateTo({
         duration: 400,
@@ -175,8 +160,6 @@ struct Index {
         this.contentOpacity = 1;
       });
     }, 300);
-
-    // 底部淡入
     setTimeout(() => {
       animateTo({
         duration: 400,
@@ -186,7 +169,6 @@ struct Index {
       });
     }, 500);
 
-    // 跳转
     setTimeout(() => {
       this.isLoading = false;
       try {
@@ -199,12 +181,10 @@ struct Index {
 
   build() {
     Stack() {
-      // ── 原有的启动页内容 ──
       Column() {
         Blank()
           .layoutWeight(1)
 
-        // Logo
         Image($r('app.media.app_icon'))
           .width(100)
           .height(100)
@@ -213,7 +193,6 @@ struct Index {
           .opacity(this.logoOpacity)
           .margin({ bottom: 24 })
 
-        // 标题
         Column() {
           Text('Moonlight')
             .fontSize(36)
@@ -239,7 +218,6 @@ struct Index {
         .opacity(this.contentOpacity)
         .margin({ bottom: 48 })
 
-        // 加载
         if (this.isLoading) {
           LoadingProgress()
             .width(36)
@@ -251,7 +229,6 @@ struct Index {
         Blank()
           .layoutWeight(1)
 
-        // 底部
         Column() {
           Text('Powered by AlkaidLab')
             .fontSize(12)
@@ -264,10 +241,8 @@ struct Index {
       .height('100%')
       .alignItems(HorizontalAlign.Center)
 
-      // ── 隐私政策同意弹窗（首次启动时覆盖在启动页上方） ──
       if (this.showPrivacyConsent) {
         Column() {
-          // 半透明遮罩
         }
         .width('100%')
         .height('100%')
@@ -275,7 +250,6 @@ struct Index {
         .opacity(this.privacyDialogOpacity)
 
         Column() {
-          // 标题
           Column({ space: 4 }) {
             Text('用户协议与隐私政策')
               .fontSize(20)
@@ -290,14 +264,12 @@ struct Index {
           .alignItems(HorizontalAlign.Center)
           .padding({ top: 24, bottom: 12, left: 20, right: 20 })
 
-          // 概述
           Text('欢迎使用 Moonlight V+！在您使用本应用之前，请仔细阅读并了解我们的隐私政策：')
             .fontSize(14)
             .fontColor(AppColors.TextSecondary)
             .padding({ left: 20, right: 20, bottom: 8 })
             .width('100%')
 
-          // 可滚动的隐私政策内容
           Scroll() {
             Column({ space: 12 }) {
               ForEach(this.privacySections, (section: PrivacySection) => {
@@ -320,7 +292,6 @@ struct Index {
                 .borderRadius(8)
               })
 
-              // 底部补充说明
               Text('完整隐私政策请查看项目仓库中的 PRIVACY_POLICY.md')
                 .fontSize(12)
                 .fontColor(AppColors.TextTertiary)
@@ -333,7 +304,6 @@ struct Index {
           .layoutWeight(1)
           .scrollBar(BarState.Auto)
 
-          // 按钮区域
           Column({ space: 10 }) {
             Button('同意并继续')
               .width('100%')

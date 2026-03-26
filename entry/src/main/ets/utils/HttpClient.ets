@@ -11,72 +11,50 @@
 import { rcp } from '@kit.RemoteCommunicationKit';
 import { StringUtil } from './StringUtil';
 
-/**
- * HTTP 客户端配置
- */
 export interface HttpClientConfig {
-  /** 连接超时（毫秒） */
+  /**
   connectTimeout?: number;
-  /** 传输超时（毫秒） */
+  /**
   transferTimeout?: number;
-  /** 是否跳过服务器证书验证 */
+  /**
   skipServerValidation?: boolean;
-  /** 客户端证书文件路径（PEM 格式） */
+  /**
   clientCertPath?: string;
-  /** 客户端私钥文件路径（PEM 格式） */
+  /**
   clientKeyPath?: string;
 }
 
-/**
- * HTTP 响应
- */
 export interface HttpResponse {
   statusCode: number;
   body: string;
 }
 
 /**
- * HTTP 客户端工具类
  * 
- * 统一处理 HTTP/HTTPS 请求，基于 RCP (RemoteCommunicationKit)
  */
 export class HttpClient {
-  /** 默认连接超时 */
+  /**
   static readonly DEFAULT_CONNECT_TIMEOUT = 5000;
-  /** 默认传输超时 */
+  /**
   static readonly DEFAULT_TRANSFER_TIMEOUT = 7000;
-  /** 长连接超时（用于等待用户操作的请求） */
+  /**
   static readonly LONG_TRANSFER_TIMEOUT = 300000;
 
-  /**
-   * 执行 GET 请求
-   * @param url 请求 URL
-   * @param config 配置选项
-   * @returns 响应字符串
-   */
   static async get(url: string, config?: HttpClientConfig): Promise<string> {
     const response = await HttpClient.request(url, config);
     return response.body;
   }
 
-  /**
-   * 执行 HTTP 请求
-   * @param url 请求 URL
-   * @param config 配置选项
-   * @returns HTTP 响应
-   */
   static async request(url: string, config?: HttpClientConfig): Promise<HttpResponse> {
     const connectTimeout = config?.connectTimeout ?? HttpClient.DEFAULT_CONNECT_TIMEOUT;
     const transferTimeout = config?.transferTimeout ?? HttpClient.DEFAULT_TRANSFER_TIMEOUT;
 
     console.debug(`HttpClient: 请求 ${url} (connect=${connectTimeout}ms, transfer=${transferTimeout}ms)`);
 
-    // 构建安全配置
     const securityConfig: rcp.SecurityConfiguration = {
       remoteValidation: config?.skipServerValidation !== false ? 'skip' : 'system'
     };
 
-    // 如果提供了客户端证书
     if (config?.clientCertPath && config?.clientKeyPath) {
       securityConfig.certificate = {
         type: 'PEM',
@@ -86,7 +64,6 @@ export class HttpClient {
       console.info(`HttpClient: 使用客户端证书: ${config.clientCertPath}`);
     }
 
-    // 创建 session 配置
     const sessionConfig: rcp.SessionConfiguration = {
       requestConfiguration: {
         security: securityConfig,
@@ -134,14 +111,6 @@ export class HttpClient {
     }
   }
 
-  /**
-   * 执行带客户端证书的 HTTPS 请求
-   * @param url 请求 URL
-   * @param certPath 证书文件路径
-   * @param keyPath 私钥文件路径
-   * @param config 配置选项
-   * @returns 响应字符串
-   */
   static async getWithClientCert(
     url: string,
     certPath: string,
@@ -158,9 +127,6 @@ export class HttpClient {
   }
 
   /**
-   * 执行 GET 请求并返回二进制数据
-   * @param url 请求 URL
-   * @param config 配置选项
    * @returns ArrayBuffer
    */
   static async getBinary(url: string, config?: HttpClientConfig): Promise<ArrayBuffer> {
@@ -169,12 +135,10 @@ export class HttpClient {
 
     console.info(`HttpClient: 二进制请求 ${url}`);
 
-    // 构建安全配置
     const securityConfig: rcp.SecurityConfiguration = {
       remoteValidation: config?.skipServerValidation !== false ? 'skip' : 'system'
     };
 
-    // 如果提供了客户端证书
     if (config?.clientCertPath && config?.clientKeyPath) {
       securityConfig.certificate = {
         type: 'PEM',
@@ -183,7 +147,6 @@ export class HttpClient {
       };
     }
 
-    // 创建 session 配置
     const sessionConfig: rcp.SessionConfiguration = {
       requestConfiguration: {
         security: securityConfig,
@@ -221,11 +184,6 @@ export class HttpClient {
   }
 
   /**
-   * 执行带客户端证书的 HTTPS 请求并返回二进制数据
-   * @param url 请求 URL
-   * @param certPath 证书文件路径
-   * @param keyPath 私钥文件路径
-   * @param config 配置选项
    * @returns ArrayBuffer
    */
   static async getBinaryWithClientCert(

@@ -9,10 +9,7 @@
  */
 
 /**
- * 电脑数据持久化模块
  *
- * 负责电脑列表的序列化/反序列化、深拷贝、以及旧数据格式兼容处理。
- * 从 ComputerManager 中提取，遵循单一职责原则。
  */
 import { ComputerInfo, ComputerState, PairState, ComputerInfoBuilder } from '../model/ComputerInfo';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
@@ -20,12 +17,8 @@ import { NvHttp } from './NvHttp';
 import { MAX_PORT } from '../common/NetworkConstants';
 
 // =============================================================================
-// 类型定义
 // =============================================================================
 
-/**
- * 持久化存储的电脑数据格式
- */
 interface SavedComputerData {
   uuid: string;
   name: string;
@@ -42,15 +35,12 @@ interface SavedComputerData {
   httpPort?: number;
 }
 
-/**
- * 地址端口提取结果
- */
 interface ExtractedHostPort {
   host: string;
   port: number;
 }
 
-/** 持久化存储键名 */
+/**
 const STORAGE_KEY = 'saved_computers';
 
 // =============================================================================
@@ -58,22 +48,13 @@ const STORAGE_KEY = 'saved_computers';
 // =============================================================================
 
 /**
- * 电脑数据持久化工具类
  *
- * 提供纯静态方法，无内部状态：
- * - 深拷贝 ComputerInfo
- * - 保存 / 加载电脑列表（Preferences）
- * - 兼容旧版数据格式（配对状态字符串、地址中嵌入端口等）
  */
 export class ComputerPersistence {
 
   // ---------------------------------------------------------------------------
-  // 深拷贝
   // ---------------------------------------------------------------------------
 
-  /**
-   * 深拷贝电脑对象，确保 ArkUI @State 能检测到变化
-   */
   static cloneComputer(computer: ComputerInfo): ComputerInfo {
     return {
       uuid: computer.uuid,
@@ -101,12 +82,8 @@ export class ComputerPersistence {
   }
 
   // ---------------------------------------------------------------------------
-  // 保存
   // ---------------------------------------------------------------------------
 
-  /**
-   * 保存电脑列表到持久化存储
-   */
   static async saveComputers(computers: Map<string, ComputerInfo>): Promise<void> {
     try {
       const computerList: SavedComputerData[] = [];
@@ -146,12 +123,8 @@ export class ComputerPersistence {
   }
 
   // ---------------------------------------------------------------------------
-  // 加载
   // ---------------------------------------------------------------------------
 
-  /**
-   * 从持久化存储加载电脑列表
-   */
   static async loadComputers(): Promise<Map<string, ComputerInfo>> {
     const computers = new Map<string, ComputerInfo>();
 
@@ -166,10 +139,8 @@ export class ComputerPersistence {
       console.info(`ComputerPersistence: 解析到 ${computerList.length} 台电脑`);
 
       for (const saved of computerList) {
-        // 解析配对状态（兼容旧格式数字字符串 "1" 和新格式 "PAIRED"）
         const pairState = ComputerPersistence.parsePairState(saved.pairState);
 
-        // 兼容旧数据：从地址中提取端口
         let httpPort = saved.httpPort;
         let addressHost = saved.address;
         if (!httpPort && saved.address) {
@@ -211,12 +182,8 @@ export class ComputerPersistence {
   }
 
   // ---------------------------------------------------------------------------
-  // 兼容性工具
   // ---------------------------------------------------------------------------
 
-  /**
-   * 解析配对状态字符串（兼容旧版数字格式和新版字符串格式）
-   */
   static parsePairState(stateStr: string): PairState {
     if (stateStr === 'PAIRED' || stateStr === '1') return PairState.PAIRED;
     if (stateStr === 'FAILED' || stateStr === '3') return PairState.FAILED;
@@ -224,10 +191,6 @@ export class ComputerPersistence {
     return PairState.NOT_PAIRED;
   }
 
-  /**
-   * 从旧格式地址中提取端口（兼容迁移）
-   * 例如 "192.168.1.100:48000" → { host: "192.168.1.100", port: 48000 }
-   */
   static extractPortFromAddress(address: string): ExtractedHostPort | null {
     const colonIndex = address.indexOf(':');
     if (colonIndex > 0 && address.indexOf(':', colonIndex + 1) === -1) {

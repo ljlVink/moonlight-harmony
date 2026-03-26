@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 虚拟控制器组件
- * 现代化设计，支持完整的游戏手柄功能
- */
 import { InputEvent, InputType, ControllerButton, ControllerButtonEvent, ControllerAxis, ControllerAxisEvent } from '../model/InputEvent';
 import { AnalogStick, AnalogStickConfig } from './AnalogStick';
 import { vibrator } from '@kit.SensorServiceKit';
@@ -21,56 +17,49 @@ import { display } from '@kit.ArkUI';
 const SCALE_KEY = 'virtual_controller_scale';
 const OPACITY_KEY = 'virtual_controller_opacity';
 
-/**
- * 虚拟控制器配置
- */
 export interface VirtualControllerConfig {
-  /** 透明度 (0-1) */
+  /**
   opacity?: number;
-  /** 按钮缩放 (0.5-2) */
+  /**
   scale?: number;
-  /** 是否显示左摇杆 */
+  /**
   showLeftStick?: boolean;
-  /** 是否显示右摇杆 */
+  /**
   showRightStick?: boolean;
-  /** 是否显示 D-Pad */
+  /**
   showDpad?: boolean;
-  /** 是否显示 ABXY */
+  /**
   showButtons?: boolean;
-  /** 是否显示肩键和扳机 */
+  /**
   showShoulder?: boolean;
-  /** 是否显示 Start/Back/Guide */
+  /**
   showCenter?: boolean;
-  /** 是否显示 Guide 按钮（showCenter 为 true 时生效） */
+  /**
   showGuideButton?: boolean;
-  /** 是否显示独立 L3/R3 按钮 */
+  /**
   showL3R3?: boolean;
-  /** 启用震动反馈 */
+  /**
   enableVibration?: boolean;
-  /** 摇杆死区 */
+  /**
   deadzone?: number;
 }
 
 @Component
 export struct VirtualController {
-  // 配置（普通属性，不使用 @Prop，避免父组件重渲染时因新对象引用触发子组件不必要的更新）
   config: VirtualControllerConfig = {};
 
-  // 回调
   onInput: (input: InputEvent) => void = () => {};
 
-  /** 触摸穿透模式 */
+  /**
   touchPassthrough: boolean = false;
 
-  /** 按钮缩放比例（由父组件驱动） */
+  /**
   @Prop controllerScale: number = 1.0;
 
-  // 计算后的配置值
   private controllerOpacity: number = 0.75;
   private controllerDeadzone: number = 0.15;
 
   aboutToAppear(): void {
-    // 应用配置
     if (this.config.opacity !== undefined) {
       this.controllerOpacity = this.config.opacity;
     }
@@ -79,20 +68,15 @@ export struct VirtualController {
     }
   }
 
-  // 辅助方法：给 6 位 hex 颜色添加 alpha 前缀（ArkUI 使用 #AARRGGBB 格式）
   private withAlpha(color: string, alpha: number): string {
     const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
     return '#' + hex + color.substring(1);
   }
 
   build() {
-    // 使用 Column + Row 标准 flex 布局
-    // 确保所有子组件正确参与 ArkUI 触摸测试树
     Column() {
-      // ===== 上方 - 肩键和扳机 =====
       if (this.config.showShoulder !== false) {
         Row() {
-          // 左侧肩键组
           Column({ space: 6 }) {
             // LT
             Column() {
@@ -130,7 +114,6 @@ export struct VirtualController {
 
           Blank()
 
-          // 右侧肩键组
           Column({ space: 6 }) {
             // RT
             Column() {
@@ -170,11 +153,8 @@ export struct VirtualController {
         .padding({ left: 16, right: 16, top: 16 })
       }
 
-      // ===== 中间区域 - 左摇杆+D-Pad / ABXY+右摇杆 =====
       Row() {
-        // 左侧：左摇杆 + D-Pad
         Column() {
-          // 左摇杆
           if (this.config.showLeftStick !== false) {
             Column() {
               AnalogStick({
@@ -192,7 +172,6 @@ export struct VirtualController {
             .margin({ bottom: 16 })
           }
 
-          // D-Pad（可爱十字键造型）
           if (this.config.showDpad !== false) {
             this.buildCrossDpad()
           }
@@ -203,9 +182,7 @@ export struct VirtualController {
 
         Blank()
 
-        // 右侧：ABXY + 右摇杆
         Column() {
-          // ABXY 按钮
           if (this.config.showButtons !== false) {
             Column() {
               // Y
@@ -228,7 +205,6 @@ export struct VirtualController {
             .margin({ bottom: 16 })
           }
 
-          // 右摇杆
           if (this.config.showRightStick !== false) {
             AnalogStick({
               config: {
@@ -249,13 +225,11 @@ export struct VirtualController {
       }
       .width('100%')
 
-      // ===== 底部 - Start/Back/Guide =====
       if (this.config.showCenter !== false) {
         Row({ space: 12 }) {
           // Back
           this.buildCenterButton('◂', 'BACK', ControllerButton.BACK)
 
-          // Guide（可通过设置隐藏）
           if (this.config.showGuideButton !== false) {
             Column() {
               Text('◉')
@@ -279,7 +253,6 @@ export struct VirtualController {
         .margin({ bottom: 20 })
       }
 
-      // ===== 独立 L3/R3 按钮（可选）=====
       if (this.config.showL3R3 === true) {
         Row() {
           this.buildSmallButton('L3', ControllerButton.LS)
@@ -295,7 +268,6 @@ export struct VirtualController {
     .justifyContent(FlexAlign.End)
   }
 
-  // ==================== ABXY 按钮（全透明 + 彩色边框）====================
   @Builder
   buildActionButton(label: string, button: ControllerButton, color: string) {
     Column() {
@@ -314,18 +286,12 @@ export struct VirtualController {
     .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event))
   }
 
-  // ==================== 十字键（Cross D-Pad）====================
-  // 当前 DPad 方向状态（位标志），用于在 Move 事件中跟踪变化
   private dpadDirection: number = 0;
 
   @Builder
   buildCrossDpad() {
-    // 采用 Android 风格的单一触摸区域 + 九宫格坐标判定
-    // 支持 8 方向 + 手指滑动无缝换向
     Stack() {
-      // 视觉层：纯展示的 3x3 十字键外观
       Column() {
-        // 第一行：角 | 上 | 角
         Row() {
           Column().width(36 * this.controllerScale).height(36 * this.controllerScale)
             .borderRadius({ topLeft: 14, topRight: 0, bottomLeft: 0, bottomRight: 0 })
@@ -347,7 +313,6 @@ export struct VirtualController {
             .borderRadius({ topLeft: 0, topRight: 14, bottomLeft: 0, bottomRight: 0 })
         }
 
-        // 第二行：左 | 中心 | 右
         Row() {
           Column() {
             Text('◂')
@@ -391,7 +356,6 @@ export struct VirtualController {
           })
         }
 
-        // 第三行：角 | 下 | 角
         Row() {
           Column().width(36 * this.controllerScale).height(36 * this.controllerScale)
             .borderRadius({ topLeft: 0, topRight: 0, bottomLeft: 14, bottomRight: 0 })
@@ -413,9 +377,8 @@ export struct VirtualController {
             .borderRadius({ topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 14 })
         }
       }
-      .hitTestBehavior(HitTestMode.None) // 视觉层不拦截触摸
+      .hitTestBehavior(HitTestMode.None)
 
-      // 触摸层：覆盖整个 3x3 区域，统一处理触摸 + 坐标判定方向
       Column()
         .width(108 * this.controllerScale)
         .height(108 * this.controllerScale)
@@ -427,7 +390,6 @@ export struct VirtualController {
     .height(108 * this.controllerScale)
   }
 
-  // ==================== 中间功能键（Back/Start）====================
   @Builder
   buildCenterButton(icon: string, label: string, button: ControllerButton) {
     Column() {
@@ -451,7 +413,6 @@ export struct VirtualController {
     .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event))
   }
 
-  // ==================== L3/R3 小按钮 ====================
   @Builder
   buildSmallButton(label: string, button: ControllerButton) {
     Column() {
@@ -470,16 +431,9 @@ export struct VirtualController {
     .onTouch((event: TouchEvent) => this.handleButtonTouch(button, event))
   }
 
-  // ==================== 事件处理 ====================
-
-  /**
-   * DPad 统一触摸处理（Android 风格九宫格坐标判定）
-   * 支持 8 方向 + 手指滑动无缝换向
-   */
   private handleDpadTouch(event: TouchEvent): void {
     event.stopPropagation();
 
-    // Up/Cancel 先处理：释放所有方向（不依赖触摸坐标）
     if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
       const allDirs: number[] = [
         ControllerButton.UP as number,
@@ -502,7 +456,6 @@ export struct VirtualController {
       return;
     }
 
-    // Down/Move：根据坐标判定方向
     const touch = event.touches[0];
     if (!touch) return;
 
@@ -518,9 +471,7 @@ export struct VirtualController {
       if (touch.y > twoThirds) newDirection |= ControllerButton.DOWN as number;
 
       if (newDirection !== this.dpadDirection) {
-        // 释放不再按下的方向
         const released = this.dpadDirection & ~newDirection;
-        // 按下新增的方向
         const pressed = newDirection & ~this.dpadDirection;
 
         const allDirs: number[] = [
@@ -568,10 +519,9 @@ export struct VirtualController {
     const isReleased = event.type === TouchType.Up || event.type === TouchType.Cancel;
     
     if (!isPressed && !isReleased) {
-      return; // Move 事件不处理
+      return;
     }
     
-    // 先发送事件（不修改 @State，避免重渲染导致 Up 事件丢失）
     const inputEvent: ControllerButtonEvent = {
       type: InputType.CONTROLLER_BUTTON,
       timestamp: Date.now(),
@@ -581,7 +531,6 @@ export struct VirtualController {
     };
     this.onInput(inputEvent);
     
-    // 震动反馈
     if (isPressed && this.config.enableVibration !== false) {
       this.triggerVibration();
     }
@@ -596,7 +545,6 @@ export struct VirtualController {
       return;
     }
     
-    // 先发送扳机轴事件（不修改 @State，避免重渲染导致 Up 丢失）
     const axis = isLeft ? ControllerAxis.LEFT_TRIGGER : ControllerAxis.RIGHT_TRIGGER;
     const value = isPressed ? 255 : 0;
     
@@ -609,7 +557,6 @@ export struct VirtualController {
     };
     this.onInput(axisEvent);
     
-    // 震动反馈
     if (isPressed && this.config.enableVibration !== false) {
       this.triggerVibration();
     }
@@ -625,55 +572,45 @@ export struct VirtualController {
         usage: 'touch'
       });
     } catch (e) {
-      // 忽略震动错误
     }
   }
 
 }
 
 // =============================================================================
-// 虚拟控制器叠加层
-// 封装 VirtualController，设置通过 GameMenuDialog 卡片调整
 // =============================================================================
 
 @Component
 export struct VirtualControllerOverlay {
-  /** 输入事件回调 */
+  /**
   onInput: (input: InputEvent) => void = () => {};
 
-  /** 触摸穿透状态（双向 — 外部需读取来控制 XComponent hitTest） */
+  /**
   @Link touchPassthrough: boolean;
 
-  /** 控制器缩放值（双向 — 外部需读取传递给 config） */
+  /**
   @Link controllerScale: number;
 
-  /** 控制器整体透明度（双向 — 外部菜单可调节） */
+  /**
   @Link controllerOpacity: number;
 
-  /** 是否仅显示 L3/R3 按钮 */
+  /**
   onlyL3R3: boolean = false;
-  /** 是否显示 Guide 按钮 */
+  /**
   showGuideButton: boolean = true;
-  /** 虚拟控制器按钮触摸震动 */
+  /**
   vibrateOsc: boolean = true;
-  /** 竖屏时半高显示 */
+  /**
   halfHeightPortrait: boolean = true;
 
-  /**
-   * 触摸注册修复触发器。ArkUI 首次渲染时按钮的命中测试区域可能未正确建立，
-   * 通过在父容器（而非 VirtualController）触发一次重渲染来刷新命中测试树。
-   * 父容器重渲染不会导致 V2 重渲染（@Prop 值不变），但 ArkUI 会重算整棵树的命中区域。
-   */
   @State private hitTestReady: number = 0;
   @State private isPortrait: boolean = false;
 
   aboutToAppear(): void {
-    // 检测竖屏
     try {
       const d = display.getDefaultDisplaySync();
       this.isPortrait = d.height > d.width;
     } catch (_) {}
-    // 延迟 100ms 在父层触发一次重渲染，刷新整个 Stack 的命中测试区域
     setTimeout(() => {
       this.hitTestReady = 1;
     }, 100);
@@ -681,7 +618,6 @@ export struct VirtualControllerOverlay {
 
   build() {
     Stack() {
-      // 控制器主体 — 底部对齐
       Column() {
         VirtualController({
           touchPassthrough: this.touchPassthrough,
@@ -712,34 +648,21 @@ export struct VirtualControllerOverlay {
     .width('100%')
     .height('100%')
     .hitTestBehavior(this.touchPassthrough ? HitTestMode.Transparent : HitTestMode.Default)
-    // hitTestReady: 父层重渲染触发 ArkUI 重算命中测试区域（opacity 微变不可见）
     .opacity(this.hitTestReady > 0 ? 1 : 0.99)
   }
 
-  /**
-   * 静态方法：加载持久化的缩放值
-   */
   static async loadScale(): Promise<number> {
     return await PreferencesUtil.get<number>(SCALE_KEY, 1.0);
   }
 
-  /**
-   * 静态方法：保存缩放值
-   */
   static saveScale(value: number): void {
     PreferencesUtil.put(SCALE_KEY, value);
   }
 
-  /**
-   * 静态方法：加载持久化的透明度值
-   */
   static async loadOpacity(): Promise<number> {
     return await PreferencesUtil.get<number>(OPACITY_KEY, 0.75);
   }
 
-  /**
-   * 静态方法：保存透明度值
-   */
   static saveOpacity(value: number): void {
     PreferencesUtil.put(OPACITY_KEY, value);
   }

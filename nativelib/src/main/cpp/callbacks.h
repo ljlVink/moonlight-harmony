@@ -10,9 +10,7 @@
 
 /**
  * @file callbacks.h
- * @brief moonlight-common-c 回调处理头文件
  * 
- * 定义从 C 库回调到 ArkTS 的机制
  */
 
 #ifndef MOONLIGHT_CALLBACKS_H
@@ -27,30 +25,18 @@ extern "C" {
 #endif
 
 // =============================================================================
-// 回调初始化
 // =============================================================================
 
 /**
- * 初始化回调系统
- * 保存 JS 环境和回调函数引用
  * 
- * @param env NAPI 环境
- * @param callbacks 包含所有回调函数的对象
  */
 void Callbacks_Init(napi_env env, napi_value callbacks);
 
-/**
- * 清理回调系统
- */
 void Callbacks_Cleanup(void);
 
 // =============================================================================
-// 线程安全回调函数
 // =============================================================================
 
-/**
- * 视频解码器回调函数
- */
 typedef struct {
     napi_threadsafe_function tsfn_setup;
     napi_threadsafe_function tsfn_start;
@@ -59,21 +45,15 @@ typedef struct {
     napi_threadsafe_function tsfn_submitDecodeUnit;
 } VideoDecoderCallbacks;
 
-/**
- * 音频渲染器回调函数
- */
 typedef struct {
     napi_threadsafe_function tsfn_init;
     napi_threadsafe_function tsfn_start;
     napi_threadsafe_function tsfn_stop;
     napi_threadsafe_function tsfn_cleanup;
     napi_threadsafe_function tsfn_playSample;
-    napi_threadsafe_function tsfn_bassEnergy;  // 低频能量回调（音频振动）
+    napi_threadsafe_function tsfn_bassEnergy;
 } AudioRendererCallbacks;
 
-/**
- * 连接监听器回调函数
- */
 typedef struct {
     napi_threadsafe_function tsfn_stageStarting;
     napi_threadsafe_function tsfn_stageComplete;
@@ -90,7 +70,6 @@ typedef struct {
 } ConnectionListenerCallbacks;
 
 // =============================================================================
-// 全局回调实例
 // =============================================================================
 
 extern VideoDecoderCallbacks g_videoCallbacks;
@@ -98,24 +77,20 @@ extern AudioRendererCallbacks g_audioCallbacks;
 extern ConnectionListenerCallbacks g_connCallbacks;
 
 // =============================================================================
-// moonlight-common-c 回调桥接函数
 // =============================================================================
 
-// 视频解码器回调
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags);
 void BridgeDrStart(void);
 void BridgeDrStop(void);
 void BridgeDrCleanup(void);
 int BridgeDrSubmitDecodeUnit(void* decodeUnit);
 
-// 音频渲染器回调
 int BridgeArInit(int audioConfiguration, void* opusConfig, void* context, int flags);
 void BridgeArStart(void);
 void BridgeArStop(void);
 void BridgeArCleanup(void);
 void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength);
 
-// 连接监听器回调
 void BridgeClStageStarting(int stage);
 void BridgeClStageComplete(int stage);
 void BridgeClStageFailed(int stage, int errorCode);

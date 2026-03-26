@@ -9,10 +9,7 @@
  */
 
 /**
- * Native HID 手柄解析器服务
  * 
- * 封装原生层的 HID 报告解析功能
- * 提供简洁的 ArkTS API
  */
 
 import nativelib from 'libmoonlight_nativelib.so';
@@ -20,9 +17,6 @@ import { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from './Nati
 
 const TAG = '[NativeHidParser]';
 
-/**
- * 原生 HID 解析器接口 (从 NAPI 导出)
- */
 interface NativeGamepadModule {
   parseHidReport(vendorId: number, productId: number, data: Uint8Array, forceType?: number): NativeGamepadState;
   getGamepadType(vendorId: number, productId: number): number;
@@ -31,9 +25,6 @@ interface NativeGamepadModule {
   createRumbleCommand(vendorId: number, productId: number, lowFreq: number, highFreq: number): Uint8Array | null;
 }
 
-/**
- * Native HID 解析器服务
- */
 export class NativeHidParserService {
   private static instance: NativeHidParserService | null = null;
   private gamepadModule: NativeGamepadModule | null = null;
@@ -42,9 +33,6 @@ export class NativeHidParserService {
   private constructor() {
   }
 
-  /**
-   * 获取单例实例
-   */
   static getInstance(): NativeHidParserService {
     if (!NativeHidParserService.instance) {
       NativeHidParserService.instance = new NativeHidParserService();
@@ -52,17 +40,12 @@ export class NativeHidParserService {
     return NativeHidParserService.instance;
   }
 
-  /**
-   * 初始化服务
-   */
   init(): boolean {
     if (this.initialized) {
       return true;
     }
 
     try {
-      // 获取 Gamepad 模块
-      // 直接访问 nativelib.Gamepad，避免使用 'in' 操作符
       interface NativeLibWithGamepad {
         Gamepad?: NativeGamepadModule;
       }
@@ -82,21 +65,10 @@ export class NativeHidParserService {
     }
   }
 
-  /**
-   * 检查是否已初始化
-   */
   isInitialized(): boolean {
     return this.initialized;
   }
 
-  /**
-   * 解析 HID 报告
-   * @param vendorId 设备厂商 ID
-   * @param productId 设备产品 ID
-   * @param data HID 报告数据
-   * @param forceType 可选，强制使用的协议类型 (0=自动, 1=Xbox, 2=DS4, 3=Switch, 5=DualSense)
-   * @returns 解析后的手柄状态，如果解析失败返回 null
-   */
   parseHidReport(vendorId: number, productId: number, data: Uint8Array, forceType?: number): NativeGamepadState | null {
     if (!this.gamepadModule) {
       console.warn(`${TAG} 服务未初始化`);
@@ -111,12 +83,6 @@ export class NativeHidParserService {
     }
   }
 
-  /**
-   * 获取手柄类型
-   * @param vendorId 设备厂商 ID
-   * @param productId 设备产品 ID
-   * @returns 手柄类型枚举值
-   */
   getGamepadType(vendorId: number, productId: number): NativeGamepadType {
     if (!this.gamepadModule) {
       return NativeGamepadType.UNKNOWN;
@@ -129,12 +95,6 @@ export class NativeHidParserService {
     }
   }
 
-  /**
-   * 检查是否为支持的手柄
-   * @param vendorId 设备厂商 ID
-   * @param productId 设备产品 ID
-   * @returns 是否支持
-   */
   isSupportedGamepad(vendorId: number, productId: number): boolean {
     if (!this.gamepadModule) {
       return false;
@@ -147,12 +107,6 @@ export class NativeHidParserService {
     }
   }
 
-  /**
-   * 获取手柄名称
-   * @param vendorId 设备厂商 ID
-   * @param productId 设备产品 ID
-   * @returns 手柄名称
-   */
   getGamepadName(vendorId: number, productId: number): string {
     if (!this.gamepadModule) {
       return 'Unknown Gamepad';
@@ -165,14 +119,6 @@ export class NativeHidParserService {
     }
   }
 
-  /**
-   * 创建震动命令
-   * @param vendorId 设备厂商 ID
-   * @param productId 设备产品 ID
-   * @param lowFreq 低频震动强度 (0-65535)
-   * @param highFreq 高频震动强度 (0-65535)
-   * @returns 震动命令数据，如果不支持则返回 null
-   */
   createRumbleCommand(vendorId: number, productId: number, lowFreq: number, highFreq: number): Uint8Array | null {
     if (!this.gamepadModule) {
       return null;
@@ -186,5 +132,4 @@ export class NativeHidParserService {
   }
 }
 
-// 重新导出类型，方便外部使用
 export { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from './NativeGamepad';

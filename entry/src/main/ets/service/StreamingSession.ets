@@ -43,36 +43,28 @@ import {
 import nativeLib from 'libmoonlight_nativelib.so';
 
 // =============================================================================
-// 类型定义
 // =============================================================================
 
-/**
- * 串流性能统计
- */
 export interface StreamStats {
-  fps: number;             // 接收帧率 (Rx)
-  renderedFps: number;     // 渲染帧率 (Rd)
+  fps: number;
+  renderedFps: number;
   bitrate: number;         // Kbps
-  latency: number;         // 解码延迟 ms (EMA 瞬时值)
-  hostLatency: number;     // 主机处理延迟（编码时间）ms
-  networkLatency: number;  // 网络延迟（RTT）ms
+  latency: number;
+  hostLatency: number;
+  networkLatency: number;
   packetLoss: number;      // %
   decodedFrames: number;
   droppedFrames: number;
-  globalAvgDecodeLatency: number;  // 全局平均解码延迟 ms
-  globalAvgHostLatency: number;    // 全局平均主机延迟 ms
-  globalAvgFps: number;            // 全局平均帧率
-  // 分级丢帧统计
+  globalAvgDecodeLatency: number;
+  globalAvgHostLatency: number;
+  globalAvgFps: number;
   droppedByL1: number;     // L1: sync drain-to-latest
-  droppedByL2: number;     // L2: async 延迟过高跳帧
-  droppedByL3: number;     // L3: 临界延迟 IDR 恢复
-  droppedByL4: number;     // L4: 网络突发检测
-  droppedByL5: number;     // L5: async 渲染跳帧
+  droppedByL2: number;
+  droppedByL3: number;
+  droppedByL4: number;
+  droppedByL5: number;
 }
 
-/**
- * 解码器能力信息
- */
 export interface DecoderCapabilities {
   supportsH264: boolean;
   supportsHEVC: boolean;
@@ -87,17 +79,16 @@ export interface DecoderCapabilities {
   maxInstances: number;
 }
 
-/** HDR 状态变化回调 */
+/**
 export type HdrStateCallback = (isHdr: boolean) => void;
 
-/** 编解码器状态变化回调 */
+/**
 export type CodecStateCallback = (codec: string) => void;
 
-/** 分辨率变化回调 */
+/**
 export type ResolutionChangedCallback = (width: number, height: number) => void;
 
 // =============================================================================
-// Native 模块接口
 // =============================================================================
 
 interface NativeModule {
@@ -188,10 +179,8 @@ interface VideoStats {
   totalHostLatencyMs: number;
   framesWithHostLatency: number;
   globalAvgFps: number;
-  // 网络丢帧统计
   framesLost: number;
   totalFrames: number;
-  // 分级丢帧统计
   droppedByL1: number;
   droppedByL2: number;
   droppedByL3: number;
@@ -212,19 +201,18 @@ interface ControllerState {
 }
 
 // =============================================================================
-// 常量
 // =============================================================================
 
-/** Native 模块引用（供静态方法使用） */
+/**
 const nativeModuleRef = nativeLib as NativeModule;
 
-/** VIDEO_FORMAT 位掩码常量 */
+/**
 const VIDEO_FORMAT_MASK_10BIT = 0xAA00;
 const VIDEO_FORMAT_MASK_H264 = 0x000F;
 const VIDEO_FORMAT_MASK_H265 = 0x0F00;
 const VIDEO_FORMAT_MASK_AV1 = 0xF000;
 
-/** 连接阶段名称映射 */
+/**
 const STAGE_NAMES: Record<number, string> = {
   1: '正在初始化平台...',
   2: '正在解析服务器地址...',
@@ -239,7 +227,7 @@ const STAGE_NAMES: Record<number, string> = {
   11: '正在启动输入流...'
 };
 
-/** 标准 Xbox 手柄支持的按钮集合 */
+/**
 const STANDARD_BUTTON_FLAGS =
   MoonlightButton.A | MoonlightButton.B | MoonlightButton.X | MoonlightButton.Y |
   MoonlightButton.UP | MoonlightButton.DOWN | MoonlightButton.LEFT | MoonlightButton.RIGHT |
@@ -252,30 +240,18 @@ const STANDARD_BUTTON_FLAGS =
 // =============================================================================
 
 /**
- * 串流会话管理
  *
- * 负责管理与服务器的串流连接，包括：
- * - 视频解码与渲染
- * - 音频解码与播放
- * - 输入事件发送（键盘、手柄、鼠标）
- * - 麦克风采集与传输
- * - 性能统计
  */
 export class StreamingSession {
 
   // ---------------------------------------------------------------------------
-  // 静态方法
   // ---------------------------------------------------------------------------
 
-  /**
-   * 获取解码器能力信息
-   */
   static getDecoderCapabilities(): DecoderCapabilities {
     return nativeModuleRef.getDecoderCapabilities();
   }
 
   /**
-   * 获取设备屏幕亮度范围（用于服务端 HDR tone mapping）
    * @returns [minBrightness, maxBrightness, maxAverageBrightness] (nits)
    */
   private static getBrightnessRange(): number[] {
@@ -301,7 +277,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 成员变量 — 连接与配置
   // ---------------------------------------------------------------------------
 
   private nativeModule: NativeModule;
@@ -310,7 +285,7 @@ export class StreamingSession {
   private config: StreamConfig | null = null;
   private surfaceId: string = '';
   private isRunning: boolean = false;
-  /** 用户主动发起的停止（菜单断开/退出游戏），抑制 connectionTerminated 回调弹窗 */
+  /**
   private userInitiatedStop: boolean = false;
   private computer: ComputerInfo | null = null;
   private nvHttp: NvHttp | null = null;
@@ -319,14 +294,12 @@ export class StreamingSession {
   private displayGuid: string = '';
   private useVdd: boolean = false;
 
-  // 服务器信息
   private serverAppVersion: string = '';
   private serverGfeVersion: string = '';
   private serverCodecModeSupport: number = 0;
   private rtspSessionUrl: string = '';
 
   // ---------------------------------------------------------------------------
-  // 成员变量 — 回调
   // ---------------------------------------------------------------------------
 
   private hdrStateCallback: HdrStateCallback | null = null;
@@ -337,7 +310,6 @@ export class StreamingSession {
   private connectionStatusCallback: ((connectionStatus: number) => void) | null = null;
 
   // ---------------------------------------------------------------------------
-  // 成员变量 — 手柄状态
   // ---------------------------------------------------------------------------
 
   private virtualControllerArrived: boolean = false;
@@ -354,7 +326,6 @@ export class StreamingSession {
   };
 
   // ---------------------------------------------------------------------------
-  // 成员变量 — 性能统计
   // ---------------------------------------------------------------------------
 
   private stats: StreamStats = {
@@ -366,15 +337,13 @@ export class StreamingSession {
   };
   private lastValidStats: StreamStats | null = null;
 
-  // 滑动窗口丢包率统计（对齐 Android: lastTwo = lastWindow + activeWindow）
-  private prevSnapshotLost: number = 0;    // 上一窗口起始时的累计 framesLost
-  private prevSnapshotTotal: number = 0;   // 上一窗口起始时的累计 totalFrames
-  private activeSnapshotLost: number = 0;  // 当前窗口起始时的累计 framesLost
-  private activeSnapshotTotal: number = 0; // 当前窗口起始时的累计 totalFrames
-  private lastWindowFlipTime: number = 0;  // 上次窗口翻转的时间戳
+  private prevSnapshotLost: number = 0;
+  private prevSnapshotTotal: number = 0;
+  private activeSnapshotLost: number = 0;
+  private activeSnapshotTotal: number = 0;
+  private lastWindowFlipTime: number = 0;
 
   // ---------------------------------------------------------------------------
-  // 成员变量 — 音频与麦克风
   // ---------------------------------------------------------------------------
 
   private audioVibrationService: AudioVibrationService = new AudioVibrationService();
@@ -382,7 +351,6 @@ export class StreamingSession {
   private abilityContext: common.UIAbilityContext | undefined = undefined;
 
   // ---------------------------------------------------------------------------
-  // 构造函数
   // ---------------------------------------------------------------------------
 
   constructor() {
@@ -390,7 +358,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 回调设置
   // ---------------------------------------------------------------------------
 
   setHdrStateCallback(callback: HdrStateCallback | null): void {
@@ -401,10 +368,6 @@ export class StreamingSession {
     this.codecStateCallback = callback;
   }
 
-  /**
-   * 设置连接终止回调
-   * errorCode: 0 = 正常关闭, <0 = 错误
-   */
   setConnectionTerminatedCallback(callback: ((errorCode: number) => void) | null): void {
     this.connectionTerminatedCallback = callback;
   }
@@ -422,12 +385,8 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 生命周期 — 启动 / 停止 / 恢复
   // ---------------------------------------------------------------------------
 
-  /**
-   * 开始串流会话
-   */
   async start(
     computerId: string,
     appId: number,
@@ -475,9 +434,6 @@ export class StreamingSession {
     }
   }
 
-  /**
-   * 停止串流会话
-   */
   async stop(): Promise<void> {
     console.info('停止串流');
     this.userInitiatedStop = true;
@@ -488,9 +444,6 @@ export class StreamingSession {
     await this.cleanup();
   }
 
-  /**
-   * 退出远程应用并停止串流
-   */
   async quitApp(): Promise<boolean> {
     console.info('退出远程应用');
     this.userInitiatedStop = true;
@@ -510,9 +463,6 @@ export class StreamingSession {
     return quitSuccess;
   }
 
-  /**
-   * 从后台恢复解码器
-   */
   resumeDecoder(): void {
     if (!this.isRunning) {
       console.warn('[StreamingSession] 串流已停止，无需恢复解码器');
@@ -527,7 +477,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 配置与状态查询
   // ---------------------------------------------------------------------------
 
   getEffectiveConfig(): StreamConfig | null {
@@ -539,12 +488,8 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 服务器控制
   // ---------------------------------------------------------------------------
 
-  /**
-   * 动态调整码率 (kbps)
-   */
   async setBitrate(bitrate: number): Promise<boolean> {
     if (!this.nvHttp) return false;
     try {
@@ -556,9 +501,6 @@ export class StreamingSession {
     }
   }
 
-  /**
-   * 发送超级指令 (Sunshine)
-   */
   async sendSuperCmd(cmdId: string): Promise<boolean> {
     if (!this.nvHttp) return false;
     try {
@@ -568,10 +510,6 @@ export class StreamingSession {
     }
   }
 
-  /**
-   * 旋转显示器方向 (Sunshine)
-   * @param angle 0=横屏, 90=竖屏
-   */
   async rotateDisplay(angle: number, displayName?: string): Promise<boolean> {
     if (!this.nvHttp) {
       console.warn('StreamingSession: rotateDisplay 失败 - nvHttp 未初始化');
@@ -585,20 +523,14 @@ export class StreamingSession {
     }
   }
 
-  /**
-   * 设置音频音量 (0.0 ~ 1.0)
-   */
   setAudioVolume(volume: number): boolean {
     return this.nativeModule.setAudioVolume(volume);
   }
 
   // ---------------------------------------------------------------------------
-  // 输入 — 键盘与文本
   // ---------------------------------------------------------------------------
 
   /**
-   * 发送键盘输入
-   * @param keyCode Windows 虚拟键码
    * @param keyAction 0x03=KEY_DOWN, 0x04=KEY_UP
    * @param modifiers SHIFT=0x01, CTRL=0x02, ALT=0x04, META=0x08
    */
@@ -607,9 +539,6 @@ export class StreamingSession {
     this.nativeModule.sendKeyboardInput(keyCode, keyAction, modifiers, 0);
   }
 
-  /**
-   * 发送按键序列（同时按下，延迟后释放）
-   */
   sendKeys(keyCodes: number[]): void {
     if (!this.isRunning || keyCodes.length === 0) return;
 
@@ -627,19 +556,13 @@ export class StreamingSession {
     }, 25);
   }
 
-  /**
-   * 发送 UTF-8 文本（用于 IME 输入）
-   */
   sendUtf8Text(text: string): void {
     if (!this.isRunning || text.length === 0) return;
     this.nativeModule.sendUtf8Text(text);
   }
 
   /**
-   * 发送虚拟手柄输入（供 CustomKeyManager 使用）
    *
-   * 与直接调用 MoonBridge 不同，此方法会先确保 controllerArrival 已发送，
-   * 并使用正确的 activeGamepadMask。对应 Android ControllerHandler 的流程。
    */
   sendVirtualControllerInput(
     buttonFlags: number, leftTrigger: number, rightTrigger: number,
@@ -657,12 +580,8 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 输入 — 手柄（虚拟 + 物理）
   // ---------------------------------------------------------------------------
 
-  /**
-   * 发送虚拟手柄输入事件
-   */
   sendInput(input: InputEvent): void {
     if (!this.isRunning) return;
 
@@ -673,9 +592,6 @@ export class StreamingSession {
     }
   }
 
-  /**
-   * 发送物理手柄完整状态
-   */
   sendGamepadState(
     controllerIndex: number,
     buttons: number,
@@ -700,12 +616,8 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 性能统计
   // ---------------------------------------------------------------------------
 
-  /**
-   * 获取实时性能统计
-   */
   getStats(): StreamStats {
     try {
       const vs = this.nativeModule.getVideoStats();
@@ -717,31 +629,26 @@ export class StreamingSession {
       this.stats.latency = vs.avgDecodeTimeMs || 0;
       this.stats.hostLatency = vs.hostLatency || 0;
 
-      // 滑动窗口丢包率（对齐 Android: ~2秒窗口 = lastWindow + activeWindow）
       const totalFrames = vs.totalFrames || 0;
       const framesLost = vs.framesLost || 0;
       const now = Date.now();
       if (this.lastWindowFlipTime === 0) {
-        // 首次调用：初始化窗口
         this.lastWindowFlipTime = now;
         this.activeSnapshotLost = framesLost;
         this.activeSnapshotTotal = totalFrames;
         this.prevSnapshotLost = framesLost;
         this.prevSnapshotTotal = totalFrames;
       } else if (now - this.lastWindowFlipTime >= 1000) {
-        // 每秒翻转窗口：prev <- active, active <- 当前累计值
         this.prevSnapshotLost = this.activeSnapshotLost;
         this.prevSnapshotTotal = this.activeSnapshotTotal;
         this.activeSnapshotLost = framesLost;
         this.activeSnapshotTotal = totalFrames;
         this.lastWindowFlipTime = now;
       }
-      // 用最近两个窗口的增量计算丢包率
       const windowLost = framesLost - this.prevSnapshotLost;
       const windowTotal = totalFrames - this.prevSnapshotTotal;
       this.stats.packetLoss = windowTotal > 0 ? (windowLost / windowTotal * 100) : 0;
 
-      // 分级丢帧统计
       this.stats.droppedByL1 = vs.droppedByL1 || 0;
       this.stats.droppedByL2 = vs.droppedByL2 || 0;
       this.stats.droppedByL3 = vs.droppedByL3 || 0;
@@ -793,9 +700,6 @@ export class StreamingSession {
     return copy;
   }
 
-  /**
-   * 获取汇总统计（串流结束后使用，回退到最后有效快照）
-   */
   getSummaryStats(): StreamStats {
     const current = this.getStats();
     if (current.renderedFps > 0 || current.latency > 0) return current;
@@ -803,7 +707,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 启动流程子步骤
   // ---------------------------------------------------------------------------
 
   private async resolveComputer(computerId: string, context?: common.UIAbilityContext): Promise<void> {
@@ -857,8 +760,6 @@ export class StreamingSession {
   }
 
   private applyPostConnectionSettings(config: StreamConfig): void {
-    // 必须在 connectToServer() 之后，因为 BridgeArInit() 会重置 enabled_=false
-    // 第三个参数: sceneMode (游戏/电影=0, 音乐/节奏=1, 自动=2)
     const sceneMode = this.audioVibrationService.getSceneModeInt();
     this.nativeModule.setBassVibrationConfig(config.enableAudioVibration, 1.0, sceneMode);
     if (config.enableAudioVibration) {
@@ -867,7 +768,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — Native 初始化
   // ---------------------------------------------------------------------------
 
   private async initializeNative(): Promise<void> {
@@ -915,11 +815,9 @@ export class StreamingSession {
         console.info(`连接已终止: ${errorCode}, userInitiated=${this.userInitiatedStop}`);
         this.isRunning = false;
         GamepadManager.getInstance().stopAllSensors();
-        // 立即停止所有振动（设备马达 + USB 手柄马达 + 音频振动）
         GamepadManager.getInstance().stopAllVibration();
         this.audioVibrationService.stop();
         this.stopMicrophone();
-        // 用户主动停止时不触发外部回调（避免弹出“连接已断开”提示）
         if (!this.userInitiatedStop && this.connectionTerminatedCallback) {
           this.connectionTerminatedCallback(errorCode);
         }
@@ -959,7 +857,6 @@ export class StreamingSession {
       }
     };
 
-    // 设置传感器数据回调
     GamepadManager.getInstance().setSensorDataCallback(
       (cn: number, motionType: number, x: number, y: number, z: number): void => {
         if (this.isRunning) this.nativeModule.sendControllerMotionEvent(cn, motionType, x, y, z);
@@ -970,7 +867,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 视频 Surface
   // ---------------------------------------------------------------------------
 
   private async setupVideoSurface(): Promise<void> {
@@ -981,7 +877,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 应用启动
   // ---------------------------------------------------------------------------
 
   private async launchApp(cachedCurrentGame: number = 0): Promise<void> {
@@ -995,7 +890,6 @@ export class StreamingSession {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // 检查并调整 HDR 支持
     let effectiveHdr = this.config.hdr;
     if (effectiveHdr) {
       try {
@@ -1063,7 +957,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 服务器连接
   // ---------------------------------------------------------------------------
 
   private async connectToServer(): Promise<void> {
@@ -1071,7 +964,6 @@ export class StreamingSession {
       throw new Error('配置未设置');
     }
 
-    // 构建 supportedVideoFormats
     let supportedVideoFormats = 0x0001; // H.264
     let actualCodec: 'H.264' | 'HEVC' = this.config.codec;
 
@@ -1100,11 +992,9 @@ export class StreamingSession {
 
     console.info(`编解码器: ${actualCodec}, formats=0x${supportedVideoFormats.toString(16)}`);
 
-    // 生成 IV: 前4字节 = riKeyId (big-endian), 后12字节 = 0
     const riAesIv = new ArrayBuffer(16);
     new DataView(riAesIv).setUint32(0, this.riKeyId, false);
 
-    // 应用解码器设置
     this.nativeModule.setDecoderBufferCount(this.config.decoderBufferCount);
     this.nativeModule.setDecoderSyncMode(this.config.enableSyncDecode);
     this.nativeModule.setVsyncEnabled(this.config.enableVsync);
@@ -1141,7 +1031,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 手柄输入处理
   // ---------------------------------------------------------------------------
 
   private handleControllerButton(event: ControllerButtonEvent): void {
@@ -1229,7 +1118,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 麦克风
   // ---------------------------------------------------------------------------
 
   private startMicrophoneIfNeeded(): void {
@@ -1243,9 +1131,6 @@ export class StreamingSession {
     this.ensureMicPermissionAndStart();
   }
 
-  /**
-   * 检查/请求麦克风权限后启动
-   */
   private async ensureMicPermissionAndStart(): Promise<void> {
     try {
       const atManager = abilityAccessCtrl.createAtManager();
@@ -1310,7 +1195,6 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 清理
   // ---------------------------------------------------------------------------
 
   private async cleanup(): Promise<void> {
@@ -1326,12 +1210,8 @@ export class StreamingSession {
   }
 
   // ---------------------------------------------------------------------------
-  // 内部 — 工具方法
   // ---------------------------------------------------------------------------
 
-  /**
-   * 根据 videoFormat 位掩码检测编解码器名称
-   */
   private static detectCodec(videoFormat: number): string {
     if ((videoFormat & VIDEO_FORMAT_MASK_AV1) !== 0) return 'AV1';
     if ((videoFormat & VIDEO_FORMAT_MASK_H265) !== 0) return 'HEVC';
@@ -1339,18 +1219,11 @@ export class StreamingSession {
     return 'HEVC';
   }
 
-  /**
-   * 归一化扳机值到 0~255
-   * 虚拟手柄: 0~255, 物理手柄: -32768~32767
-   */
   private static normalizeTrigger(value: number): number {
     if (value >= 0 && value <= 255) return value;
     return Math.floor((value + 32768) / 256);
   }
 
-  /**
-   * 获取键码对应的修饰键掩码
-   */
   private static getModifierForKey(key: number): number {
     switch (key) {
       case VK_SHIFT: return MODIFIER_SHIFT;

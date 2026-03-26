@@ -9,9 +9,7 @@
  */
 
 /**
- * Xbox One 控制器驱动
  * 
- * 参考 Android moonlight-android XboxOneController
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -22,7 +20,6 @@ import { readShortLE, AXIS_MAX } from '../GamepadTypes';
 
 const TAG = '[USB-XONE]';
 
-// 初始化数据包
 const FW2015_INIT = new Uint8Array([0x05, 0x20, 0x00, 0x01, 0x00]);
 const ONE_S_INIT = new Uint8Array([0x05, 0x20, 0x00, 0x0f, 0x06]);
 const SERIES_S_INIT = new Uint8Array([0x05, 0x20, 0x00, 0x0f, 0x06]);
@@ -84,16 +81,11 @@ export class XboxOneController extends AbstractXboxController {
     this.deviceName = 'Xbox One Controller';
   }
   
-  /**
-   * 检查是否可以驱动该设备
-   */
   static canClaimDevice(device: usbManager.USBDevice): boolean {
-    // 检查厂商 ID
     if (!XboxOne.SUPPORTED_VENDORS.includes(device.vendorId)) {
       return false;
     }
     
-    // 检查接口
     if (!device.configs || device.configs.length === 0) {
       return false;
     }
@@ -105,7 +97,6 @@ export class XboxOneController extends AbstractXboxController {
     
     const iface = config.interfaces[0];
     
-    // 检查接口类、子类、协议
     const isXboxOne = 
       iface.clazz === UsbClass.USB_CLASS_VENDOR_SPEC &&
       iface.subClass === XboxOne.IFACE_SUBCLASS &&
@@ -118,9 +109,6 @@ export class XboxOneController extends AbstractXboxController {
     return isXboxOne;
   }
   
-  /**
-   * 处理按钮数据
-   */
   private processButtons(buffer: Uint8Array, offset: number): void {
     let b = buffer[offset++];
     
@@ -141,13 +129,11 @@ export class XboxOneController extends AbstractXboxController {
     this.setButtonFlag(ButtonFlags.LS_CLK_FLAG, b & 0x40);
     this.setButtonFlag(ButtonFlags.RS_CLK_FLAG, b & 0x80);
     
-    // 扳机 (0-1023 -> 0.0-1.0)
     this.leftTrigger = readShortLE(buffer, offset) / 1023.0;
     offset += 2;
     this.rightTrigger = readShortLE(buffer, offset) / 1023.0;
     offset += 2;
     
-    // 摇杆 (Y 轴需要取反，使用 -value 而不是 ~value 避免 JavaScript 32位整数问题)
     this.leftStickX = readShortLE(buffer, offset) / AXIS_MAX;
     offset += 2;
     this.leftStickY = -readShortLE(buffer, offset) / AXIS_MAX;
@@ -158,9 +144,6 @@ export class XboxOneController extends AbstractXboxController {
     this.rightStickY = -readShortLE(buffer, offset) / AXIS_MAX;
   }
   
-  /**
-   * 确认模式报告
-   */
   private async ackModeReport(seqNum: number): Promise<void> {
     const payload = new Uint8Array([
       0x01, 0x20, seqNum, 0x09, 0x00, 0x07, 0x20, 0x02,
@@ -169,16 +152,13 @@ export class XboxOneController extends AbstractXboxController {
     await this.bulkWrite(payload);
   }
   
-  /**
-   * 处理输入报告
-   */
   protected handleRead(buffer: Uint8Array): boolean {
     if (buffer.length === 0) {
       return false;
     }
     
     switch (buffer[0]) {
-      case 0x20: // 按钮/轴报告
+      case 0x20:
         if (buffer.length < 18) {
           console.warn(`${TAG} 按钮/轴报告太短: ${buffer.length}`);
           return false;
@@ -186,12 +166,11 @@ export class XboxOneController extends AbstractXboxController {
         this.processButtons(buffer, 4);
         return true;
         
-      case 0x07: // 模式报告
+      case 0x07:
         if (buffer.length < 5) {
           console.warn(`${TAG} 模式报告太短: ${buffer.length}`);
           return false;
         }
-        // Xbox One S 控制器需要确认模式报告
         if (buffer[1] === 0x30) {
           this.ackModeReport(buffer[2]);
         }
@@ -202,15 +181,10 @@ export class XboxOneController extends AbstractXboxController {
     return false;
   }
   
-  /**
-   * 初始化
-   */
   protected doInit(): boolean {
     console.info(`${TAG} 初始化 Xbox One 控制器`);
     
-    // 发送初始化数据包
     for (const initPkt of INIT_PKTS) {
-      // 匹配 VID/PID (0x0000 表示通配符)
       if ((initPkt.vid === 0 || initPkt.vid === this.vendorId) &&
           (initPkt.pid === 0 || initPkt.pid === this.productId)) {
         this.bulkWrite(initPkt.data);
@@ -220,11 +194,7 @@ export class XboxOneController extends AbstractXboxController {
     return true;
   }
   
-  /**
-   * 震动反馈 (去重: 跳过相同非零值, 零值始终发送)
-   */
   rumble(lowFreqMotor: number, highFreqMotor: number): void {
-    // 零值(停止振动)始终发送, 非零重复值跳过
     if (lowFreqMotor !== 0 || highFreqMotor !== 0) {
       if (lowFreqMotor === this.lowFreqMotor && highFreqMotor === this.highFreqMotor) {
         return;
@@ -235,18 +205,12 @@ export class XboxOneController extends AbstractXboxController {
     this.sendRumble();
   }
   
-  /**
-   * 扳机震动反馈
-   */
   rumbleTriggers(leftTrigger: number, rightTrigger: number): void {
     this.leftTriggerMotor = leftTrigger;
     this.rightTriggerMotor = rightTrigger;
     this.sendRumble();
   }
   
-  /**
-   * 发送震动命令
-   */
   private sendRumble(): void {
     const data = new Uint8Array([
       0x09, 0x00, this.seqNum++, 0x09, 0x00, 0x0f,

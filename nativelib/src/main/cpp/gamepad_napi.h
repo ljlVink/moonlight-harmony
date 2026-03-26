@@ -9,9 +9,7 @@
  */
 
 /**
- * USB 手柄 NAPI 绑定头文件
  * 
- * 用于将 USB HID 手柄功能暴露给 ArkTS 层
  */
 
 #ifndef GAMEPAD_NAPI_H
@@ -24,23 +22,17 @@
 extern "C" {
 #endif
 
-/**
- * 手柄状态结构 (用于 NAPI 传输)
- */
 typedef struct {
-    int32_t deviceId;       // 设备 ID
-    uint32_t buttons;       // 按钮位掩码
-    int16_t leftStickX;     // 左摇杆 X (-32768 to 32767)
-    int16_t leftStickY;     // 左摇杆 Y
-    int16_t rightStickX;    // 右摇杆 X
-    int16_t rightStickY;    // 右摇杆 Y
-    uint8_t leftTrigger;    // 左扳机 (0-255)
-    uint8_t rightTrigger;   // 右扳机 (0-255)
+    int32_t deviceId;
+    uint32_t buttons;
+    int16_t leftStickX;
+    int16_t leftStickY;
+    int16_t rightStickX;
+    int16_t rightStickY;
+    uint8_t leftTrigger;
+    uint8_t rightTrigger;
 } NapiGamepadState;
 
-/**
- * 手柄信息结构
- */
 typedef struct {
     int32_t deviceId;
     uint16_t vendorId;
@@ -50,9 +42,6 @@ typedef struct {
     bool isConnected;
 } NapiGamepadInfo;
 
-/**
- * 按钮标志位 (与 Moonlight 协议一致)
- */
 #define BTN_FLAG_UP          0x0001
 #define BTN_FLAG_DOWN        0x0002
 #define BTN_FLAG_LEFT        0x0004
@@ -69,7 +58,6 @@ typedef struct {
 #define BTN_FLAG_X           0x4000
 #define BTN_FLAG_Y           0x8000
 
-// 扩展按钮 (用于 special button)
 #define BTN_FLAG_PADDLE1     0x00010000
 #define BTN_FLAG_PADDLE2     0x00020000
 #define BTN_FLAG_PADDLE3     0x00040000
@@ -77,30 +65,21 @@ typedef struct {
 #define BTN_FLAG_TOUCHPAD    0x00100000
 #define BTN_FLAG_MISC        0x00200000
 
-/**
- * NAPI 导出函数
- */
 
-// 初始化模块
 napi_value GamepadNapi_Init(napi_env env, napi_value exports);
 
-// 解析 HID 报告 (根据 VID/PID 选择解析器)
 // parseHidReport(vendorId: number, productId: number, data: Uint8Array): GamepadState
 napi_value GamepadNapi_ParseHidReport(napi_env env, napi_callback_info info);
 
-// 获取已知手柄的类型
 // getGamepadType(vendorId: number, productId: number): number
 napi_value GamepadNapi_GetGamepadType(napi_env env, napi_callback_info info);
 
-// 检查是否支持的手柄
 // isSupportedGamepad(vendorId: number, productId: number): boolean
 napi_value GamepadNapi_IsSupportedGamepad(napi_env env, napi_callback_info info);
 
-// 获取手柄名称
 // getGamepadName(vendorId: number, productId: number): string
 napi_value GamepadNapi_GetGamepadName(napi_env env, napi_callback_info info);
 
-// 生成 Rumble 命令 (返回要发送到 HID 设备的数据)
 // createRumbleCommand(vendorId: number, productId: number, lowFreq: number, highFreq: number): Uint8Array | null
 napi_value GamepadNapi_CreateRumbleCommand(napi_env env, napi_callback_info info);
 

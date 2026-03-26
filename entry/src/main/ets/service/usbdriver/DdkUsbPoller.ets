@@ -21,7 +21,6 @@ import nativeLib from 'libmoonlight_nativelib.so';
 const TAG = '[DdkUsbPoller]';
 
 // ============================================================
-// Native 接口类型
 // ============================================================
 
 interface DdkPollerNativeInterface {
@@ -76,16 +75,14 @@ export interface DdkPollerStats {
 }
 
 // ============================================================
-// 全局状态
 // ============================================================
 
 const ddkNative = (nativeLib as NativeLibWithDdkPoller).UsbDdkPoller;
 
 let ddkInitialized = false;
-let ddkAvailable: boolean | null = null;  // null = 未检测
+let ddkAvailable: boolean | null = null;
 
 // ============================================================
-// DdkUsbPoller 类
 // ============================================================
 
 export class DdkUsbPoller {
@@ -94,11 +91,6 @@ export class DdkUsbPoller {
   private outEndpointAddr: number = 0;
   private _running: boolean = false;
 
-  // ========== 静态方法 ==========
-
-  /**
-   * 检查 DDK Poller 是否可用
-   */
   static isAvailable(): boolean {
     if (ddkAvailable !== null) return ddkAvailable;
 
@@ -113,9 +105,7 @@ export class DdkUsbPoller {
   }
 
   /**
-   * 全局初始化 DDK (只需调用一次)
    *
-   * @returns 初始化结果
    */
   static init(): DdkInitResult {
     if (!DdkUsbPoller.isAvailable()) {
@@ -142,9 +132,7 @@ export class DdkUsbPoller {
   }
 
   /**
-   * 查找指定 VID/PID 的 USB 设备
    *
-   * @returns 查找结果，包含 DDK deviceId
    */
   static findDevice(vid: number, pid: number): DdkFindResult {
     if (!ddkInitialized) {
@@ -169,12 +157,7 @@ export class DdkUsbPoller {
   }
 
   /**
-   * 通过 busNum/devAddress 构造 DDK deviceId
-   * 当 findDevice 返回 0 设备时使用此方法
    *
-   * @param busNum     USB 总线号 (来自 usbManager device.busNum)
-   * @param devAddress USB 设备地址 (来自 usbManager device.devAddress)
-   * @returns 成功时包含 deviceId
    */
   static makeDeviceId(busNum: number, devAddress: number): DdkMakeDeviceIdResult {
     if (!ddkInitialized) {
@@ -198,9 +181,6 @@ export class DdkUsbPoller {
     }
   }
 
-  /**
-   * 全局释放 DDK
-   */
   static release(): void {
     if (ddkInitialized && ddkNative) {
       try {
@@ -213,24 +193,12 @@ export class DdkUsbPoller {
     }
   }
 
-  // ========== 实例方法 ==========
-
   get running(): boolean {
     return this._running;
   }
 
   /**
-   * 启动 DDK 轮询
    *
-   * @param deviceId       DDK 设备 ID (来自 findDevice)
-   * @param ifaceIndex     USB 接口编号
-   * @param inEndpoint     输入端点地址
-   * @param outEndpoint    输出端点地址 (0=无输出)
-   * @param maxPacketSize  最大包大小
-   * @param onData         数据回调
-   * @param onError        错误回调
-   * @param timeoutMs      单次读取超时 (默认 100ms)
-   * @returns 是否启动成功
    */
   start(
     deviceId: number,
@@ -281,9 +249,6 @@ export class DdkUsbPoller {
     }
   }
 
-  /**
-   * 停止轮询并释放资源
-   */
   stop(): void {
     if (!this._running || this.pollerId < 0) return;
 
@@ -299,11 +264,7 @@ export class DdkUsbPoller {
   }
 
   /**
-   * 发送输出数据 (init/rumble) — 同步操作
    *
-   * @param data         要发送的数据
-   * @param endpoint     输出端点地址 (默认使用 start 时指定的)
-   * @returns 发送的字节数，负数表示错误
    */
   sendOutput(data: Uint8Array, endpoint?: number): number {
     if (!this._running || this.pollerId < 0 || !ddkNative) {
@@ -324,9 +285,6 @@ export class DdkUsbPoller {
     }
   }
 
-  /**
-   * 获取统计信息
-   */
   getStats(): DdkPollerStats {
     if (this.pollerId < 0 || !ddkNative) {
       return { totalReads: 0, totalBytes: 0 };
@@ -338,10 +296,6 @@ export class DdkUsbPoller {
     }
   }
 
-  /**
-   * 设置是否忽略断开信号 (对应用户设置 "忽略手柄断开")
-   * 启用后，DDK 原生轮询线程遇到致命 IO 错误不会退出，而是 sleep 后继续
-   */
   setIgnoreDisconnect(ignore: boolean): void {
     if (this.pollerId < 0 || !ddkNative) return;
     try {
@@ -352,10 +306,6 @@ export class DdkUsbPoller {
     }
   }
 
-  /**
-   * 查询原生轮询线程是否仍在运行
-   * 用于检测线程异常退出（IO 错误等导致线程结束但 JS 层未感知）
-   */
   isNativeRunning(): boolean {
     if (this.pollerId < 0 || !ddkNative) return false;
     try {

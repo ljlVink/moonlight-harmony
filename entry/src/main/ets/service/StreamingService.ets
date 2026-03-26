@@ -15,12 +15,8 @@ const TAG = 'StreamingService';
 const DOMAIN = 0x0000;
 
 /**
- * 串流后台服务
  * 
- * 用于保持串流在后台运行
  * 
- * 注意: HarmonyOS 4.0+ 不再支持 ServiceExtensionAbility，
- * 改用 ExtensionAbility 或 BackgroundTaskManager API
  */
 export default class StreamingService extends ExtensionAbility {
   onCreate(): void {

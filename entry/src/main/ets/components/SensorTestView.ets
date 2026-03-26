@@ -8,16 +8,10 @@
  * (at your option) any later version.
  */
 
-/**
- * 设备传感器测试视图
- * 用于测试设备内置陀螺仪和加速度计的数据采集和方向校正
- * 验证设备传感器回退机制是否正常工作
- */
 
 import { DeviceSensorService, LI_MOTION_TYPE_ACCEL, LI_MOTION_TYPE_GYRO } from '../service/DeviceSensorService';
 import { AppColors } from '../common/Theme';
 
-// @Builder 按引用传参接口
 interface AxisBarParams {
   axis: string;
   value: number;
@@ -25,7 +19,6 @@ interface AxisBarParams {
   color: string;
 }
 
-// 传感器数据记录
 class SensorDataRecord {
   timestamp: string;
   motionType: number;
@@ -44,21 +37,16 @@ class SensorDataRecord {
 
 @Component
 export struct SensorTestView {
-  // 传感器服务
   private sensorService: DeviceSensorService = DeviceSensorService.getInstance();
 
-  // 传感器可用性
   @State gyroAvailable: boolean = false;
   @State accelAvailable: boolean = false;
 
-  // 传感器活跃状态
   @State gyroActive: boolean = false;
   @State accelActive: boolean = false;
 
-  // 测试频率
   @State testReportRateHz: number = 100;
 
-  // 实时传感器数据
   @State gyroX: number = 0;
   @State gyroY: number = 0;
   @State gyroZ: number = 0;
@@ -66,10 +54,8 @@ export struct SensorTestView {
   @State accelY: number = 0;
   @State accelZ: number = 0;
 
-  // 设备方向
   @State deviceRotation: number = 0;
 
-  // 数据采集统计
   @State gyroDataCount: number = 0;
   @State accelDataCount: number = 0;
   @State lastGyroUpdateTime: number = 0;
@@ -77,14 +63,11 @@ export struct SensorTestView {
   @State gyroEffectiveRate: number = 0;
   @State accelEffectiveRate: number = 0;
 
-  // 历史最大值追踪（用于验证数据范围）
   @State gyroMaxAbs: number = 0;
   @State accelMaxAbs: number = 0;
 
-  // 日志
   @State logMessages: string[] = [];
 
-  // 内部缓冲区（传感器回调线程写入，定时器读取后同步到 @State）
   private refreshTimer: number = -1;
   private gyroCountInternal: number = 0;
   private accelCountInternal: number = 0;
@@ -123,8 +106,6 @@ export struct SensorTestView {
   private startRefreshTimer(): void {
     this.lastRateCalcTime = Date.now();
     this.refreshTimer = setInterval(() => {
-      // 将内部缓冲区同步到 @State 变量，驱动 UI 刷新
-      // 传感器回调写入 internal* 变量（非 @State），此处拷贝到 @State 触发重绘
       this.gyroX = this.internalGyroX;
       this.gyroY = this.internalGyroY;
       this.gyroZ = this.internalGyroZ;
@@ -136,7 +117,6 @@ export struct SensorTestView {
       this.gyroDataCount = this.gyroCountInternal;
       this.accelDataCount = this.accelCountInternal;
 
-      // 计算有效采样率
       const now = Date.now();
       const elapsed = (now - this.lastRateCalcTime) / 1000;
       if (elapsed >= 1.0) {
@@ -154,7 +134,7 @@ export struct SensorTestView {
       this.gyroActive = this.sensorService.isGyroActive();
       this.accelActive = this.sensorService.isAccelActive();
       this.deviceRotation = this.sensorService.getCurrentRotation();
-    }, 100) as number; // 10Hz UI 刷新
+    }, 100) as number;
   }
 
   private clearRefreshTimer(): void {
@@ -164,16 +144,12 @@ export struct SensorTestView {
     }
   }
 
-  /**
-   * 启动陀螺仪测试
-   */
   private startGyroTest(): void {
     if (!this.gyroAvailable) {
       this.addLog('错误: 设备没有陀螺仪传感器');
       return;
     }
 
-    // 设置数据回调 — 写入内部缓冲区，由定时器同步到 @State
     this.sensorService.setDataCallback(
       (controllerNumber: number, motionType: number, x: number, y: number, z: number) => {
         if (motionType === LI_MOTION_TYPE_GYRO) {
@@ -204,25 +180,18 @@ export struct SensorTestView {
     this.addLog(`陀螺仪测试启动: ${this.testReportRateHz}Hz`);
   }
 
-  /**
-   * 停止陀螺仪测试
-   */
   private stopGyroTest(): void {
     this.sensorService.setMotionEventState(LI_MOTION_TYPE_GYRO, 0);
     this.gyroActive = false;
     this.addLog('陀螺仪测试停止');
   }
 
-  /**
-   * 启动加速度计测试
-   */
   private startAccelTest(): void {
     if (!this.accelAvailable) {
       this.addLog('错误: 设备没有加速度计传感器');
       return;
     }
 
-    // 确保数据回调已设置 — 写入内部缓冲区，由定时器同步到 @State
     this.sensorService.setDataCallback(
       (controllerNumber: number, motionType: number, x: number, y: number, z: number) => {
         if (motionType === LI_MOTION_TYPE_GYRO) {
@@ -253,18 +222,12 @@ export struct SensorTestView {
     this.addLog(`加速度计测试启动: ${this.testReportRateHz}Hz`);
   }
 
-  /**
-   * 停止加速度计测试
-   */
   private stopAccelTest(): void {
     this.sensorService.setMotionEventState(LI_MOTION_TYPE_ACCEL, 0);
     this.accelActive = false;
     this.addLog('加速度计测试停止');
   }
 
-  /**
-   * 停止所有测试
-   */
   private stopAllTests(): void {
     this.sensorService.disableAll();
     this.sensorService.setDataCallback(null);
@@ -273,9 +236,6 @@ export struct SensorTestView {
     this.addLog('所有传感器测试停止');
   }
 
-  /**
-   * 重置统计数据
-   */
   private resetStats(): void {
     this.gyroCountInternal = 0;
     this.accelCountInternal = 0;
@@ -305,25 +265,18 @@ export struct SensorTestView {
   build() {
     Scroll() {
       Column({ space: 16 }) {
-        // 传感器可用性状态
         this.buildAvailabilitySection()
 
-        // 测试控制
         this.buildControlSection()
 
-        // 陀螺仪数据展示
         this.buildGyroDataSection()
 
-        // 加速度计数据展示
         this.buildAccelDataSection()
 
-        // 设备方向信息
         this.buildOrientationSection()
 
-        // 统计信息
         this.buildStatsSection()
 
-        // 日志
         this.buildLogSection()
       }
       .width('100%')
@@ -415,7 +368,6 @@ export struct SensorTestView {
         .fontColor(AppColors.TextPrimary)
         .width('100%')
 
-      // 频率选择
       Row({ space: 8 }) {
         Text('采样频率:')
           .fontSize(13)
@@ -427,7 +379,6 @@ export struct SensorTestView {
       }
       .width('100%')
 
-      // 操作按钮
       Row({ space: 8 }) {
         Button(this.gyroActive ? '停止陀螺仪' : '启动陀螺仪')
           .onClick(() => {
@@ -476,7 +427,6 @@ export struct SensorTestView {
       .width('100%')
       .justifyContent(FlexAlign.Start)
 
-      // 重置统计
       Row() {
         Button('重置统计')
           .onClick(() => {
@@ -519,7 +469,6 @@ export struct SensorTestView {
       .onClick(() => {
         this.testReportRateHz = rate;
         this.addLog(`采样频率设置为 ${rate}Hz`);
-        // 如果当前正在采集，重新以新频率启动
         if (this.gyroActive) {
           this.sensorService.setMotionEventState(LI_MOTION_TYPE_GYRO, rate);
           this.addLog(`陀螺仪重新启动: ${rate}Hz`);
@@ -556,12 +505,10 @@ export struct SensorTestView {
           .textAlign(TextAlign.Center)
           .padding(12)
       } else {
-        // 三轴数据条
         this.buildAxisBar({ axis: 'X', value: this.gyroX, maxRange: 500, color: '#F44336' })
         this.buildAxisBar({ axis: 'Y', value: this.gyroY, maxRange: 500, color: '#4CAF50' })
         this.buildAxisBar({ axis: 'Z', value: this.gyroZ, maxRange: 500, color: '#2196F3' })
 
-        // 数值显示
         Row({ space: 16 }) {
           Column({ space: 2 }) {
             Text('X (deg/s)')
@@ -627,12 +574,10 @@ export struct SensorTestView {
           .textAlign(TextAlign.Center)
           .padding(12)
       } else {
-        // 三轴数据条
         this.buildAxisBar({ axis: 'X', value: this.accelX, maxRange: 20, color: '#FF9800' })
         this.buildAxisBar({ axis: 'Y', value: this.accelY, maxRange: 20, color: '#9C27B0' })
         this.buildAxisBar({ axis: 'Z', value: this.accelZ, maxRange: 20, color: '#00BCD4' })
 
-        // 数值显示
         Row({ space: 16 }) {
           Column({ space: 2 }) {
             Text('X (m/s²)')
@@ -666,7 +611,6 @@ export struct SensorTestView {
         .justifyContent(FlexAlign.SpaceEvenly)
         .margin({ top: 4 })
 
-        // 重力提示
         Row({ space: 4 }) {
           Text('💡')
             .fontSize(11)
@@ -694,21 +638,18 @@ export struct SensorTestView {
         .width(16)
 
       Stack() {
-        // 背景
         Row()
           .width('100%')
           .height(12)
           .backgroundColor(AppColors.SurfaceDark)
           .borderRadius(6)
 
-        // 中心线
         Row()
           .width(1)
           .height(12)
           .backgroundColor(AppColors.TextTertiary)
           .position({ x: '50%', y: 0 })
 
-        // 数据条（从中心向外延伸）
         Row()
           .width(`${Math.min(50, Math.abs($$.value / $$.maxRange) * 50)}%`)
           .height(12)
@@ -786,7 +727,6 @@ export struct SensorTestView {
         .width('100%')
 
       Row({ space: 0 }) {
-        // 陀螺仪统计
         Column({ space: 4 }) {
           Text('陀螺仪')
             .fontSize(13)
@@ -824,13 +764,11 @@ export struct SensorTestView {
         .alignItems(HorizontalAlign.Start)
         .padding(8)
 
-        // 分隔线
         Row()
           .width(1)
           .height(60)
           .backgroundColor(AppColors.Divider)
 
-        // 加速度计统计
         Column({ space: 4 }) {
           Text('加速度计')
             .fontSize(13)

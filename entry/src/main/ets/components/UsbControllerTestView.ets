@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * USB 手柄测试视图
- * 用于测试 USB 手柄驱动是否正常工作
- */
 
 import { usbManager } from '@kit.BasicServicesKit';
 import { UsbDriverService, UsbDriverListener, ControllerType, AbstractController, ButtonFlags } from '../service/usbdriver';
@@ -19,7 +15,6 @@ import { GamepadManager } from '../service/GamepadManager';
 import { AXIS_MAX } from '../service/GamepadTypes';
 import { AppColors } from '../common/Theme';
 
-// 手柄状态类
 class ControllerInputState {
   buttons: number = 0;
   leftStickX: number = 0;
@@ -30,7 +25,6 @@ class ControllerInputState {
   rightTrigger: number = 0;
 }
 
-// @Builder 按引用传参接口
 interface StickVisualizerParams {
   x: number;
   y: number;
@@ -50,7 +44,6 @@ interface ABXYButtonParams {
   color: string;
 }
 
-// 设备信息类
 class DeviceInfo {
   name: string = '';
   vid: number = 0;
@@ -58,7 +51,6 @@ class DeviceInfo {
   type: number = 0;
 }
 
-// USB 驱动监听器实现类
 class TestViewDriverListener implements UsbDriverListener {
   private view: UsbControllerTestView;
   
@@ -76,9 +68,9 @@ class TestViewDriverListener implements UsbDriverListener {
     const state = new ControllerInputState();
     state.buttons = buttonFlags;
     state.leftStickX = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(leftStickX * AXIS_MAX)));
-    state.leftStickY = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(-leftStickY * AXIS_MAX)));  // Y轴取负与串流一致
+    state.leftStickY = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(-leftStickY * AXIS_MAX)));
     state.rightStickX = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(rightStickX * AXIS_MAX)));
-    state.rightStickY = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(-rightStickY * AXIS_MAX)));  // Y轴取负与串流一致
+    state.rightStickY = Math.max(-AXIS_MAX, Math.min(AXIS_MAX, Math.floor(-rightStickY * AXIS_MAX)));
     state.leftTrigger = leftTrigger;
     state.rightTrigger = rightTrigger;
     
@@ -107,7 +99,6 @@ export struct UsbControllerTestView {
   @State isRunning: boolean = false;
   @State deviceCount: number = 0;
   @State connectedDevices: DeviceInfo[] = [];
-  // 使用纯原始类型 @State —— ArkUI 对 number/boolean 的变化检测最可靠
   @State displayButtons: number = 0;
   @State displayLSX: number = 0;
   @State displayLSY: number = 0;
@@ -126,8 +117,6 @@ export struct UsbControllerTestView {
   private lastPollStatTime: number = 0;
   private pollRateTimer: number = -1;
   private uiRefreshTimer: number = -1;
-  // 内部缓冲区：USB 轮询回调（高频，125-1000Hz）写入此变量，
-  // 由 UI 刷新定时器同步到 @State 以正确触发 UI 重渲染
   private internalLastInputState: ControllerInputState | null = null;
 
   aboutToAppear(): void {
@@ -168,9 +157,6 @@ export struct UsbControllerTestView {
     }
   }
 
-  // 30Hz UI 刷新定时器：将内部缓冲区同步到 @State 变量
-  // USB 轮询回调频率为 125-1000Hz，远高于 UI 刷新需求。
-  // 使用纯原始类型赋值确保 ArkUI 可靠检测变化。
   private startUiRefreshTimer(): void {
     this.uiRefreshTimer = setInterval(() => {
       if (this.internalLastInputState !== null) {
@@ -208,7 +194,6 @@ export struct UsbControllerTestView {
   }
   
   onDeviceAdded(controller: AbstractController): void {
-    // UI 层防御：防止同一设备重复显示
     const exists = this.connectedDevices.some((d: DeviceInfo) => d.vid === controller.getVendorId() && d.pid === controller.getProductId());
     if (exists) {
       this.addLog(`设备已存在，跳过重复: ${controller.getName()}`);
@@ -250,7 +235,6 @@ export struct UsbControllerTestView {
 
     this.listener = new TestViewDriverListener(this);
     this.usbDriverService = UsbDriverService.getInstance();
-    // 临时接管 listener 用于测试（覆盖 GamepadManager 的 listener）
     this.usbDriverService.setListener(this.listener);
     this.usbDriverService.start();
     this.isRunning = true;
@@ -259,16 +243,8 @@ export struct UsbControllerTestView {
 
   private stopDriver(): void {
     if (this.usbDriverService !== null) {
-      // 测试页面场景：必须调用 stop() 释放 USB 设备的独占声明（claimInterface），
-      // 否则切换到 GCK 测试页时，Game Controller Kit 无法通过系统 HID 输入栈检测到该设备。
-      // 注意：这不影响串流，因为测试页面不在串流路径上。
-      // 用户切回 USB Tab 时 startDriver() 会重新调用 start() 重新枚举设备。
       this.usbDriverService.stop();
       
-      // 重要：仅恢复 GamepadManager 的 listener 引用，但不重启 USB 驱动。
-      // 之前调用 reattachInputCallbacks() 会在传统模式下执行 usbDriverService.start()，
-      // 导致设备被立即重新独占，GCK 测试页面无法检测到手柄。
-      // GamepadManager 会在需要时（如串流启动）自行重启 USB 驱动。
       this.restoreGamepadManagerListenerOnly();
       
       this.usbDriverService = null;
@@ -289,15 +265,11 @@ export struct UsbControllerTestView {
   }
   
   /**
-   * 仅恢复 GamepadManager 的 USB 驱动 listener，不重启驱动。
    * 
-   * 与 reattachInputCallbacks() 不同，此方法不会调用 usbDriverService.start()，
-   * 避免在切换到 GCK 测试页时立即重新独占 USB 设备。
    */
   private restoreGamepadManagerListenerOnly(): void {
     try {
       const gamepadManager = GamepadManager.getInstance();
-      // 仅恢复 listener，不启动驱动
       UsbDriverService.getInstance().setListener(gamepadManager);
       console.info('[UsbControllerTest] 已恢复 GamepadManager listener（未重启驱动）');
     } catch (err) {
@@ -376,9 +348,7 @@ export struct UsbControllerTestView {
   build() {
     Scroll() {
       Column({ space: 10 }) {
-        // ═══ 设备状态 + 控制按钮（合并为一张卡片）═══
         Column({ space: 10 }) {
-          // 标题 + 操作按钮
           Row() {
             Text('设备状态')
               .fontSize(15)
@@ -416,7 +386,6 @@ export struct UsbControllerTestView {
           }
           .width('100%')
 
-          // 统计数字行
           Row() {
             Column({ space: 2 }) {
               Text(`${this.deviceCount}`)
@@ -467,7 +436,6 @@ export struct UsbControllerTestView {
           }
           .width('100%')
 
-          // 已连接设备列表
           if (this.connectedDevices.length > 0) {
             ForEach(this.connectedDevices, (device: DeviceInfo) => {
               Row({ space: 8 }) {
@@ -498,10 +466,8 @@ export struct UsbControllerTestView {
         .borderRadius(12)
         .border({ width: 1, color: AppColors.CardBorder })
 
-        // ═══ 输入可视化卡片 ═══
         if (this.hasInput) {
           Column({ space: 10 }) {
-            // 标题行
             Row() {
               Text('输入状态')
                 .fontSize(15)
@@ -517,9 +483,7 @@ export struct UsbControllerTestView {
             }
             .width('100%')
 
-            // 扳机区
             Row() {
-              // 左侧
               Column({ space: 4 }) {
                 Row() {
                   Text('LB')
@@ -553,7 +517,6 @@ export struct UsbControllerTestView {
 
               Blank()
 
-              // 右侧
               Column({ space: 4 }) {
                 Row() {
                   Text('RB')
@@ -588,9 +551,7 @@ export struct UsbControllerTestView {
             .width('100%')
             .padding({ left: 20, right: 20 })
 
-            // 主体区
             Row() {
-              // 左：摇杆 + D-Pad
               Column({ space: 14 }) {
                 this.StickVisualizer({ x: this.displayLSX, y: this.displayLSY, isRight: false })
                 Text((this.displayButtons & ButtonFlags.LS_CLK_FLAG) !== 0 ? 'L3 ●' : 'L3')
@@ -603,7 +564,6 @@ export struct UsbControllerTestView {
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
 
-              // 中：功能键
               Column() {
                 Row({ space: 16 }) {
                   this.FunctionButton({ label: '≡', buttons: this.displayButtons, flag: ButtonFlags.BACK_FLAG })
@@ -615,7 +575,6 @@ export struct UsbControllerTestView {
               .alignItems(HorizontalAlign.Center)
               .justifyContent(FlexAlign.Center)
 
-              // 右：ABXY + 摇杆
               Column({ space: 14 }) {
                 this.ABXYVisualizer()
                 this.StickVisualizer({ x: this.displayRSX, y: this.displayRSY, isRight: true })
@@ -631,7 +590,6 @@ export struct UsbControllerTestView {
             .width('100%')
             .padding({ left: 4, right: 4 })
 
-            // 数值行
             Row() {
               Column() {
                 Text(`L: ${this.formatStickValue(this.displayLSX)},${this.formatStickValue(this.displayLSY)}`)
@@ -676,7 +634,6 @@ export struct UsbControllerTestView {
           .border({ width: 1, color: AppColors.CardBorder })
         }
 
-        // ═══ 日志卡片 ═══
         Column({ space: 8 }) {
           Row() {
             Text('调试日志')
@@ -723,11 +680,9 @@ export struct UsbControllerTestView {
     .scrollBar(BarState.Off)
   }
 
-  // 摇杆可视化 - 精致圆盘风格
   @Builder
   StickVisualizer($$: StickVisualizerParams) {
     Stack() {
-      // 外圈 - 柔和边框
       Circle()
         .width(76)
         .height(76)
@@ -735,7 +690,6 @@ export struct UsbControllerTestView {
         .stroke('#20808080')
         .strokeWidth(1.5)
 
-      // 十字参考线（淡）
       Line()
         .width(56)
         .height(0.5)
@@ -745,7 +699,6 @@ export struct UsbControllerTestView {
         .height(56)
         .backgroundColor('#15808080')
 
-      // 死区范围
       Circle()
         .width(12)
         .height(12)
@@ -753,7 +706,6 @@ export struct UsbControllerTestView {
         .stroke('#18808080')
         .strokeWidth(0.5)
       
-      // 指示点 — 渐变发光
       Circle()
         .width(18)
         .height(18)
@@ -769,7 +721,6 @@ export struct UsbControllerTestView {
     .height(76)
   }
 
-  // 功能键（Back/Home/Start）- 小型胶囊风格
   @Builder
   FunctionButton($$: ButtonStateParams) {
     Column() {
@@ -787,25 +738,20 @@ export struct UsbControllerTestView {
     .animation({ duration: 80 })
   }
   
-  // ABXY 按钮菱形布局 — 紧凑排列
   @Builder
   ABXYVisualizer() {
     Column({ space: 1 }) {
-      // Y 在上
       this.ABXYButton({ label: 'Y', buttons: this.displayButtons, flag: ButtonFlags.Y_FLAG, color: '#FFB900' })
 
-      // X 和 B 在中间
       Row({ space: 22 }) {
         this.ABXYButton({ label: 'X', buttons: this.displayButtons, flag: ButtonFlags.X_FLAG, color: '#0078D4' })
         this.ABXYButton({ label: 'B', buttons: this.displayButtons, flag: ButtonFlags.B_FLAG, color: '#E81123' })
       }
 
-      // A 在下
       this.ABXYButton({ label: 'A', buttons: this.displayButtons, flag: ButtonFlags.A_FLAG, color: '#107C10' })
     }
   }
 
-  // 单个 ABXY 按钮 — 精致圆形
   @Builder
   ABXYButton($$: ABXYButtonParams) {
     Column() {
@@ -826,14 +772,11 @@ export struct UsbControllerTestView {
     .animation({ duration: 60 })
   }
   
-  // D-Pad 十字键 — 更紧凑的十字形
   @Builder
   DPadVisualizer() {
     Column({ space: 1 }) {
-      // 上
       this.DPadArrow({ label: '▲', buttons: this.displayButtons, flag: ButtonFlags.UP_FLAG })
 
-      // 左 中心 右
       Row({ space: 1 }) {
         this.DPadArrow({ label: '◀', buttons: this.displayButtons, flag: ButtonFlags.LEFT_FLAG })
         Column()
@@ -844,12 +787,10 @@ export struct UsbControllerTestView {
         this.DPadArrow({ label: '▶', buttons: this.displayButtons, flag: ButtonFlags.RIGHT_FLAG })
       }
 
-      // 下
       this.DPadArrow({ label: '▼', buttons: this.displayButtons, flag: ButtonFlags.DOWN_FLAG })
     }
   }
 
-  // D-Pad 单个方向键
   @Builder
   DPadArrow($$: ButtonStateParams) {
     Column() {

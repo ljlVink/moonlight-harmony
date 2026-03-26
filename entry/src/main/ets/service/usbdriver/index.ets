@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * USB Driver 模块导出
- */
 
 export { AbstractController } from './AbstractController';
 export { UsbDriverListener, UsbDriverStateListener } from './UsbDriverListener';
@@ -34,20 +31,15 @@ export {
   SwitchPro
 } from './ControllerConstants';
 
-// 原生 HID 解析器
 export { NativeHidParserService } from './NativeHidParserService';
 export { NativeButtonFlags, NativeGamepadType } from './NativeGamepad';
 export type { NativeGamepadState } from './NativeGamepad';
 
-/**
- * 协议类型枚举
- * 用于 NativeHidController.setForceProtocolType()
- */
 export enum ProtocolType {
-  AUTO = 0,        // 自动检测
-  XBOX = 1,        // Xbox 协议
-  DS4 = 2,         // DualShock 4 协议
-  SWITCH = 3,      // Switch Pro 协议
-  GENERIC = 4,     // 通用 HID 协议
-  DUALSENSE = 5    // DualSense (PS5) 协议
+  AUTO = 0,
+  XBOX = 1,
+  DS4 = 2,
+  SWITCH = 3,
+  GENERIC = 4,
+  DUALSENSE = 5
 }

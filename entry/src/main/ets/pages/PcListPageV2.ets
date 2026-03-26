@@ -33,14 +33,7 @@ import { PcListTitleBar, TitleBarConfig } from '../components/PcListTitleBar';
 import { PinDialogView, AboutDialogView } from '../components/PcListDialogs';
 
 /**
- * 电脑列表页面 (现代化版本)
- * 
- * 功能:
- * - 显示已添加的电脑列表
- * - 支持下拉刷新
- * - 支持 mDNS 自动发现
- * - 支持 WOL 唤醒
- * - 支持配对/取消配对
+ * Computer list page (modern version)
  */
 @Entry
 @Component
@@ -54,23 +47,20 @@ struct PcListPageV2 {
   @State pairingComputerName: string = '';
   @State backgroundImageUrl: string = '';
   @State showAboutDialog: boolean = false;
-  @State isLandscape: boolean = false;  // 横屏检测
-  @State screenWidth: number = 0;       // 屏幕宽度
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;  // 动态状态栏安全区高度
+  @State isLandscape: boolean = false;
+  @State screenWidth: number = 0;
+  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
   
-  // LazyForEach 数据源
   private computerDataSource: ComputerDataSource = new ComputerDataSource();
   
   private computerManager: ComputerManager = ComputerManager.getInstance();
   private backgroundUtil: BackgroundImageUtil = BackgroundImageUtil.getInstance();
   private actions: PcListActions | null = null;
   
-  // 摇一摇相关
   private lastShakeTime: number = 0;
-  private shakeThreshold: number = 15; // 加速度阈值
-  private shakeCooldown: number = 2000; // 2秒冷却时间
+  private shakeThreshold: number = 15;
+  private shakeCooldown: number = 2000;
   
-  // CustomDialogController 配置
   private optionPickerDialogConfig: OptionPickerDialogConfig = {
     title: '',
     options: [],
@@ -86,13 +76,12 @@ struct PcListPageV2 {
     content: ''
   };
   
-  // CustomDialogController 实例
   private optionPickerDialogController: CustomDialogController | null = null;
   private confirmDialogController: CustomDialogController | null = null;
   private infoDialogController: CustomDialogController | null = null;
 
   /**
-   * 显示确认弹窗
+   * Show confirm dialog
    */
   private showConfirmDialog(config: ConfirmDialogConfig): void {
     this.confirmDialogConfig = config;
@@ -108,7 +97,7 @@ struct PcListPageV2 {
   }
   
   /**
-   * 显示信息弹窗
+   * Show info dialog
    */
   private showInfoDialog(config: InfoDialogConfig): void {
     this.infoDialogConfig = config;
@@ -124,11 +113,9 @@ struct PcListPageV2 {
   }
 
   aboutToAppear(): void {
-    // 先设置 context 以便后续使用本地缓存
     const context = getContext(this) as common.UIAbilityContext;
     this.backgroundUtil.setContext(context);
 
-    // 初始化业务逻辑处理类
     this.actions = new PcListActions({
       showConfirmDialog: (config: ConfirmDialogConfig) => this.showConfirmDialog(config),
       showInfoDialog: (config: InfoDialogConfig) => this.showInfoDialog(config),
@@ -148,56 +135,46 @@ struct PcListPageV2 {
   
   private async loadBackgroundImage(): Promise<void> {
     try {
-      // 先检查背景图类型，如果是 NONE 则不加载
       const bgType = await this.backgroundUtil.getBackgroundImageType();
       if (bgType === BackgroundImageType.NONE) {
         this.backgroundImageUrl = '';
         return;
       }
 
-      // 首次使用检查免责声明
       const disclaimerAccepted = await this.backgroundUtil.isDisclaimerAccepted();
       if (!disclaimerAccepted) {
-        // 显示免责声明弹窗
         this.showBackgroundDisclaimerDialog();
         return;
       }
       
-      // 优先使用本地缓存的图片
       const localPath = await this.backgroundUtil.downloadToLocalCache();
       if (localPath) {
         this.backgroundImageUrl = 'file://' + localPath;
       } else {
-        // 如果本地缓存失败，使用在线 URL
         this.backgroundImageUrl = await this.backgroundUtil.getBackgroundImageUrl();
       }
     } catch (err) {
-      // 忽略错误
     }
   }
   
   /**
-   * 页面返回时重新加载背景图设置
-   * 用户可能在设置页面更改了背景图类型
+   * Reload background image settings when page returns
    */
   private async reloadBackgroundImage(): Promise<void> {
     try {
-      // 检查类型是否发生变化
       const typeChanged = await this.backgroundUtil.reload();
       const currentType = await this.backgroundUtil.getBackgroundImageType();
       if (currentType === BackgroundImageType.NONE) {
         this.backgroundImageUrl = '';
       } else if (typeChanged) {
-        // 类型变化，重新加载（缓存已在 setBackgroundImageType 中清除）
         this.loadBackgroundImage();
       }
     } catch (err) {
-      // 忽略错误
     }
   }
 
   /**
-   * 显示背景图免责声明弹窗
+   * Show background image disclaimer dialog
    */
   private showBackgroundDisclaimerDialog(): void {
     const config: ConfirmDialogConfig = {
@@ -210,7 +187,6 @@ struct PcListPageV2 {
       cancelButton: {
         text: '关闭壁纸',
         onClick: async () => {
-          // 用户选择关闭壁纸，设置为 NONE
           await this.backgroundUtil.setDisclaimerAccepted();
           await this.backgroundUtil.disableBackgroundImage();
           this.backgroundImageUrl = '';
@@ -219,7 +195,6 @@ struct PcListPageV2 {
       confirmButton: {
         text: '知悉并继续',
         onClick: async () => {
-          // 用户同意，保存状态并加载壁纸
           await this.backgroundUtil.setDisclaimerAccepted();
           this.loadBackgroundImageAfterDisclaimer();
         }
@@ -229,7 +204,7 @@ struct PcListPageV2 {
   }
   
   /**
-   * 免责声明确认后加载背景图
+   * Load background image after disclaimer accepted
    */
   private async loadBackgroundImageAfterDisclaimer(): Promise<void> {
     try {
@@ -240,7 +215,6 @@ struct PcListPageV2 {
         this.backgroundImageUrl = await this.backgroundUtil.getBackgroundImageUrl();
       }
     } catch (err) {
-      // 忽略错误
     }
   }
 
@@ -258,18 +232,15 @@ struct PcListPageV2 {
       
       this.isInitializing = false;
       
-      // 异步刷新状态
       this.computerManager.refreshAllComputers().then(() => {
         this.syncViewModelFromManager();
-        // 启动轮询
         this.computerManager.startPolling();
       }).catch((err: Error) => {
-        console.error('[MOONLIGHT] PcListPage: 刷新失败', err);
-        // 启动轮询
+        console.error('[MOONLIGHT] PcListPage: Refresh failed', err);
         this.computerManager.startPolling();
       });
     } catch (err) {
-      console.error('PcListPage: 初始化失败', err);
+      console.error('PcListPage: Initialization failed', err);
       this.isInitializing = false;
     }
   }
@@ -277,49 +248,41 @@ struct PcListPageV2 {
   private async syncViewModelFromManager(): Promise<void> {
     const computers = await this.computerManager.getComputers();
     
-    // 创建 UUID 到电脑信息的映射
     const computerMap = new Map<string, ComputerInfo>();
     for (const c of computers) {
       computerMap.set(c.uuid, c);
     }
     
-    // 获取现有的 ObservableComputer 列表
     const existingMap = new Map<string, ObservableComputer>();
     for (const oc of this.viewModel.computers) {
       existingMap.set(oc.uuid, oc);
     }
     
-    // 构建新的列表，复用现有对象以避免重新渲染
     const newList: ObservableComputer[] = [];
     let hasChanges = false;
     
     for (const c of computers) {
       const existing = existingMap.get(c.uuid);
       if (existing) {
-        // 更新现有对象的属性（@Observed 会处理响应式更新）
         existing.updateFrom(c);
         newList.push(existing);
         existingMap.delete(c.uuid);
       } else {
-        // 新电脑，创建新对象
         newList.push(new ObservableComputer(c));
         hasChanges = true;
       }
     }
     
-    // 如果有电脑被删除
     if (existingMap.size > 0) {
       hasChanges = true;
     }
     
-    // 只有当电脑数量变化时才替换整个数组
     if (hasChanges || this.viewModel.computers.length !== newList.length) {
-      // 排序：在线已配对 > 在线未配对 > 离线，同优先级按名称排序
       newList.sort((a, b) => {
         const getPriority = (c: ObservableComputer): number => {
-          if (c.isOnline && c.isPaired) return 0;  // 在线已配对
-          if (c.isOnline) return 1;                  // 在线未配对
-          return 2;                                   // 离线
+          if (c.isOnline && c.isPaired) return 0;
+          if (c.isOnline) return 1;
+          return 2;
         };
         const pa = getPriority(a);
         const pb = getPriority(b);
@@ -329,11 +292,9 @@ struct PcListPageV2 {
         return a.name.localeCompare(b.name);
       });
       this.viewModel.computers = newList;
-      // 同步更新 LazyForEach 数据源
       this.computerDataSource.reloadData(newList);
     }
     
-    // 更新缓存的统计值，确保 UI 显示正确
     this.viewModel.computerCount = newList.length;
     this.viewModel.onlineCount = newList.filter(c => c.isOnline).length;
   }
@@ -345,33 +306,24 @@ struct PcListPageV2 {
   }
 
   onPageShow(): void {
-    // 页面再次显示时启动轮询
     this.computerManager.startPolling();
     if (!this.isInitializing) {
-      // 先同步当前数据
       this.syncViewModelFromManager();
-      // 立即刷新一次状态（异步），确保显示最新的游戏运行状态
       this.computerManager.refreshAllComputers().then(() => {
         this.syncViewModelFromManager();
       }).catch((err: Error) => {
-        console.warn('[MOONLIGHT] PcListPage: 刷新失败', err);
+        console.warn('[MOONLIGHT] PcListPage: Refresh failed', err);
       });
-      // 重新加载背景图设置（用户可能在设置中更改了背景图类型）
-      // 注意：首次加载时 aboutToAppear 已调用 loadBackgroundImage，不需要重复
       this.reloadBackgroundImage();
     }
-    // 重新启动摇一摇检测
     this.startShakeDetection();
   }
   
   onPageHide(): void {
-    // 页面隐藏时停止轮询（节省资源）
     this.computerManager.stopPolling();
-    // 停止摇一摇检测
     this.stopShakeDetection();
   }
   
-  // 启动摇一摇检测
   private startShakeDetection(): void {
     try {
       sensor.on(sensor.SensorId.ACCELEROMETER, (data) => {
@@ -380,41 +332,32 @@ struct PcListPageV2 {
         const z = data.z;
         const acceleration = Math.sqrt(x * x + y * y + z * z);
         
-        // 检测是否超过阈值（摇一摇动作）
-        // 正常重力加速度约为9.8，需要减去
         const shakeForce = Math.abs(acceleration - 9.8);
         
         if (shakeForce > this.shakeThreshold) {
           const now = Date.now();
-          // 冷却时间检查，防止连续触发
           if (now - this.lastShakeTime > this.shakeCooldown) {
             this.lastShakeTime = now;
             this.refreshWallpaper();
           }
         }
-      }, { interval: 100000000 }); // 100ms 采样间隔
+      }, { interval: 100000000 });
     } catch (err) {
-      // 某些设备可能不支持加速度传感器
     }
   }
   
-  // 停止摇一摇检测
   private stopShakeDetection(): void {
     try {
       sensor.off(sensor.SensorId.ACCELEROMETER);
     } catch (err) {
-      // 忽略错误
     }
   }
 
   build() {
     Stack() {
-      // 背景图层
       BackgroundImage({ imageUrl: this.backgroundImageUrl, imageOpacity: 0.7 })
-      
-      // 主内容
+  
       Column() {
-        // 标题栏
         PcListTitleBar({
           config: {
             onlineCount: this.viewModel.onlineCount,
@@ -425,7 +368,6 @@ struct PcListPageV2 {
           } as TitleBarConfig
         })
         
-        // 电脑列表或空状态
         if (this.isInitializing) {
           this.LoadingState()
         } else if (this.viewModel.computers.length === 0) {
@@ -434,7 +376,6 @@ struct PcListPageV2 {
           this.ComputerList()
         }
         
-        // 底部操作栏 (有电脑时显示，空状态由 EmptyState 自带按钮)
         if (!this.isInitializing && this.viewModel.computers.length > 0) {
           this.BottomBar()
         }
@@ -443,7 +384,6 @@ struct PcListPageV2 {
       .height('100%')
       .defaultFocus(true)
       
-      // PIN 对话框
       if (this.showPinDialog) {
         PinDialogView({
           pin: this.currentPin,
@@ -452,7 +392,6 @@ struct PcListPageV2 {
         })
       }
       
-      // 关于对话框
       if (this.showAboutDialog) {
         AboutDialogView({
           onClose: () => { this.showAboutDialog = false; }
@@ -462,7 +401,6 @@ struct PcListPageV2 {
     .width('100%')
     .height('100%')
     .onAreaChange((oldValue: Area, newValue: Area) => {
-      // 检测屏幕尺寸变化（旋转屏幕时）
       const width = newValue.width as number;
       const height = newValue.height as number;
       this.screenWidth = width;
@@ -490,7 +428,6 @@ struct PcListPageV2 {
   @Builder
   EmptyState() {
     Column() {
-      // 霓虹风格插图
       Column() {
         Text('🖥️')
           .fontSize(48)
@@ -520,8 +457,7 @@ struct PcListPageV2 {
         .fontSize(AppSizes.FontCaption)
         .fontColor(AppColors.TextTertiary)
         .margin({ top: AppSpacing.Small })
-
-      // 快速操作按钮 - 霓虹风格
+      
       Row() {
         Button({ type: ButtonType.Normal }) {
           Row() {
@@ -572,20 +508,18 @@ struct PcListPageV2 {
   }
 
   /**
-   * 计算网格列数
-   * 横屏或宽屏时使用多列布局
+   * Calculate grid columns based on screen width
    */
   private getGridColumns(): number {
-    if (this.screenWidth >= 900) return 3;  // 大屏幕 3 列
-    if (this.screenWidth >= 600 || this.isLandscape) return 2;  // 中等屏幕或横屏 2 列
-    return 1;  // 竖屏单列
+    if (this.screenWidth >= 900) return 3;
+    if (this.screenWidth >= 600 || this.isLandscape) return 2;
+    return 1;
   }
 
   @Builder
   ComputerList() {
     Refresh({ refreshing: $$this.isRefreshing }) {
       if (this.getGridColumns() > 1) {
-        // 横屏/宽屏：使用 Grid 布局
         Grid() {
           ForEach(this.viewModel.computers, (computer: ObservableComputer, index: number) => {
             GridItem() {
@@ -612,7 +546,6 @@ struct PcListPageV2 {
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
       } else {
-        // 竖屏：使用 List 布局
         List({ space: AppSpacing.Medium }) {
           LazyForEach(this.computerDataSource, (computer: ObservableComputer, index: number) => {
             ListItem() {
@@ -647,7 +580,6 @@ struct PcListPageV2 {
   @Builder
   BottomBar() {
     Row() {
-      // 扫描按钮 - 搜索网络电脑
       Button({ type: ButtonType.Circle }) {
         if (this.isScanning) {
           LoadingProgress()
@@ -663,11 +595,10 @@ struct PcListPageV2 {
       }
       .width(44)
       .height(44)
-      .backgroundColor(0x1A000000)  // 与 SaveButton 保持一致的半透明背景
+      .backgroundColor(0x1A000000)
       .enabled(!this.isScanning)
       .onClick(() => this.scanNetwork())
-
-      // 添加按钮 - 突出显示的中央大按钮
+      
       Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_add'))
           .width(28)
@@ -686,9 +617,7 @@ struct PcListPageV2 {
       .margin({ left: AppSpacing.XLarge, right: AppSpacing.XLarge })
       .onClick(() => router.pushUrl({ url: 'pages/AddPcPageV2' }))
       
-      // 下载壁纸到相册 - 使用 SaveButton 安全控件
-      // 注意：SaveButton 作为安全控件，背景色透明度有最低限制 (α >= 0x1A)
-      SaveButton({ 
+      SaveButton({
         icon: SaveIconStyle.FULL_FILLED, 
         buttonType: ButtonType.Circle 
       })
@@ -696,7 +625,7 @@ struct PcListPageV2 {
         .height(44)
         .iconSize(22)
         .iconColor(AppColors.TextSecondary)
-        .backgroundColor(0x1A000000)  // 最低透明度的黑色背景
+        .backgroundColor(0x1A000000)
         .onClick(this.handleSaveWallpaperClick)
     }
     .width('100%')
@@ -710,13 +639,11 @@ struct PcListPageV2 {
     })
   }
   
-  // 刷新壁纸（获取新的随机图片）- 由摇一摇触发
   private async refreshWallpaper(): Promise<void> {
     try {
       promptAction.showToast({ message: '正在刷新壁纸...' });
-      const localPath = await this.backgroundUtil.downloadToLocalCache(true); // forceRefresh = true
+      const localPath = await this.backgroundUtil.downloadToLocalCache(true);
       if (localPath) {
-        // 添加时间戳参数强制 Image 组件重新加载（绕过缓存）
         this.backgroundImageUrl = 'file://' + localPath + '?t=' + Date.now();
         promptAction.showToast({ message: '壁纸已刷新' });
       } else {
@@ -728,8 +655,7 @@ struct PcListPageV2 {
   }
   
   /**
-   * SaveButton 保存壁纸点击回调
-   * 使用安全控件授权后保存图片到相册
+   * SaveButton callback for saving wallpaper to album
    */
   handleSaveWallpaperClick: SaveButtonCallback = async (
     event: ClickEvent, 
@@ -747,7 +673,6 @@ struct PcListPageV2 {
         const context = getContext(this) as common.UIAbilityContext;
         promptAction.showToast({ message: '正在保存壁纸...' });
         
-        // 读取本地缓存文件
         const stat = fileIo.statSync(localPath);
         if (!stat || stat.size === 0) {
           promptAction.showToast({ message: '缓存图片不存在' });
@@ -759,28 +684,26 @@ struct PcListPageV2 {
         fileIo.readSync(file.fd, imageData);
         fileIo.closeSync(file.fd);
         
-        // 使用 SaveButton 授权后创建图片资源
         const helper = photoAccessHelper.getPhotoAccessHelper(context);
         const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpg');
         
-        // 写入图片数据
         const photoFile = await fileIo.open(uri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
         await fileIo.write(photoFile.fd, imageData);
         await fileIo.close(photoFile.fd);
         
         promptAction.showToast({ message: '壁纸已保存到相册' });
       } catch (err) {
-        console.error('下载壁纸失败', err);
+        console.error('Failed to save wallpaper', err);
         const e = err as BusinessError;
-        promptAction.showToast({ message: `保存失败: ${e.message || '未知错误'}` });
+        promptAction.showToast({ message: `Save failed: ${e.message || 'Unknown error'}` });
       }
     } else if (result === SaveButtonOnClickResult.TEMPORARY_AUTHORIZATION_FAILED) {
-      console.error('保存授权失败', error);
-      promptAction.showToast({ message: '保存授权失败' });
+      console.error('Save authorization failed', error);
+      promptAction.showToast({ message: 'Save authorization failed' });
     }
   };
 
-  // ==================== 业务逻辑 ====================
+  // ==================== Business Logic ====================
   
   private async refreshComputers(): Promise<void> {
     this.isRefreshing = true;
@@ -788,13 +711,15 @@ struct PcListPageV2 {
       await this.computerManager.refreshAllComputers();
       this.syncViewModelFromManager();
     } catch (err) {
-      console.error('刷新失败', err);
+      console.error('Refresh failed', err);
     } finally {
       this.isRefreshing = false;
     }
   }
 
-  /** 扫码：自动识别配对 URL 或按键配置 */
+  /**
+   * Scan QR code: auto-detect pairing URL or key config
+   */
   private async scanAndImportKeys(): Promise<void> {
     const result = await QrShareService.scanQrCode();
     if (!result) {
@@ -802,9 +727,8 @@ struct PcListPageV2 {
       return;
     }
 
-    // 检测 moonlight://pair URL（Sunshine QR 配对）
     const trimmed = result.trim();
-    console.info(`[Scan] 扫码结果 (${trimmed.length}字符): ${trimmed.substring(0, 100)}`);
+    console.info(`[Scan] Scan result (${trimmed.length} chars): ${trimmed.substring(0, 100)}`);
     if (trimmed.startsWith('moonlight://pair')) {
       await this.handleQrPairing(trimmed);
       return;
@@ -847,9 +771,10 @@ struct PcListPageV2 {
     this.optionPickerDialogController.open();
   }
 
-  /** 处理 Sunshine QR 配对 URL */
+  /**
+   * Handle Sunshine QR pairing URL
+   */
   private async handleQrPairing(url: string): Promise<void> {
-    // 解析 moonlight://pair?host=...&port=...&pin=...&name=...
     const paramStr = url.substring(url.indexOf('?') + 1);
     const params = new Map<string, string>();
     for (const part of paramStr.split('&')) {
@@ -873,7 +798,6 @@ struct PcListPageV2 {
     promptAction.showToast({ message: `正在连接 ${serverName}...`, duration: 2000 });
 
     try {
-      // 1. 添加电脑
       const computer = await this.computerManager.addComputer(address);
       this.syncViewModelFromManager();
 
@@ -882,8 +806,7 @@ struct PcListPageV2 {
         return;
       }
 
-      // 2. 使用 QR 码中的 PIN 自动配对（服务端已 preset，无需用户输入）
-      promptAction.showToast({ message: `正在与 ${serverName} 配对...`, duration: 2000 });
+      promptAction.showToast({ message: `Pairing with ${serverName}...`, duration: 2000 });
       const context = getContext() as common.UIAbilityContext;
       const pairingManager = new PairingManager(
         selectBestAddress(computer), computer.uuid, context, computer.httpPort
@@ -922,15 +845,14 @@ struct PcListPageV2 {
       this.syncViewModelFromManager();
       promptAction.showToast({ message: '扫描完成' });
     } catch (err) {
-      console.error('扫描失败', err);
-      promptAction.showToast({ message: '扫描失败' });
+      console.error('Scan failed', err);
+      promptAction.showToast({ message: 'Scan failed' });
     } finally {
       this.isScanning = false;
     }
   }
 
   private showComputerMenu(computer: ObservableComputer): void {
-    // 使用 ComputerMenuHelper 生成菜单
     const callbacks: ComputerMenuCallbacks = {
       onWake: (c) => this.actions!.wakeComputer(c),
       onPair: (c) => this.actions!.pairWithComputer(c),
@@ -949,7 +871,6 @@ struct PcListPageV2 {
     
     const menuResult = ComputerMenuHelper.generateMenu(computer, callbacks);
 
-    // 设置配置
     this.optionPickerDialogConfig = {
       title: computer.name,
       subtitle: computer.statusText,
@@ -963,7 +884,6 @@ struct PcListPageV2 {
       }
     };
     
-    // 创建并打开弹窗
     this.optionPickerDialogController = new CustomDialogController({
       builder: OptionPickerDialog({
         config: this.optionPickerDialogConfig

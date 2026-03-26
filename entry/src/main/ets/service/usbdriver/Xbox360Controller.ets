@@ -9,9 +9,7 @@
  */
 
 /**
- * Xbox 360 控制器驱动
  * 
- * 参考 Android moonlight-android Xbox360Controller
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -23,7 +21,6 @@ import { readShortLE, AXIS_MAX, TRIGGER_MAX } from '../GamepadTypes';
 const TAG = '[USB-X360]';
 
 export class Xbox360Controller extends AbstractXboxController {
-  // 去重: 记录上次发送的振动值
   private lastRumbleLow: number = -1;
   private lastRumbleHigh: number = -1;
   
@@ -37,16 +34,11 @@ export class Xbox360Controller extends AbstractXboxController {
     this.deviceName = 'Xbox 360 Controller';
   }
   
-  /**
-   * 检查是否可以驱动该设备
-   */
   static canClaimDevice(device: usbManager.USBDevice): boolean {
-    // 检查厂商 ID
     if (!Xbox360.SUPPORTED_VENDORS.includes(device.vendorId)) {
       return false;
     }
     
-    // 检查接口
     if (!device.configs || device.configs.length === 0) {
       return false;
     }
@@ -58,7 +50,6 @@ export class Xbox360Controller extends AbstractXboxController {
     
     const iface = config.interfaces[0];
     
-    // 检查接口类、子类、协议
     const isXbox360 = 
       iface.clazz === UsbClass.USB_CLASS_VENDOR_SPEC &&
       iface.subClass === Xbox360.IFACE_SUBCLASS &&
@@ -71,31 +62,22 @@ export class Xbox360Controller extends AbstractXboxController {
     return isXbox360;
   }
   
-  /**
-   * 无符号字节转换
-   */
   private unsignByte(b: number): number {
     return b & 0xFF;
   }
   
-  /**
-   * 处理输入报告
-   */
   protected handleRead(buffer: Uint8Array): boolean {
     if (buffer.length < 14) {
       console.warn(`${TAG} 读取数据太短: ${buffer.length}`);
       return false;
     }
     
-    // Xbox 360 输入报告: byte[0]=0x00 (report ID), byte[1]=0x14 (长度)
     if (buffer[0] !== 0x00 || buffer[1] !== 0x14) {
       return false;
     }
     
-    // 跳过前两个字节（报告 ID 和长度）
     let offset = 2;
     
-    // D-Pad 和 Start/Select
     const b = buffer[offset++];
     this.setButtonFlag(ButtonFlags.LEFT_FLAG, b & 0x04);
     this.setButtonFlag(ButtonFlags.RIGHT_FLAG, b & 0x08);
@@ -106,7 +88,6 @@ export class Xbox360Controller extends AbstractXboxController {
     this.setButtonFlag(ButtonFlags.LS_CLK_FLAG, b & 0x40);
     this.setButtonFlag(ButtonFlags.RS_CLK_FLAG, b & 0x80);
     
-    // ABXY 和 LB/RB
     const b2 = buffer[offset++];
     this.setButtonFlag(ButtonFlags.A_FLAG, b2 & 0x10);
     this.setButtonFlag(ButtonFlags.B_FLAG, b2 & 0x20);
@@ -116,18 +97,14 @@ export class Xbox360Controller extends AbstractXboxController {
     this.setButtonFlag(ButtonFlags.RB_FLAG, b2 & 0x02);
     this.setButtonFlag(ButtonFlags.SPECIAL_BUTTON_FLAG, b2 & 0x04);
     
-    // 扳机 (0-255 -> 0.0-1.0)
     this.leftTrigger = this.unsignByte(buffer[offset++]) / TRIGGER_MAX;
     this.rightTrigger = this.unsignByte(buffer[offset++]) / TRIGGER_MAX;
     
-    // 左摇杆 (-32768 到 32767 -> -1.0 到 1.0)
-    // Y 轴使用 -value 来反转 (不使用 ~ 因为 JavaScript 的 ~ 作用于 32 位整数)
     this.leftStickX = readShortLE(buffer, offset) / AXIS_MAX;
     offset += 2;
     this.leftStickY = -readShortLE(buffer, offset) / AXIS_MAX;
     offset += 2;
     
-    // 右摇杆
     this.rightStickX = readShortLE(buffer, offset) / AXIS_MAX;
     offset += 2;
     this.rightStickY = -readShortLE(buffer, offset) / AXIS_MAX;
@@ -135,9 +112,6 @@ export class Xbox360Controller extends AbstractXboxController {
     return true;
   }
   
-  /**
-   * 发送 LED 命令
-   */
   private async sendLedCommand(command: number): Promise<boolean> {
     const commandBuffer = new Uint8Array([0x01, 0x03, command]);
     
@@ -150,20 +124,12 @@ export class Xbox360Controller extends AbstractXboxController {
     return true;
   }
   
-  /**
-   * 初始化
-   */
   protected doInit(): boolean {
-    // 设置 LED 显示控制器编号
     this.sendLedCommand(2 + (this.getControllerId() % 4));
     
-    // LED 命令失败不影响初始化
     return true;
   }
   
-  /**
-   * 震动反馈 (去重: 跳过相同非零值, 零值始终发送)
-   */
   rumble(lowFreqMotor: number, highFreqMotor: number): void {
     if (lowFreqMotor !== 0 || highFreqMotor !== 0) {
       if (lowFreqMotor === this.lastRumbleLow && highFreqMotor === this.lastRumbleHigh) {
@@ -175,18 +141,14 @@ export class Xbox360Controller extends AbstractXboxController {
 
     const data = new Uint8Array([
       0x00, 0x08, 0x00,
-      (lowFreqMotor >> 8) & 0xFF,   // 低频马达 (大马达)
-      (highFreqMotor >> 8) & 0xFF,  // 高频马达 (小马达)
+      (lowFreqMotor >> 8) & 0xFF,
+      (highFreqMotor >> 8) & 0xFF,
       0x00, 0x00, 0x00
     ]);
     
     this.bulkWrite(data);
   }
   
-  /**
-   * 扳机震动（Xbox 360 不支持）
-   */
   rumbleTriggers(_leftTrigger: number, _rightTrigger: number): void {
-    // Xbox 360 控制器不支持扳机震动
   }
 }

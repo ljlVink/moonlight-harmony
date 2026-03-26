@@ -9,14 +9,8 @@
  */
 
 /**
- * 鼠标事件监听器
  *
- * 使用 OH_Input_AddMouseEventMonitor 在系统输入管线层级监听鼠标事件，
- * 绕过 ArkUI 渲染帧率限制（不触摸时 ~30Hz），以硬件原始轮询率接收鼠标事件，
- * 并直接调用 moonlight-common-c 的输入 API 发送给远端 PC。
- * Monitor 不消费事件，触摸和滚轮事件完全不受影响。
  *
- * 需要权限: ohos.permission.INPUT_MONITORING
  */
 
 #ifndef MOUSE_INTERCEPTOR_H

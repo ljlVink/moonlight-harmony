@@ -9,34 +9,26 @@
  */
 
 /**
- * SDL GameControllerDB 兼容映射系统实现
  * 
- * 包含常见手柄的预定义映射，基于 SDL GameControllerDB 数据
  * https://github.com/gabomdq/SDL_GameControllerDB
  */
 
 #include "sdl_gamecontrollerdb.h"
 #include "sdl_gamecontrollerdb_data.h"
-#include "gamepad_napi.h"  // 使用其中定义的 BTN_FLAG_* 常量
+#include "gamepad_napi.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
 
-// ==================== 辅助宏：快速创建映射 ====================
 #define BTN(idx) { MAPPING_BUTTON, idx, 0, false, 0, 255 }
 #define AXIS(idx) { MAPPING_AXIS, idx, 0, false, 0, 255 }
 #define AXIS_INV(idx) { MAPPING_AXIS, idx, 0, true, 0, 255 }
 #define HAT(idx, mask) { MAPPING_HAT, idx, mask, false, 0, 255 }
 #define NONE { MAPPING_NONE, 0, 0, false, 0, 255 }
 
-// ==================== 预定义映射数据库 ====================
-// 按 VID 分组排列
-
 static const GamepadMapping g_mappingDatabase[] = {
     
-    // ==================== Microsoft Xbox 系列 ====================
-    // Xbox 360 Controller - 标准 XInput 布局
     {
         .vendorId = 0x045E, .productId = 0x028E,
         .name = "Xbox 360 Controller",
@@ -84,7 +76,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== Sony PlayStation 系列 ====================
     // DualShock 4
     {
         .vendorId = 0x054C, .productId = 0x05C4,
@@ -98,7 +89,7 @@ static const GamepadMapping g_mappingDatabase[] = {
         .leftx = AXIS(0), .lefty = AXIS(1),
         .rightx = AXIS(2), .righty = AXIS(5),
         .lefttrigger = AXIS(3), .righttrigger = AXIS(4),
-        .reportOffset = 1, .reportLength = 64  // 跳过 Report ID
+        .reportOffset = 1, .reportLength = 64
     },
     
     // DualShock 4 v2
@@ -133,12 +124,11 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 1, .reportLength = 78
     },
     
-    // ==================== Nintendo Switch 系列 ====================
     // Switch Pro Controller
     {
         .vendorId = 0x057E, .productId = 0x2009,
         .name = "Switch Pro Controller",
-        .a = BTN(1), .b = BTN(0), .x = BTN(3), .y = BTN(2),  // Nintendo 布局: A/B, X/Y 互换
+        .a = BTN(1), .b = BTN(0), .x = BTN(3), .y = BTN(2),
         .back = BTN(8), .guide = BTN(12), .start = BTN(9),
         .leftstick = BTN(10), .rightstick = BTN(11),
         .leftshoulder = BTN(4), .rightshoulder = BTN(5),
@@ -146,11 +136,10 @@ static const GamepadMapping g_mappingDatabase[] = {
         .dpleft = HAT(0, HAT_LEFT), .dpright = HAT(0, HAT_RIGHT),
         .leftx = AXIS(0), .lefty = AXIS(1),
         .rightx = AXIS(2), .righty = AXIS(3),
-        .lefttrigger = BTN(6), .righttrigger = BTN(7),  // ZL/ZR 是数字按钮
+        .lefttrigger = BTN(6), .righttrigger = BTN(7),
         .reportOffset = 0, .reportLength = 64
     },
     
-    // ==================== 8BitDo 系列 ====================
     // 8BitDo Pro 2
     {
         .vendorId = 0x2DC8, .productId = 0x6006,
@@ -183,7 +172,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== Logitech 系列 ====================
     // Logitech F310
     {
         .vendorId = 0x046D, .productId = 0xC21D,
@@ -216,7 +204,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== Razer 系列 ====================
     // Razer Wolverine Ultimate
     {
         .vendorId = 0x1532, .productId = 0x0A14,
@@ -233,11 +220,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== 通用廉价手柄 ====================
-    // 注意: VID 0x413D 手柄使用特殊的 HID 报告格式，
-    // 已在 parseGenericHidReport() 中专门处理，不在此数据库中定义
-    
-    // DragonRise 通用手柄
     {
         .vendorId = 0x0079, .productId = 0x0006,
         .name = "DragonRise Generic Controller",
@@ -253,7 +235,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== HORI 系列 ====================
     // HORI Fighting Stick
     {
         .vendorId = 0x0F0D, .productId = 0x00C1,
@@ -264,7 +245,7 @@ static const GamepadMapping g_mappingDatabase[] = {
         .leftshoulder = BTN(4), .rightshoulder = BTN(5),
         .dpup = HAT(0, HAT_UP), .dpdown = HAT(0, HAT_DOWN),
         .dpleft = HAT(0, HAT_LEFT), .dpright = HAT(0, HAT_RIGHT),
-        .leftx = NONE, .lefty = NONE,  // 摇杆: HAT 直接映射
+        .leftx = NONE, .lefty = NONE,
         .rightx = NONE, .righty = NONE,
         .lefttrigger = BTN(6), .righttrigger = BTN(7),
         .reportOffset = 0, .reportLength = 0
@@ -286,7 +267,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== PowerA 系列 ====================
     {
         .vendorId = 0x20D6, .productId = 0xA711,
         .name = "PowerA Xbox Controller",
@@ -302,7 +282,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== SteelSeries 系列 ====================
     // SteelSeries Stratus Duo
     {
         .vendorId = 0x1038, .productId = 0x1430,
@@ -319,7 +298,6 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== GameSir 系列 ====================
     {
         .vendorId = 0x3575, .productId = 0x0620,
         .name = "GameSir Nova",
@@ -335,11 +313,10 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // ==================== GuliKit 系列 ====================
     {
         .vendorId = 0x3820, .productId = 0x0009,
         .name = "GuliKit KingKong 2 Pro",
-        .a = BTN(1), .b = BTN(0), .x = BTN(3), .y = BTN(2),  // Nintendo 布局
+        .a = BTN(1), .b = BTN(0), .x = BTN(3), .y = BTN(2),
         .back = BTN(8), .guide = BTN(12), .start = BTN(9),
         .leftstick = BTN(10), .rightstick = BTN(11),
         .leftshoulder = BTN(4), .rightshoulder = BTN(5),
@@ -351,12 +328,9 @@ static const GamepadMapping g_mappingDatabase[] = {
         .reportOffset = 0, .reportLength = 0
     },
     
-    // 结束标记
     { 0, 0, NULL, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, 0, 0 }
 };
 
-// ==================== 厂商默认映射 (当 PID 未知时使用) ====================
-// Xbox 风格默认模板
 static const GamepadMapping g_xboxDefaultMapping = {
     .vendorId = 0, .productId = 0,
     .name = "Xbox-style Default",
@@ -372,7 +346,6 @@ static const GamepadMapping g_xboxDefaultMapping = {
     .reportOffset = 0, .reportLength = 0
 };
 
-// PlayStation 风格默认模板
 static const GamepadMapping g_psDefaultMapping = {
     .vendorId = 0, .productId = 0,
     .name = "PlayStation-style Default",
@@ -388,11 +361,10 @@ static const GamepadMapping g_psDefaultMapping = {
     .reportOffset = 1, .reportLength = 64
 };
 
-// Nintendo 风格默认模板
 static const GamepadMapping g_nintendoDefaultMapping = {
     .vendorId = 0, .productId = 0,
     .name = "Nintendo-style Default",
-    .a = BTN(1), .b = BTN(0), .x = BTN(3), .y = BTN(2),  // A/B, X/Y 互换
+    .a = BTN(1), .b = BTN(0), .x = BTN(3), .y = BTN(2),
     .back = BTN(8), .guide = BTN(12), .start = BTN(9),
     .leftstick = BTN(10), .rightstick = BTN(11),
     .leftshoulder = BTN(4), .rightshoulder = BTN(5),
@@ -404,7 +376,6 @@ static const GamepadMapping g_nintendoDefaultMapping = {
     .reportOffset = 0, .reportLength = 0
 };
 
-// 通用默认模板 (DirectInput 风格)
 static const GamepadMapping g_genericDefaultMapping = {
     .vendorId = 0, .productId = 0,
     .name = "Generic DirectInput Default",
@@ -420,7 +391,6 @@ static const GamepadMapping g_genericDefaultMapping = {
     .reportOffset = 0, .reportLength = 0
 };
 
-// ==================== 厂商 VID 到默认映射的查找表 ====================
 typedef struct {
     uint16_t vendorId;
     const GamepadMapping* defaultMapping;
@@ -430,7 +400,7 @@ static const VendorDefaultEntry g_vendorDefaults[] = {
     { 0x045E, &g_xboxDefaultMapping },      // Microsoft
     { 0x054C, &g_psDefaultMapping },        // Sony
     { 0x057E, &g_nintendoDefaultMapping },  // Nintendo
-    { 0x2DC8, &g_xboxDefaultMapping },      // 8BitDo (通常 Xbox 模式)
+    { 0x2DC8, &g_xboxDefaultMapping },
     { 0x046D, &g_xboxDefaultMapping },      // Logitech
     { 0x1532, &g_xboxDefaultMapping },      // Razer
     { 0x0F0D, &g_xboxDefaultMapping },      // HORI
@@ -444,39 +414,35 @@ static const VendorDefaultEntry g_vendorDefaults[] = {
     { 0x2C22, &g_psDefaultMapping },        // Qanba
     { 0x3820, &g_nintendoDefaultMapping },  // GuliKit
     { 0x3575, &g_xboxDefaultMapping },      // GameSir
-    { 0x3537, &g_xboxDefaultMapping },      // GameSir (新 VID: G7 Pro/Cyclone 2/Kaleid Flux)
+    { 0x3537, &g_xboxDefaultMapping },
     { 0x8555, &g_xboxDefaultMapping },      // GameSir (G4 Pro VID)
     { 0x046D, &g_xboxDefaultMapping },      // Logitech
     { 0x044F, &g_xboxDefaultMapping },      // Thrustmaster
-    { 0x20BC, &g_xboxDefaultMapping },      // 北通 Betop / GameSir T4w/G3w
+    { 0x20BC, &g_xboxDefaultMapping },
     { 0x20D6, &g_xboxDefaultMapping },      // PowerA / BDA / Moga
     { 0x1949, &g_xboxDefaultMapping },      // Amazon / Ipega
     { 0x0955, &g_xboxDefaultMapping },      // NVIDIA
     { 0x18D1, &g_xboxDefaultMapping },      // Google Stadia
-    { 0x2717, &g_xboxDefaultMapping },      // 小米 XiaoMi
+    { 0x2717, &g_xboxDefaultMapping },
     { 0x0B05, &g_xboxDefaultMapping },      // ASUS ROG
-    { 0x1689, &g_xboxDefaultMapping },      // Razer (旧 VID)
-    { 0x0111, &g_xboxDefaultMapping },      // SteelSeries (旧 VID)
+    { 0x1689, &g_xboxDefaultMapping },
+    { 0x0111, &g_xboxDefaultMapping },
     { 0x358A, &g_xboxDefaultMapping },      // Backbone One
     { 0x10F5, &g_xboxDefaultMapping },      // Turtle Beach
     { 0x294B, &g_xboxDefaultMapping },      // Snakebyte
-    { 0x3285, &g_psDefaultMapping },        // Nacon (新 VID)
+    { 0x3285, &g_psDefaultMapping },
     { 0x06A3, &g_genericDefaultMapping },   // Saitek / Cyborg
     { 0x0079, &g_genericDefaultMapping },   // DragonRise
     { 0x0810, &g_genericDefaultMapping },   // Generic
-    { 0x413D, &g_genericDefaultMapping },   // Generic (用户的手柄)
+    { 0x413D, &g_genericDefaultMapping },
     { 0, NULL }
 };
-
-// ==================== SDL GameControllerDB 社区数据库 ====================
 
 static std::vector<GamepadMapping> g_sdlParsedMappings;
 static bool g_sdlDBInitialized = false;
 
 /**
- * 从 SDL GUID 字符串中提取 VID/PID (Linux 格式)
  * 
- * Linux GUID 布局 (16 bytes, 32 hex chars):
  *   Bytes 0-1:  Bus type (LE)
  *   Bytes 2-3:  CRC16
  *   Bytes 4-5:  Vendor ID (LE)  → hex chars 8-11
@@ -516,10 +482,6 @@ static bool extractVidPidFromGUID(const char* guid, uint16_t* outVid, uint16_t* 
     return (*outVid != 0 || *outPid != 0);
 }
 
-/**
- * 懒加载 SDL GameControllerDB 社区数据库
- * 解析所有条目并提取 VID/PID 存入动态数组
- */
 static void initSDLGameControllerDB() {
     if (g_sdlDBInitialized) return;
     g_sdlDBInitialized = true;
@@ -542,10 +504,7 @@ static void initSDLGameControllerDB() {
     }
 }
 
-// ==================== API 实现 ====================
-
 const GamepadMapping* findGamepadMapping(uint16_t vendorId, uint16_t productId) {
-    // 1. 先搜索静态预定义数据库 (手工调优映射，优先级最高)
     for (int i = 0; g_mappingDatabase[i].name != NULL; i++) {
         if (g_mappingDatabase[i].vendorId == vendorId && 
             g_mappingDatabase[i].productId == productId) {
@@ -553,7 +512,6 @@ const GamepadMapping* findGamepadMapping(uint16_t vendorId, uint16_t productId) 
         }
     }
     
-    // 2. 搜索 SDL GameControllerDB 社区数据库 (707 个 Linux 平台映射)
     initSDLGameControllerDB();
     for (size_t i = 0; i < g_sdlParsedMappings.size(); i++) {
         if (g_sdlParsedMappings[i].vendorId == vendorId &&
@@ -574,11 +532,6 @@ const GamepadMapping* getDefaultMappingByVendor(uint16_t vendorId) {
     return &g_genericDefaultMapping;
 }
 
-// ==================== SDL 映射字符串解析器 ====================
-
-/**
- * 解析单个映射元素 (如 "b0", "a1", "h0.1")
- */
 static bool parseElement(const char* str, MappingSource* out) {
     if (!str || !out) return false;
     
@@ -589,7 +542,6 @@ static bool parseElement(const char* str, MappingSource* out) {
     out->rangeMin = 0;
     out->rangeMax = 255;
     
-    // 检查是否反转 (a~0 格式)
     bool inverted = false;
     if (str[0] == '~') {
         inverted = true;
@@ -608,7 +560,6 @@ static bool parseElement(const char* str, MappingSource* out) {
         case 'a':
             out->type = MAPPING_AXIS;
             out->inverted = inverted;
-            // 检查 a0+ 或 a0- 格式
             {
                 char* endptr;
                 out->index = strtol(rest, &endptr, 10);
@@ -624,7 +575,6 @@ static bool parseElement(const char* str, MappingSource* out) {
             
         case 'h':
             out->type = MAPPING_HAT;
-            // 格式: h0.1, h0.2, h0.4, h0.8
             {
                 const char* dotPos = strchr(rest, '.');
                 if (dotPos) {
@@ -644,24 +594,19 @@ static bool parseElement(const char* str, MappingSource* out) {
 bool parseSDLMappingString(const char* mappingString, GamepadMapping* outMapping) {
     if (!mappingString || !outMapping) return false;
     
-    // 初始化所有映射为 NONE
     memset(outMapping, 0, sizeof(GamepadMapping));
     
-    // 复制字符串以便修改
     char* str = strdup(mappingString);
     if (!str) return false;
     
-    // 解析 GUID (跳过)
     char* token = strtok(str, ",");
     if (!token) { free(str); return false; }
     
-    // 解析名称
     token = strtok(NULL, ",");
     if (token) {
         outMapping->name = strdup(token);
     }
     
-    // 解析映射对
     while ((token = strtok(NULL, ",")) != NULL) {
         char* colonPos = strchr(token, ':');
         if (!colonPos) continue;
@@ -673,7 +618,6 @@ bool parseSDLMappingString(const char* mappingString, GamepadMapping* outMapping
         MappingSource src;
         if (!parseElement(value, &src)) continue;
         
-        // 按键名匹配
         if (strcmp(key, "a") == 0) outMapping->a = src;
         else if (strcmp(key, "b") == 0) outMapping->b = src;
         else if (strcmp(key, "x") == 0) outMapping->x = src;
@@ -701,11 +645,6 @@ bool parseSDLMappingString(const char* mappingString, GamepadMapping* outMapping
     return true;
 }
 
-// ==================== 映射应用 ====================
-
-/**
- * 从 HID 报告中读取按钮状态
- */
 static bool readButton(const uint8_t* data, int len, const MappingSource* src, int buttonByteOffset) {
     if (src->type != MAPPING_BUTTON) return false;
     
@@ -717,9 +656,6 @@ static bool readButton(const uint8_t* data, int len, const MappingSource* src, i
     return (data[byteIndex] & (1 << bitIndex)) != 0;
 }
 
-/**
- * 从 HID 报告中读取轴值
- */
 static int16_t readAxis(const uint8_t* data, int len, const MappingSource* src, int axisOffset) {
     if (src->type != MAPPING_AXIS) return 0;
     
@@ -728,18 +664,13 @@ static int16_t readAxis(const uint8_t* data, int len, const MappingSource* src, 
     
     int value = data[index];
     
-    // 应用反转
     if (src->inverted) {
         value = 255 - value;
     }
     
-    // 转换到 -32768 ~ 32767 范围
     return (int16_t)(((int)value - 128) << 8);
 }
 
-/**
- * 检查 HAT 方向
- */
 static bool checkHat(const uint8_t* data, int len, const MappingSource* src, int hatOffset) {
     if (src->type != MAPPING_HAT) return false;
     
@@ -748,19 +679,18 @@ static bool checkHat(const uint8_t* data, int len, const MappingSource* src, int
     
     uint8_t hatValue = data[index] & 0x0F;
     
-    // HAT 值 0-7 映射到方向
     static const uint8_t hatToMask[] = {
-        HAT_UP,                     // 0: 上
-        HAT_UP | HAT_RIGHT,         // 1: 右上
-        HAT_RIGHT,                  // 2: 右
-        HAT_DOWN | HAT_RIGHT,       // 3: 右下
-        HAT_DOWN,                   // 4: 下
-        HAT_DOWN | HAT_LEFT,        // 5: 左下
-        HAT_LEFT,                   // 6: 左
-        HAT_UP | HAT_LEFT           // 7: 左上
+        HAT_UP,
+        HAT_UP | HAT_RIGHT,
+        HAT_RIGHT,
+        HAT_DOWN | HAT_RIGHT,
+        HAT_DOWN,
+        HAT_DOWN | HAT_LEFT,
+        HAT_LEFT,
+        HAT_UP | HAT_LEFT
     };
     
-    if (hatValue > 7) return false;  // 中立或无效
+    if (hatValue > 7) return false;
     
     return (hatToMask[hatValue] & src->hatMask) != 0;
 }
@@ -788,11 +718,10 @@ void applyGamepadMapping(
     *outRightTrigger = 0;
     
     int offset = mapping->reportOffset;
-    int buttonOffset = offset + 4;  // 通常按钮在摇杆数据后面
-    int hatOffset = offset + 4;     // HAT 通常紧随摇杆
-    int axisOffset = offset;        // 轴从偏移开始
+    int buttonOffset = offset + 4;
+    int hatOffset = offset + 4;
+    int axisOffset = offset;
     
-    // 读取摇杆
     if (mapping->leftx.type == MAPPING_AXIS) {
         *outLeftStickX = readAxis(data, len, &mapping->leftx, axisOffset);
     }
@@ -806,7 +735,6 @@ void applyGamepadMapping(
         *outRightStickY = readAxis(data, len, &mapping->righty, axisOffset);
     }
     
-    // 读取扳机 (可能是按钮或轴)
     if (mapping->lefttrigger.type == MAPPING_AXIS) {
         int idx = axisOffset + mapping->lefttrigger.index;
         if (idx < len) *outLeftTrigger = data[idx];
@@ -825,7 +753,6 @@ void applyGamepadMapping(
         }
     }
     
-    // 读取面板按钮
     #define CHECK_BTN(mapping_field, flag) \
         if (mapping->mapping_field.type == MAPPING_BUTTON && readButton(data, len, &mapping->mapping_field, buttonOffset)) \
             *outButtons |= flag; \

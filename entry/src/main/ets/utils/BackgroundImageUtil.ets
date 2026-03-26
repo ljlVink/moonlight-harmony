@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 背景图工具类
- * 提供背景图加载和管理功能
- */
 import { PreferencesUtil } from './PreferencesUtil';
 import { display, promptAction } from '@kit.ArkUI';
 import { http } from '@kit.NetworkKit';
@@ -23,15 +19,10 @@ import { common } from '@kit.AbilityKit';
 const BACKGROUND_IMAGE_URL_KEY = 'settings_background_image_url';
 const BACKGROUND_IMAGE_TYPE_KEY = 'settings_background_image_type';
 const BACKGROUND_DISCLAIMER_ACCEPTED_KEY = 'settings_background_disclaimer_accepted';
-// 本地缓存文件名（横屏/竖屏分别缓存）
 const CACHED_BACKGROUND_LANDSCAPE = 'cached_background_landscape.jpg';
 const CACHED_BACKGROUND_PORTRAIT = 'cached_background_portrait.jpg';
-// 背景图缓存过期时间：24小时（毫秒）
 const BACKGROUND_CACHE_EXPIRE_MS = 24 * 60 * 60 * 1000;
 
-/**
- * 背景图 API 源配置
- */
 interface BackgroundApiSource {
   name: string;
   description: string;
@@ -39,89 +30,64 @@ interface BackgroundApiSource {
   portrait: string;
 }
 
-/**
- * 背景图 API 源集合
- */
 interface BackgroundApiSourceCollection {
   picsum: BackgroundApiSource;
   pipw: BackgroundApiSource;
 }
 
-/**
- * 可用的背景图 API 源
- * - picsum: Lorem Picsum (基于 Unsplash，免费商用授权)
- * - pipw: Pipw Team 二次元壁纸 API (第三方服务，需自行评估版权风险)
- */
 export const BACKGROUND_API_SOURCES: BackgroundApiSourceCollection = {
   picsum: {
     name: 'Lorem Picsum',
-    description: '摄影壁纸 (Unsplash授权)',
+    description: 'Photography wallpapers (Unsplash licensed)',
     landscape: 'https://picsum.photos/1920/1080',
     portrait: 'https://picsum.photos/1080/1920',
   } as BackgroundApiSource,
   pipw: {
-    name: 'Pipw 二次元',
-    description: '二次元壁纸 (第三方)',
+    name: 'Pipw Anime',
+    description: 'Anime wallpapers (third-party)',
     landscape: 'https://img-api.pipw.top',
     portrait: 'https://img-api.pipw.top/?phone=true',
   } as BackgroundApiSource
 };
 
-// 背景图类型
 export enum BackgroundImageType {
-  DEFAULT = 'default',  // 使用默认 API (Pipw 二次元壁纸)
-  PICSUM = 'picsum',    // Lorem Picsum 摄影壁纸
-  PIPW = 'pipw',        // 使用 Pipw 二次元壁纸 API (兼容旧设置)
-  API = 'api',          // 自定义 API URL
-  LOCAL = 'local',      // 本地图片（暂不支持）
-  NONE = 'none'         // 不使用背景图
+  DEFAULT = 'default',
+  PICSUM = 'picsum',
+  PIPW = 'pipw',
+  API = 'api',
+  LOCAL = 'local',
+  NONE = 'none'
 }
 
-/**
- * 背景图配置
- */
 export interface BackgroundConfig {
-  /** 背景图 URL，空字符串表示使用纯色背景 */
+  /**
   imageUrl: string;
-  /** 背景图透明度 0-1 */
+  /**
   opacity: number;
-  /** 是否启用模糊效果 */
+  /**
   enableBlur: boolean;
-  /** 模糊半径 */
+  /**
   blurRadius: number;
 }
 
-/**
- * HTTP 下载结果
- */
 interface DownloadResult {
   code: number;
   data: ArrayBuffer | null;
   redirectUrl: string;
 }
 
-/**
- * 背景图工具类
- */
 export class BackgroundImageUtil {
   private static instance: BackgroundImageUtil;
   private cachedUrl: string = '';
   private cachedType: BackgroundImageType = BackgroundImageType.DEFAULT;
   private isLoaded: boolean = false;
   private refreshTimestamp: number = 0;
-  // 缓存当前显示的图片数据（用于下载）
   private cachedImageData: ArrayBuffer | null = null;
-  // 本地缓存文件路径（根据当前屏幕方向动态选择）
   private localCachePath: string = '';
-  // 横屏缓存路径
   private landscapeCachePath: string = '';
-  // 竖屏缓存路径
   private portraitCachePath: string = '';
-  // 当前缓存的方向
   private cachedOrientation: string = '';
-  // 应用上下文（用于获取沙盒路径）
   private context: common.Context | null = null;
-  // 类型变更脏标记（singleton 共享，setBackgroundImageType 时置 true，reload 时消费）
   private pendingTypeChange: boolean = false;
 
   private constructor() {}
@@ -133,20 +99,13 @@ export class BackgroundImageUtil {
     return BackgroundImageUtil.instance;
   }
 
-  /**
-   * 设置应用上下文（必须在使用前调用）
-   */
   setContext(context: common.Context): void {
     this.context = context;
     this.landscapeCachePath = `${context.cacheDir}/${CACHED_BACKGROUND_LANDSCAPE}`;
     this.portraitCachePath = `${context.cacheDir}/${CACHED_BACKGROUND_PORTRAIT}`;
-    // 根据当前方向设置默认缓存路径
     this.updateCachePathForOrientation();
   }
 
-  /**
-   * 根据当前屏幕方向更新缓存路径
-   */
   private updateCachePathForOrientation(): void {
     const orientation = this.getCurrentOrientation();
     if (orientation === 'portrait') {
@@ -157,97 +116,70 @@ export class BackgroundImageUtil {
     this.cachedOrientation = orientation;
   }
 
-  /**
-   * 获取当前屏幕方向
-   */
   private getCurrentOrientation(): string {
     try {
       const displayInfo = display.getDefaultDisplaySync();
       return displayInfo.height > displayInfo.width ? 'portrait' : 'landscape';
     } catch (err) {
-      return 'landscape'; // 默认横屏
+      return 'landscape';
     }
   }
 
-  /**
-   * 获取本地缓存的图片路径
-   */
   getLocalCachePath(): string {
     return this.localCachePath;
   }
 
-  /**
-   * 下载图片到本地缓存，返回本地文件路径
-   * 根据当前屏幕方向使用对应的缓存文件
-   * 如果已有缓存且不强制刷新，直接返回缓存路径
-   */
   async downloadToLocalCache(forceRefresh: boolean = false): Promise<string> {
     if (!this.context) {
       return '';
     }
     
-    // 检测方向变化，切换缓存路径
     this.updateCachePathForOrientation();
     
-    // 检查是否已有本地缓存
     if (!forceRefresh && this.localCachePath) {
       try {
         const stat = fileIo.statSync(this.localCachePath);
         if (stat && stat.size > 0) {
-          // 检查缓存是否过期（超过24小时则重新下载）
           const cacheAge = Date.now() - stat.mtime * 1000;
           if (cacheAge > BACKGROUND_CACHE_EXPIRE_MS) {
-            console.info('BackgroundImageUtil: 缓存已过期，将下载新图片');
-            // 重置 refreshTimestamp 以获取新图片 URL
+            console.info('BackgroundImageUtil: Cache expired, will download new image');
             this.refreshTimestamp = Date.now();
           } else {
-            // 缓存未过期，直接使用
             const file = fileIo.openSync(this.localCachePath, fileIo.OpenMode.READ_ONLY);
             this.cachedImageData = new ArrayBuffer(stat.size);
             fileIo.readSync(file.fd, this.cachedImageData);
             fileIo.closeSync(file.fd);
-            console.info(`BackgroundImageUtil: 使用 ${this.cachedOrientation} 方向缓存`);
+            console.info(`BackgroundImageUtil: Using ${this.cachedOrientation} orientation cache`);
             return this.localCachePath;
           }
         }
       } catch (error) {
-        // 文件不存在，继续下载
-        console.debug(`BackgroundImageUtil: ${this.cachedOrientation} 方向缓存不存在，将下载新图片`);
+        console.debug(`BackgroundImageUtil: ${this.cachedOrientation} orientation cache not found, will download new image`);
       }
     }
     
-    // 根据当前类型和方向获取 API URL
     const apiUrl = await this.getApiUrlForCurrentType();
     
-    // 下载图片数据
     const imageData = await this.downloadImage(apiUrl);
     if (!imageData) {
       return '';
     }
     
-    // 保存到本地缓存
     try {
       const file = fileIo.openSync(this.localCachePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
       fileIo.writeSync(file.fd, imageData);
       fileIo.closeSync(file.fd);
       
-      // 同时保存到内存缓存
       this.cachedImageData = imageData;
       
       return this.localCachePath;
     } catch (err) {
-      console.error('BackgroundImageUtil: 保存本地缓存失败', err);
+      console.error('BackgroundImageUtil: Failed to save local cache', err);
       return '';
     }
   }
 
-  /**
-   * 获取背景图 URL
-   * 注意：使用缓存避免频繁刷新背景图
-   * @returns 背景图 URL
-   */
   async getBackgroundImageUrl(): Promise<string> {
-    // 如果已加载，直接返回缓存的 URL（包括 DEFAULT 类型）
     if (this.isLoaded && this.cachedUrl) {
       return this.cachedUrl;
     }
@@ -262,7 +194,6 @@ export class BackgroundImageUtil {
         case BackgroundImageType.API:
           this.cachedUrl = await PreferencesUtil.get<string>(BACKGROUND_IMAGE_URL_KEY, '');
           if (!this.cachedUrl) {
-            // 如果自定义 URL 为空，回退到默认 API
             this.cachedType = BackgroundImageType.DEFAULT;
             await this.setBackgroundImageType(BackgroundImageType.DEFAULT);
             return this.getPipwApiUrl();
@@ -280,7 +211,6 @@ export class BackgroundImageUtil {
         case BackgroundImageType.PIPW:
         case BackgroundImageType.DEFAULT:
         default:
-          // 默认使用 Pipw 二次元壁纸
           this.cachedUrl = this.getPipwApiUrl();
           break;
       }
@@ -293,9 +223,6 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 根据当前背景图类型获取对应的 API URL
-   */
   private async getApiUrlForCurrentType(): Promise<string> {
     const bgType = await PreferencesUtil.get<string>(
       BACKGROUND_IMAGE_TYPE_KEY,
@@ -316,9 +243,6 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 获取 Pipw 二次元壁纸 API URL（根据屏幕方向）
-   */
   getPipwApiUrl(): string {
     try {
       const displayInfo = display.getDefaultDisplaySync();
@@ -337,22 +261,15 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 获取 Lorem Picsum 摄影壁纸 API URL（根据屏幕方向）
-   * 注意：只在首次加载或明确刷新时更新时间戳，避免频繁刷新
-   */
   getPicsumApiUrl(): string {
     try {
       const displayInfo = display.getDefaultDisplaySync();
       const isPortrait = displayInfo.height > displayInfo.width;
-      // 仅在明确调用刷新时更新时间戳，否则保持稳定的URL
-      // 如果 refreshTimestamp 为 0，设置一个初始值，之后保持不变
       if (this.refreshTimestamp === 0) {
         this.refreshTimestamp = Date.now();
       }
       const source = BACKGROUND_API_SOURCES.picsum;
       const baseUrl = isPortrait ? source.portrait : source.landscape;
-      // Lorem Picsum 使用 random 参数来获取随机图片
       return `${baseUrl}?random=${this.refreshTimestamp}`;
     } catch (err) {
       if (this.refreshTimestamp === 0) {
@@ -362,23 +279,17 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 设置背景图类型
-   * 类型变化时自动清除本地缓存，确保下次加载使用新类型的图片
-   */
   async setBackgroundImageType(type: BackgroundImageType): Promise<void> {
     try {
       const previousType = this.cachedType;
       await PreferencesUtil.put(BACKGROUND_IMAGE_TYPE_KEY, type);
       this.cachedType = type;
       this.isLoaded = false;
-      // 类型变化时清除缓存，确保切换后能获取正确的图片
       if (previousType !== type) {
         this.cachedUrl = '';
         this.cachedImageData = null;
         this.refreshTimestamp = Date.now();
         this.pendingTypeChange = true;
-        // 非关闭类型时清除本地缓存文件（关闭时由 disableBackgroundImage 处理）
         if (type !== BackgroundImageType.NONE) {
           await this.clearLocalCache();
         }
@@ -388,10 +299,6 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 检查用户是否已同意背景图免责声明
-   * @returns true 表示已同意，可以加载背景图
-   */
   async isDisclaimerAccepted(): Promise<boolean> {
     try {
       return await PreferencesUtil.get<boolean>(BACKGROUND_DISCLAIMER_ACCEPTED_KEY, false);
@@ -400,9 +307,6 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 设置用户已同意背景图免责声明
-   */
   async setDisclaimerAccepted(): Promise<void> {
     try {
       await PreferencesUtil.put(BACKGROUND_DISCLAIMER_ACCEPTED_KEY, true);
@@ -411,9 +315,6 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 获取背景图免责声明文本
-   */
   getDisclaimerText(): string {
     return '背景壁纸功能说明\n\n' +
       '本应用的背景壁纸来自互联网公开资源（Pipw API），图片版权归原作者所有。\n\n' +
@@ -423,10 +324,6 @@ export class BackgroundImageUtil {
       '继续使用即表示您知悉并同意上述条款。';
   }
 
-  /**
-   * 设置自定义背景图 URL
-   * @param url 背景图 URL
-   */
   async setBackgroundImageUrl(url: string): Promise<void> {
     try {
       await PreferencesUtil.put(BACKGROUND_IMAGE_URL_KEY, url);
@@ -444,30 +341,19 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 清除背景图（使用默认 API）
-   */
   async clearBackgroundImage(): Promise<void> {
     await this.setBackgroundImageUrl('');
     await this.setBackgroundImageType(BackgroundImageType.DEFAULT);
   }
 
-  /**
-   * 禁用背景图
-   * 同时清除本地缓存文件和内存缓存
-   */
   async disableBackgroundImage(): Promise<void> {
     await this.setBackgroundImageType(BackgroundImageType.NONE);
     this.cachedUrl = '';
     this.isLoaded = true;
     this.cachedImageData = null;
-    // 删除本地缓存文件，防止下次启动时仍然显示旧图片
     await this.clearLocalCache();
   }
 
-  /**
-   * 清除本地缓存的背景图文件（清除所有方向的缓存）
-   */
   async clearLocalCache(): Promise<void> {
     const paths: string[] = [this.landscapeCachePath, this.portraitCachePath];
     for (const cachePath of paths) {
@@ -477,28 +363,18 @@ export class BackgroundImageUtil {
           await fileIo.unlink(cachePath);
           console.info(`BackgroundImageUtil: 已清除缓存文件 ${cachePath}`);
         } catch (err) {
-          // 文件不存在或删除失败，忽略
         }
       }
     }
   }
 
-  /**
-   * 刷新背景图（生成新的时间戳以获取新图片）
-   */
   async refreshBackgroundImage(): Promise<string> {
     this.refreshTimestamp = Date.now();
     this.isLoaded = false;
     return await this.getBackgroundImageUrl();
   }
 
-  /**
-   * 重新加载背景图设置
-   * @returns 如果类型发生变化返回 true，否则返回 false
-   */
   async reload(): Promise<boolean> {
-    // pendingTypeChange: 通过 setBackgroundImageType() 修改（singleton 共享，cachedType 已被更新）
-    // previousType 比较: 通过 saveSetting() 直接写 preferences（cachedType 未更新，需从 prefs 重新读取）
     const dirtyFlag = this.pendingTypeChange;
     this.pendingTypeChange = false;
     const previousType = this.cachedType;
@@ -507,9 +383,6 @@ export class BackgroundImageUtil {
     return dirtyFlag || this.cachedType !== previousType;
   }
 
-  /**
-   * 获取当前背景图类型
-   */
   async getBackgroundImageType(): Promise<BackgroundImageType> {
     if (!this.isLoaded) {
       await this.getBackgroundImageUrl();
@@ -517,9 +390,6 @@ export class BackgroundImageUtil {
     return this.cachedType;
   }
 
-  /**
-   * 获取默认背景图配置
-   */
   getDefaultConfig(): BackgroundConfig {
     return {
       imageUrl: this.cachedUrl,
@@ -529,13 +399,8 @@ export class BackgroundImageUtil {
     };
   }
   
-  /**
-   * 预加载并缓存当前背景图数据
-   * 优先从本地缓存文件读取，确保下载保存的图片与显示的一致
-   */
   async preloadAndCacheImage(): Promise<void> {
     try {
-      // 优先从本地缓存文件读取
       if (this.localCachePath) {
         try {
           const stat = fileIo.statSync(this.localCachePath);
@@ -548,45 +413,30 @@ export class BackgroundImageUtil {
             return;
           }
         } catch (e) {
-          // 本地缓存文件不存在，继续尝试从 URL 下载
         }
       }
       
-      // 如果没有本地缓存，从在线 URL 下载
       if (this.cachedUrl) {
         this.cachedImageData = await this.downloadImage(this.cachedUrl);
       }
     } catch (err) {
-      // 忽略错误
     }
   }
 
-  /**
-   * 获取缓存的图片数据
-   */
   getCachedImageData(): ArrayBuffer | null {
     return this.cachedImageData;
   }
 
-  /**
-   * 清除缓存的图片数据
-   */
   clearCachedImageData(): void {
     this.cachedImageData = null;
   }
 
-  /**
-   * 下载图片数据（公共方法，供 SaveButton 使用）
-   * @param imageUrl 图片 URL
-   * @returns 图片二进制数据
-   */
   async downloadImageData(imageUrl: string): Promise<ArrayBuffer | null> {
     if (!imageUrl || imageUrl.length === 0) {
       return null;
     }
     
     try {
-      // 如果是 file:// 路径，直接读取本地文件
       if (imageUrl.startsWith('file://')) {
         const filePath = imageUrl.replace('file://', '');
         try {
@@ -603,12 +453,10 @@ export class BackgroundImageUtil {
         }
       }
       
-      // 尝试使用缓存数据
       if (this.cachedImageData) {
         return this.cachedImageData;
       }
       
-      // 重新下载
       return await this.downloadImage(imageUrl);
     } catch (err) {
       console.error('BackgroundImageUtil: 下载图片数据失败', err);
@@ -616,13 +464,9 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 验证 URL 是否为有效的图片 URL
-   */
   isValidImageUrl(url: string): boolean {
     if (!url) return false;
     
-    // 检查是否为 http/https URL
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return false;
     }
@@ -630,11 +474,6 @@ export class BackgroundImageUtil {
     return true;
   }
 
-  /**
-   * 直接将本地缓存文件保存到相册
-   * @param context 应用上下文
-   * @returns 是否保存成功
-   */
   async saveLocalCacheToGallery(context: common.UIAbilityContext): Promise<boolean> {
     if (!this.localCachePath) {
       promptAction.showToast({ message: '没有可保存的图片' });
@@ -642,7 +481,6 @@ export class BackgroundImageUtil {
     }
     
     try {
-      // 检查缓存文件是否存在
       const stat = fileIo.statSync(this.localCachePath);
       if (!stat || stat.size === 0) {
         promptAction.showToast({ message: '缓存图片不存在' });
@@ -651,16 +489,13 @@ export class BackgroundImageUtil {
       
       promptAction.showToast({ message: '正在保存图片...' });
       
-      // 读取本地缓存文件
       const file = fileIo.openSync(this.localCachePath, fileIo.OpenMode.READ_ONLY);
       const imageData = new ArrayBuffer(stat.size);
       fileIo.readSync(file.fd, imageData);
       fileIo.closeSync(file.fd);
       
-      // 创建相册访问助手
       const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context);
       
-      // 创建图片资源
       const createOption: photoAccessHelper.CreateOptions = {
         title: `moonlight_bg_${Date.now()}`,
         subtype: photoAccessHelper.PhotoSubtype.DEFAULT
@@ -672,7 +507,6 @@ export class BackgroundImageUtil {
         createOption
       );
       
-      // 写入图片数据
       const photoFile = fileIo.openSync(photoUri, fileIo.OpenMode.READ_WRITE);
       fileIo.writeSync(photoFile.fd, imageData);
       fileIo.closeSync(photoFile.fd);
@@ -691,12 +525,6 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 保存背景图到相册
-   * @param imageUrl 图片 URL
-   * @param context 应用上下文
-   * @returns 是否保存成功
-   */
   async saveImageToGallery(imageUrl: string, context: common.UIAbilityContext): Promise<boolean> {
     if (!imageUrl || imageUrl.length === 0) {
       promptAction.showToast({ message: '没有可保存的图片' });
@@ -708,7 +536,6 @@ export class BackgroundImageUtil {
       
       let imageData: ArrayBuffer | null = null;
       
-      // 1. 如果是 file:// 路径，优先直接读取本地文件
       if (imageUrl.startsWith('file://')) {
         const filePath = imageUrl.replace('file://', '');
         try {
@@ -725,12 +552,10 @@ export class BackgroundImageUtil {
         }
       }
       
-      // 2. 如果本地文件读取失败，使用缓存的图片数据
       if (!imageData) {
         imageData = this.cachedImageData;
       }
       
-      // 3. 如果缓存数据也没有，重新下载
       if (!imageData && !imageUrl.startsWith('file://')) {
         promptAction.showToast({ message: '正在下载图片...' });
         imageData = await this.downloadImage(imageUrl);
@@ -741,10 +566,8 @@ export class BackgroundImageUtil {
         return false;
       }
       
-      // 4. 创建相册访问助手
       const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context);
       
-      // 5. 创建图片资源
       const createOption: photoAccessHelper.CreateOptions = {
         title: `moonlight_bg_${Date.now()}`,
         subtype: photoAccessHelper.PhotoSubtype.DEFAULT
@@ -756,7 +579,6 @@ export class BackgroundImageUtil {
         createOption
       );
       
-      // 6. 写入图片数据
       const file = fileIo.openSync(photoUri, fileIo.OpenMode.READ_WRITE);
       fileIo.writeSync(file.fd, imageData);
       fileIo.closeSync(file.fd);
@@ -775,19 +597,12 @@ export class BackgroundImageUtil {
     }
   }
 
-  /**
-   * 下载图片数据
-   * @param url 图片 URL
-   * @returns 图片二进制数据
-   */
   private async downloadImage(url: string): Promise<ArrayBuffer | null> {
     try {
-      // 处理 URL，移除可能的时间戳参数以获取稳定的图片
       let cleanUrl = url;
       let redirectCount = 0;
       const maxRedirects = 5;
       
-      // 循环处理重定向
       while (redirectCount < maxRedirects) {
         const httpRequest = http.createHttp();
         
@@ -810,7 +625,6 @@ export class BackgroundImageUtil {
                 return;
               }
               
-              // 处理重定向 (301, 302, 303, 307, 308)
               if (data.responseCode >= 300 && data.responseCode < 400) {
                 const headers = data.header as Record<string, string>;
                 const location = headers['Location'] || headers['location'];
@@ -844,7 +658,6 @@ export class BackgroundImageUtil {
           continue;
         }
         
-        // 非重定向且无数据，返回 null
         return null;
       }
       

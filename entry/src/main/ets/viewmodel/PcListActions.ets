@@ -9,10 +9,7 @@
  */
 
 /**
- * PC 列表业务逻辑处理类
  *
- * 封装电脑相关的业务操作，如唤醒、配对、退出游戏等。
- * 通过回调接口与 UI 层解耦。
  */
 import { router, promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
@@ -25,7 +22,7 @@ import { PairState, ComputerState, selectBestAddress, ComputerInfo } from '../mo
 import { ConfirmDialogConfig, InfoDialogConfig } from '../components/ConfirmDialog';
 import { AppColors } from '../common/Theme';
 
-/** 单地址网络测试结果 */
+/**
 interface AddressTestResult {
   address: string;
   reachable: boolean;
@@ -34,9 +31,6 @@ interface AddressTestResult {
   error: string;
 }
 
-/**
- * UI 回调接口 — PcListActions 操作中需要触发 UI 变更时使用
- */
 export interface PcListUICallbacks {
   showConfirmDialog: (config: ConfirmDialogConfig) => void;
   showInfoDialog: (config: InfoDialogConfig) => void;
@@ -45,9 +39,6 @@ export interface PcListUICallbacks {
   hidePinDialog: () => void;
 }
 
-/**
- * 电脑操作业务逻辑
- */
 export class PcListActions {
   private computerManager: ComputerManager;
   private ui: PcListUICallbacks;
@@ -57,10 +48,10 @@ export class PcListActions {
     this.ui = ui;
   }
 
-  /** 处理电脑卡片点击 */
+  /**
   handleComputerTap(computer: ObservableComputer): void {
     if (!computer.isOnline) {
-      return; // 调用方负责显示菜单
+      return;
     }
     if (computer.isPaired) {
       router.pushUrl({ url: 'pages/AppListPageV2', params: { computerId: computer.uuid } });
@@ -69,7 +60,7 @@ export class PcListActions {
     this.pairWithComputer(computer);
   }
 
-  /** 快速串流 */
+  /**
   async handleQuickStream(computer: ObservableComputer): Promise<void> {
     if (!computer.isOnline || !computer.isPaired) {
       promptAction.showToast({ message: '设备未就绪' });
@@ -120,7 +111,7 @@ export class PcListActions {
     }
   }
 
-  /** 配对 */
+  /**
   async pairWithComputer(computer: ObservableComputer): Promise<void> {
     if (!computer.isOnline) {
       promptAction.showToast({ message: '电脑离线，无法配对' });
@@ -160,7 +151,7 @@ export class PcListActions {
     }
   }
 
-  /** 唤醒 */
+  /**
   async wakeComputer(computer: ObservableComputer): Promise<void> {
     if (!computer.macAddress || computer.macAddress === '00:00:00:00:00:00') {
       promptAction.showToast({ message: '缺少有效的 MAC 地址。请先在电脑在线时配对，以获取 MAC 地址。' });
@@ -174,7 +165,7 @@ export class PcListActions {
     }
   }
 
-  /** 退出游戏 */
+  /**
   quitGame(computer: ObservableComputer): void {
     if (!computer.isOnline) {
       promptAction.showToast({ message: '电脑离线，无法退出游戏' });
@@ -215,7 +206,7 @@ export class PcListActions {
     });
   }
 
-  /** 休眠 */
+  /**
   sleepComputer(computer: ObservableComputer): void {
     if (!computer.isOnline) {
       promptAction.showToast({ message: '电脑离线，无法休眠' });
@@ -251,9 +242,8 @@ export class PcListActions {
     });
   }
 
-  /** 恢复游戏 */
+  /**
   async resumeGame(computer: ObservableComputer): Promise<void> {
-    // 获取应用列表以获取超级指令（cmdList）
     try {
       const computerInfo = this.computerManager.getComputer(computer.uuid);
       if (computerInfo) {
@@ -275,7 +265,6 @@ export class PcListActions {
         return;
       }
     } catch {
-      // 获取失败时仍然恢复游戏，只是没有超级指令
     }
     router.pushUrl({
       url: 'pages/StreamPage',
@@ -283,7 +272,7 @@ export class PcListActions {
     });
   }
 
-  /** 取消配对 */
+  /**
   unpairComputer(computer: ObservableComputer): void {
     this.ui.showConfirmDialog({
       title: '取消配对',
@@ -304,7 +293,7 @@ export class PcListActions {
     });
   }
 
-  /** 删除电脑 */
+  /**
   deleteComputer(computer: ObservableComputer): void {
     this.ui.showConfirmDialog({
       title: '删除电脑',
@@ -325,12 +314,11 @@ export class PcListActions {
     });
   }
 
-  /** 测试网络 */
+  /**
   async testNetwork(computer: ObservableComputer): Promise<void> {
     promptAction.showToast({ message: '正在检测网络…' });
     const computerInfo = computer.toComputerInfo();
 
-    // 收集所有可用地址
     const addressSet = new Set<string>();
     if (computerInfo.manualAddress) addressSet.add(computerInfo.manualAddress);
     if (computerInfo.address) addressSet.add(computerInfo.address);
@@ -344,7 +332,6 @@ export class PcListActions {
       return;
     }
 
-    // 对每个地址分别测试延迟（3 轮取平均）
     const TEST_ROUNDS = 3;
     const results: AddressTestResult[] = [];
 
@@ -363,7 +350,7 @@ export class PcListActions {
           lastServerInfo = info;
         } catch (err) {
           lastError = (err as Error).message || String(err);
-          break; // 失败则不继续后续轮次
+          break;
         }
       }
 
@@ -380,26 +367,22 @@ export class PcListActions {
       });
     }
 
-    // 汇总结果
     const lines: string[] = [];
     const reachableResults = results.filter(r => r.reachable);
     const unreachableResults = results.filter(r => !r.reachable);
 
-    // 取第一个成功的 serverInfo 显示服务器信息
     const serverInfo = reachableResults.find(r => r.serverInfo)?.serverInfo;
 
     if (reachableResults.length > 0) {
       lines.push('✅ 连接成功');
       lines.push('');
 
-      // 地址延迟
       for (const r of reachableResults) {
         const label = this.getAddressLabel(r.address, computerInfo);
         const quality = r.latencyMs < 10 ? '极佳' : r.latencyMs < 30 ? '良好' : r.latencyMs < 80 ? '一般' : '较高';
         lines.push(`${label}: ${r.latencyMs}ms (${quality})`);
       }
 
-      // 服务器信息
       if (serverInfo) {
         lines.push('');
         lines.push(`主机名: ${serverInfo.hostname}`);
@@ -411,7 +394,6 @@ export class PcListActions {
       lines.push('❌ 所有地址均无法连接');
     }
 
-    // 不可达地址
     if (unreachableResults.length > 0) {
       lines.push('');
       for (const r of unreachableResults) {
@@ -424,7 +406,7 @@ export class PcListActions {
     this.ui.showInfoDialog({ title: '网络测试 — ' + computer.name, content: lines.join('\n') });
   }
 
-  /** 根据地址匹配返回易读标签 */
+  /**
   private getAddressLabel(address: string, computerInfo: ComputerInfo): string {
     if (address === computerInfo.manualAddress) return `手动 (${address})`;
     if (address === computerInfo.localAddress) return `局域网 (${address})`;
@@ -433,7 +415,7 @@ export class PcListActions {
     return address;
   }
 
-  /** 显示电脑详情 */
+  /**
   showComputerDetails(computer: ObservableComputer): void {
     const stateText = computer.isOnline ? '在线' : '离线';
     const pairText = computer.isPaired ? '已配对' : '未配对';

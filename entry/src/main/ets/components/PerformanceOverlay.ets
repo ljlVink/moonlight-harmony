@@ -8,12 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 性能覆盖层组件
- * 
- * 从 StreamPage 抽离的独立组件，显示串流性能数据
- * 支持拖动、吸附、布局切换等功能
- */
 import { promptAction } from '@kit.ArkUI';
 import { batteryInfo } from '@kit.BasicServicesKit';
 import { OptionPickerDialog, OptionPickerDialogConfig, OptionItem, SliderConfig } from './OptionPickerDialog';
@@ -28,28 +22,22 @@ import { StreamViewModel } from '../viewmodel/StreamViewModel';
 import { PreferencesUtil } from '../utils/PreferencesUtil';
 import { SettingsKeys } from '../service/SettingsService';
 
-/**
- * 点击检测阈值常量
- */
 const CLICK_THRESHOLD = 10;
 const DOUBLE_CLICK_TIMEOUT = 300;
 
-/** AppStorage 键：与 StreamPage 解锁时同步，保证解锁后覆盖层图标/透传立即刷新 */
+// AppStorage key: sync with StreamPage unlock state
 const PERF_OVERLAY_LOCKED_STORAGE_KEY = 'perf_overlay_locked';
 
 @Component
 export struct PerformanceOverlay {
-  // 外部传入的 ViewModel
+  // External ViewModel
   @ObjectLink viewModel: StreamViewModel;
   
-  // 屏幕尺寸
   @Prop screenWidth: number = 0;
   @Prop screenHeight: number = 0;
   
-  // 锁定状态用 StorageLink，菜单解锁时 set 后覆盖层能立即重绘
   @StorageLink(PERF_OVERLAY_LOCKED_STORAGE_KEY) overlayLocked: boolean = false;
   
-  // 性能数据 - 独立 @State 变量确保UI刷新
   @State perfFps: number = 0;
   @State perfRenderedFps: number = 0;
   @State perfBitrate: number = 0;
@@ -60,7 +48,6 @@ export struct PerformanceOverlay {
   @State perfBatteryLevel: number = 100;
   @State perfIsCharging: boolean = false;
   
-  // 覆盖层状态
   @State overlayX: number = 8;
   @State overlayY: number = 8;
   @State overlayOpacity: number = 1.0;
@@ -68,24 +55,19 @@ export struct PerformanceOverlay {
   @State isVertical: boolean = true;
   @State overlayBgOpacity: number = 0.53;
   @State currentSnapPosition: SnapPosition = SnapPosition.TOP_RIGHT;
-  @State overlayDragging: boolean = false;  // 拖动中显示全圆角
+  @State overlayDragging: boolean = false;  // Show full rounded corners while dragging
   
-  // 首次引导
   @State showGuide: boolean = false;
   
-  // 锁定闪烁边框
   @State lockFlashBorderOpacity: number = 0;
   
-  // 时钟图标弹跳动画
   @State clockIconScale: number = 1.0;
   @State clockHourAngle: number = 0;
   @State clockMinuteAngle: number = 0;
   private wasClockTime: boolean = false;
   
-  // 启用的性能项（@State 数组驱动 UI 响应式渲染，Set 变更不被追踪）
   @State enabledItemsList: string[] = [];
   
-  // 拖动状态
   private dragStartX: number = 0;
   private dragStartY: number = 0;
   private clickStartTime: number = 0;
@@ -94,30 +76,23 @@ export struct PerformanceOverlay {
   private overlayWidth: number = 200;
   private overlayHeight: number = 200;
   
-  // 定时器
   private updateTimer: number = -1;
   private guideTimer: number = -1;
   
-  // 弹窗控制器
   private settingsDialogController: CustomDialogController | null = null;
   
   aboutToAppear(): void {
-    // 初始化位置和布局
+    // Initialize position and layout
     this.initPosition();
     
-    // 与 viewModel 同步锁定状态到 AppStorage，供本组件与菜单解锁联动
     AppStorage.setOrCreate(PERF_OVERLAY_LOCKED_STORAGE_KEY, this.viewModel.overlayState.config.isLocked);
     
-    // 初始化背景透明度
     this.overlayBgOpacity = this.viewModel.overlayState.config.bgOpacity;
     
-    // 同步启用项目列表（@State 数组驱动 UI）
     this.enabledItemsList = Array.from(this.viewModel.overlayState.config.enabledItems);
     
-    // 启动数据更新定时器
     this.startUpdateTimer();
     
-    // 首次显示引导
     this.checkAndShowGuide();
   }
   
@@ -132,10 +107,10 @@ export struct PerformanceOverlay {
     try {
       const shown = await PreferencesUtil.get<boolean>(SettingsKeys.PERF_OVERLAY_GUIDE_SHOWN, false);
       if (!shown) {
-        // 延迟 500ms 显示，让覆盖层先渲染完
+        // Delay 500ms to let overlay render first
         setTimeout(() => {
           this.showGuide = true;
-          // 5 秒后自动关闭
+          // Auto-close after 5 seconds
           this.guideTimer = setTimeout(() => {
             this.dismissGuide();
           }, 5000);
@@ -143,7 +118,7 @@ export struct PerformanceOverlay {
         PreferencesUtil.put(SettingsKeys.PERF_OVERLAY_GUIDE_SHOWN, true);
       }
     } catch (_) {
-      // 忽略
+      // Ignore
     }
   }
   
@@ -172,7 +147,7 @@ export struct PerformanceOverlay {
   private startUpdateTimer(): void {
     let batteryUpdateCounter = 0;
     this.updateTimer = setInterval(() => {
-      // 从 ViewModel 获取 session 更新性能数据
+      // Get session from ViewModel and update performance data
       const session = this.viewModel.getSession();
       if (session) {
         const stats = session.getStats();
@@ -185,11 +160,9 @@ export struct PerformanceOverlay {
         this.perfPacketLoss = stats.packetLoss;
       }
       
-      // 每15秒更新电池
       batteryUpdateCounter++;
       if (batteryUpdateCounter >= 15) {
 
-      // 检测时钟状态变化，触发弹跳动画并更新时钟角度
       const clockNow = isClockTime();
       if (clockNow) {
         this.updateClockAngles();
@@ -204,18 +177,16 @@ export struct PerformanceOverlay {
           this.perfIsCharging = batteryInfo.chargingStatus === batteryInfo.BatteryChargeState.ENABLE ||
             batteryInfo.chargingStatus === batteryInfo.BatteryChargeState.FULL;
         } catch (e) {
-          // 忽略电池信息获取失败
+          // Ignore battery info fetch failure
         }
       }
     }, 1000);
     
-    // 初始化电池信息
     try {
       this.perfBatteryLevel = batteryInfo.batterySOC;
       this.perfIsCharging = batteryInfo.chargingStatus === batteryInfo.BatteryChargeState.ENABLE ||
         batteryInfo.chargingStatus === batteryInfo.BatteryChargeState.FULL;
     } catch (e) {
-      // 忽略
     }
   }
   
@@ -226,9 +197,9 @@ export struct PerformanceOverlay {
     }
   }
   
-  /** 时钟图标出现时的弹跳动画 */
+  /** Clock icon bounce animation on appearance */
   private triggerClockBounce(): void {
-    // 指针从上一刻钟的时间位置旋转到当前时间
+    // Rotate hands from previous quarter-hour position to current time
     const now = new Date();
     const prevTime = new Date(now.getTime() - 15 * 60 * 1000);
     const prevH = prevTime.getHours() % 12;
@@ -238,7 +209,7 @@ export struct PerformanceOverlay {
     setTimeout(() => {
       this.updateClockAngles();
     }, 50);
-    // 缩放脉冲
+    // Scale pulse
     let step = 0;
     const bounce = () => {
       if (step >= 6) {
@@ -252,22 +223,22 @@ export struct PerformanceOverlay {
     bounce();
   }
 
-  /** 更新时钟指针角度 */
+  /** Update clock hand angles */
   private updateClockAngles(): void {
     const now = new Date();
     const h = now.getHours() % 12;
     const m = now.getMinutes();
-    // 时针：每小时30°，每分钟0.5°
+    // Hour hand: 30° per hour, 0.5° per minute
     this.clockHourAngle = h * 30 + m * 0.5;
-    // 分针：每分钟6°
+    // Minute hand: 6° per minute
     this.clockMinuteAngle = m * 6;
   }
 
-  /** 自绘极简时钟（时针+分针） */
+  /** Draw minimal clock (hour + minute hands) */
   @Builder
   MiniClock(size: number) {
     Stack() {
-      // 时针（短粗）
+      // Hour hand (short and thick)
       Line()
         .width(1.5)
         .height(size * 0.28)
@@ -276,7 +247,7 @@ export struct PerformanceOverlay {
         .rotate({ angle: this.clockHourAngle, centerX: '50%', centerY: '100%' })
         .animation({ duration: 800, curve: Curve.EaseOut })
         .position({ x: size / 2 - 0.75, y: size / 2 - size * 0.28 })
-      // 分针（长细）
+      // Minute hand (long and thin)
       Line()
         .width(1)
         .height(size * 0.4)
@@ -285,7 +256,7 @@ export struct PerformanceOverlay {
         .rotate({ angle: this.clockMinuteAngle, centerX: '50%', centerY: '100%' })
         .animation({ duration: 800, curve: Curve.EaseOut })
         .position({ x: size / 2 - 0.5, y: size / 2 - size * 0.4 })
-      // 中心点
+      // Center point
       Circle()
         .width(2)
         .height(2)
@@ -298,7 +269,7 @@ export struct PerformanceOverlay {
     .animation({ duration: 200, curve: Curve.EaseOut })
   }
 
-  /** 锁定时播放金色边框闪烁动画（闪 3 次） */
+  /** Play gold border flash animation on lock (flash 3 times) */
   private playLockFlash(): void {
     let count = 0;
     const flash = () => {
@@ -322,7 +293,7 @@ export struct PerformanceOverlay {
   
   build() {
     Stack() {
-      // 主覆盖层
+      // Main overlay
       Column() {
         if (this.isVertical) {
           this.VerticalContent()
@@ -340,9 +311,9 @@ export struct PerformanceOverlay {
       .opacity(this.overlayOpacity)
       .scale({ x: this.overlayScale, y: this.overlayScale })
       .position({ x: this.overlayX, y: this.overlayY })
-      // 锁定状态下透传触摸到下层串流视图，未锁定时拦截（用 overlayLocked 保证菜单解锁后立即刷新）
+      // Pass-through touch to underlying stream view when locked, intercept when unlocked
       .hitTestBehavior(this.overlayLocked ? HitTestMode.Transparent : HitTestMode.Block)
-      .focusable(false)  // 禁止获取控制器焦点，确保游戏能接收输入
+      .focusable(false)  // Disable controller focus to ensure game receives input
       .onAreaChange((oldValue: Area, newValue: Area) => {
       const oldWidth = this.overlayWidth;
       const oldHeight = this.overlayHeight;
@@ -351,10 +322,10 @@ export struct PerformanceOverlay {
       
       if (oldWidth === 200 && oldHeight === 200 && 
           (this.overlayWidth !== 200 || this.overlayHeight !== 200)) {
-        // 首次渲染时重新计算位置（因为 aboutToAppear 时尺寸还不准确）
+        // Recalculate position on first render (size not accurate in aboutToAppear)
         this.initPosition();
       } else if (oldWidth !== this.overlayWidth || oldHeight !== this.overlayHeight) {
-        // 尺寸变化（数值位数改变等），重新对齐到当前吸附位置
+        // Size changed (digit count change etc.), re-align to current snap position
         const snapPos = calculateSnapPosition(
           this.currentSnapPosition,
           this.screenWidth,
@@ -400,7 +371,6 @@ export struct PerformanceOverlay {
       this.handleClick();
     })
 
-      // 首次操作引导提示
       if (this.showGuide) {
         Column({ space: 6 }) {
           Text('操作提示')
@@ -437,11 +407,8 @@ export struct PerformanceOverlay {
     .hitTestBehavior(HitTestMode.Transparent)
   }
   
-  // ==================== 垂直布局 ====================
-  
   @Builder
   VerticalContent() {
-    // 分辨率行
     if (this.enabledItemsList.includes(PerformanceItem.RESOLUTION)) {
       Row() {
         if (isClockTime()) {
@@ -459,7 +426,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 解码器行
     if (this.enabledItemsList.includes(PerformanceItem.DECODER)) {
       Row() {
         Text(getDecoderString(this.viewModel.actualCodec || 'HEVC', this.viewModel.actualHdr))
@@ -470,7 +436,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // FPS行
     if (this.enabledItemsList.includes(PerformanceItem.RENDER_FPS)) {
       Row() {
         Text(`Rx ${this.perfFps} / Rd ${this.perfRenderedFps}`)
@@ -484,7 +449,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 丢包行
     if (this.enabledItemsList.includes(PerformanceItem.PACKET_LOSS)) {
       Row() {
         Text(PerfIcons.PACKET_LOSS)
@@ -500,7 +464,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 带宽行
     if (this.enabledItemsList.includes(PerformanceItem.BITRATE)) {
       Row() {
         Text(PerfIcons.BITRATE)
@@ -513,7 +476,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 网络延迟行
     if (this.enabledItemsList.includes(PerformanceItem.NETWORK_LATENCY)) {
       Row() {
         Text(PerfIcons.NETWORK)
@@ -529,7 +491,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 解码延迟行
     if (this.enabledItemsList.includes(PerformanceItem.DECODE_LATENCY)) {
       Row() {
         Text(this.perfLatency < 20 ? PerfIcons.DECODE_NORMAL : PerfIcons.DECODE_HOT)
@@ -545,7 +506,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 主机延迟行
     if (this.enabledItemsList.includes(PerformanceItem.HOST_LATENCY)) {
       Row() {
         Text(PerfIcons.HOST)
@@ -561,7 +521,6 @@ export struct PerformanceOverlay {
       .margin({ bottom: 4 })
     }
 
-    // 电池行
     if (this.enabledItemsList.includes(PerformanceItem.BATTERY)) {
       Row() {
         Text(this.perfIsCharging ? PerfIcons.CHARGING : PerfIcons.BATTERY)
@@ -577,12 +536,9 @@ export struct PerformanceOverlay {
     }
   }
   
-  // ==================== 水平布局 ====================
-  
   @Builder
   HorizontalContent() {
     Row() {
-      // 分辨率
       if (this.enabledItemsList.includes(PerformanceItem.RESOLUTION)) {
         if (isClockTime()) {
           this.MiniClock(13)
@@ -598,7 +554,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.RESOLUTION)) this.Separator()
       }
       
-      // 解码器
       if (this.enabledItemsList.includes(PerformanceItem.DECODER)) {
         Text(getDecoderString(this.viewModel.actualCodec || 'HEVC', this.viewModel.actualHdr))
           .fontSize(11)
@@ -619,7 +574,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.RENDER_FPS)) this.Separator()
       }
       
-      // 丢包
       if (this.enabledItemsList.includes(PerformanceItem.PACKET_LOSS)) {
         Text(PerfIcons.PACKET_LOSS)
           .fontSize(12)
@@ -630,7 +584,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.PACKET_LOSS)) this.Separator()
       }
       
-      // 带宽
       if (this.enabledItemsList.includes(PerformanceItem.BITRATE)) {
         Text(PerfIcons.BITRATE)
           .fontSize(12)
@@ -641,7 +594,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.BITRATE)) this.Separator()
       }
       
-      // 网络延迟
       if (this.enabledItemsList.includes(PerformanceItem.NETWORK_LATENCY)) {
         Text(PerfIcons.NETWORK)
           .fontSize(12)
@@ -652,7 +604,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.NETWORK_LATENCY)) this.Separator()
       }
       
-      // 解码延迟
       if (this.enabledItemsList.includes(PerformanceItem.DECODE_LATENCY)) {
         Text(this.perfLatency < 20 ? PerfIcons.DECODE_NORMAL : PerfIcons.DECODE_HOT)
           .fontSize(12)
@@ -663,7 +614,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.DECODE_LATENCY)) this.Separator()
       }
       
-      // 主机延迟
       if (this.enabledItemsList.includes(PerformanceItem.HOST_LATENCY)) {
         Text(PerfIcons.HOST)
           .fontSize(12)
@@ -674,7 +624,6 @@ export struct PerformanceOverlay {
         if (this.hasNextItem(PerformanceItem.HOST_LATENCY)) this.Separator()
       }
       
-      // 电池
       if (this.enabledItemsList.includes(PerformanceItem.BATTERY)) {
         Text(this.perfIsCharging ? PerfIcons.CHARGING : PerfIcons.BATTERY)
           .fontSize(12)
@@ -692,8 +641,6 @@ export struct PerformanceOverlay {
       .fontSize(11)
       .fontColor('#66FFFFFF')
   }
-  
-  // ==================== 辅助方法 ====================
   
   private hasNextItem(currentItem: PerformanceItem): boolean {
     const orderedItems = [
@@ -717,8 +664,6 @@ export struct PerformanceOverlay {
     return false;
   }
   
-  // ==================== 拖动处理 ====================
-  
   private handleDragStart(event: GestureEvent): void {
     this.overlayDragging = true;
     this.dragStartX = this.overlayX;
@@ -726,7 +671,6 @@ export struct PerformanceOverlay {
     this.clickStartTime = Date.now();
     this.moveDistance = 0;
     
-    // 视觉反馈
     this.overlayOpacity = 0.7;
     this.overlayScale = 1.05;
   }
@@ -742,7 +686,6 @@ export struct PerformanceOverlay {
     let newX = this.dragStartX + offsetX;
     let newY = this.dragStartY + offsetY;
     
-    // 边界限制
     newX = Math.max(0, Math.min(newX, this.screenWidth - this.overlayWidth));
     newY = Math.max(0, Math.min(newY, this.screenHeight - this.overlayHeight));
     
@@ -751,13 +694,11 @@ export struct PerformanceOverlay {
   }
   
   private handleDragEnd(event: GestureEvent): void {
-    // 恢复视觉效果
     this.overlayOpacity = 1.0;
     this.overlayScale = 1.0;
     
     const duration = Date.now() - this.clickStartTime;
     if (this.moveDistance < CLICK_THRESHOLD && duration < 500) {
-      // 非拖动（点击），恢复贴边圆角
       this.overlayDragging = false;
       const timeSinceLastClick = Date.now() - this.lastClickTime;
       if (timeSinceLastClick < DOUBLE_CLICK_TIMEOUT && this.lastClickTime > 0) {
@@ -772,7 +713,6 @@ export struct PerformanceOverlay {
         }, DOUBLE_CLICK_TIMEOUT);
       }
     } else {
-      // 拖动结束，snapToPosition 内动画中会恢复 overlayDragging
       this.snapToPosition();
     }
   }
@@ -802,24 +742,20 @@ export struct PerformanceOverlay {
       this.overlayX = snapPos.x;
       this.overlayY = snapPos.y;
       this.currentSnapPosition = nearestPos;
-      this.overlayDragging = false;  // 恢复贴边圆角，跟随动画过渡
+      this.overlayDragging = false;
     });
     
     this.viewModel.overlayState.config.position = nearestPos;
   }
-  
-  // ==================== 点击处理 ====================
   
   private handleClick(): void {
     const now = Date.now();
     const timeSinceLastClick = now - this.lastClickTime;
     
     if (timeSinceLastClick < DOUBLE_CLICK_TIMEOUT && this.lastClickTime > 0) {
-      // 双击 - 切换布局
       this.toggleLayout();
       this.lastClickTime = 0;
     } else {
-      // 第一次点击
       const clickTime = now;
       this.lastClickTime = clickTime;
       setTimeout(() => {
@@ -841,7 +777,6 @@ export struct PerformanceOverlay {
         duration: 1500
       });
     } catch (e) {
-      // 忽略
     }
   }
   
@@ -869,9 +804,6 @@ export struct PerformanceOverlay {
     return data;
   }
 
-  /**
-   * 所有性能项目列表
-   */
   private static readonly ALL_ITEMS: PerformanceItem[] = [
     PerformanceItem.RESOLUTION,
     PerformanceItem.DECODER,
@@ -884,9 +816,6 @@ export struct PerformanceOverlay {
     PerformanceItem.BATTERY
   ];
 
-  /**
-   * 构建设置弹窗的选项列表（可重复调用以刷新）
-   */
   private buildSettingsOptions(): OptionItem[] {
     const enabledItems = this.viewModel.overlayState.config.enabledItems;
     const options: OptionItem[] = [];
@@ -907,10 +836,6 @@ export struct PerformanceOverlay {
     return options;
   }
 
-  /**
-   * 显示设置弹窗 — 保持打开模式
-   * 切换项目后弹窗不关闭, 实时刷新选项列表和覆盖层
-   */
   private showSettingsDialog(perfData: PerformanceData): void {
     const allItems = PerformanceOverlay.ALL_ITEMS;
     const currentPercent = Math.round(this.overlayBgOpacity * 100);
@@ -956,9 +881,6 @@ export struct PerformanceOverlay {
     this.settingsDialogController.open();
   }
 
-  /**
-   * 切换某个性能项目的显示/隐藏
-   */
   private toggleItem(item: PerformanceItem): void {
     const config = this.viewModel.overlayState.config;
     if (config.enabledItems.has(item)) {
@@ -966,15 +888,10 @@ export struct PerformanceOverlay {
     } else {
       config.enabledItems.add(item);
     }
-    // 同步 @State 数组，触发 UI 重新渲染
     this.enabledItemsList = Array.from(config.enabledItems);
-    // 持久化
     PreferencesUtil.put(SettingsKeys.PERF_OVERLAY_ITEMS, this.enabledItemsList.join(','));
   }
 
-  /**
-   * 更新背景透明度
-   */
   private updateBgOpacity(value: number): void {
     this.overlayBgOpacity = value;
     this.viewModel.overlayState.config.bgOpacity = value;

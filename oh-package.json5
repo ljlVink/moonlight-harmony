@@ -2,7 +2,7 @@
   modelVersion: '5.0.0',
   name: 'moonlight-harmonyos',
   version: '1.0.0',
-  description: 'Moonlight V+ - HarmonyOS 游戏串流客户端',
+  description: 'Moonlight V+ - HarmonyOS Game Streaming Client',
   main: '',
   author: '',
   license: 'GPL-3.0',

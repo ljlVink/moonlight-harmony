@@ -8,31 +8,20 @@
  * (at your option) any later version.
  */
 
-/**
- * 性能覆盖层管理器
- * 与 Android 版本对齐，支持：
- * - 可拖动（8个预设位置吸附）
- * - 可点击（显示项目详情）
- * - 双击切换布局
- * - 项目可选
- * - 锁定模式
- */
 
-// 性能项目图标常量类 - 统一管理所有 emoji 图标
 export class PerfIcons {
-  static readonly RESOLUTION: string = '📱';      // 分辨率
-  static readonly DECODER: string = '🎬';         // 解码器
-  static readonly PACKET_LOSS: string = '📶';     // 丢包率/网络信号
-  static readonly BITRATE: string = '⏳';         // 带宽/传输
-  static readonly NETWORK: string = '🌐';         // 网络延迟
-  static readonly DECODE_NORMAL: string = '⏱️';   // 解码延迟（正常）
-  static readonly DECODE_HOT: string = '🥵';      // 解码延迟（过热）
-  static readonly HOST: string = '🖥️';            // 主机延迟
-  static readonly BATTERY: string = '🔋';         // 电池
-  static readonly CHARGING: string = '⚡';        // 充电中
+  static readonly RESOLUTION: string = '📱';
+  static readonly DECODER: string = '🎬';
+  static readonly PACKET_LOSS: string = '📶';
+  static readonly BITRATE: string = '⏳';
+  static readonly NETWORK: string = '🌐';
+  static readonly DECODE_NORMAL: string = '⏱️';
+  static readonly DECODE_HOT: string = '🥵';
+  static readonly HOST: string = '🖥️';
+  static readonly BATTERY: string = '🔋';
+  static readonly CHARGING: string = '⚡';
 }
 
-// 性能项目名称常量类 - 统一管理所有显示名称
 export class PerfLabels {
   static readonly RESOLUTION: string = '分辨率';
   static readonly DECODER: string = '解码器';
@@ -45,20 +34,18 @@ export class PerfLabels {
   static readonly BATTERY: string = '电池';
 }
 
-// 性能项目枚举
 export enum PerformanceItem {
   RESOLUTION = 'resolution',
   DECODER = 'decoder',
   RENDER_FPS = 'render_fps',
   PACKET_LOSS = 'packet_loss',
-  BITRATE = 'bitrate',          // 码率
-  NETWORK_LATENCY = 'network_latency',  // 网络延迟（RTT）
+  BITRATE = 'bitrate',
+  NETWORK_LATENCY = 'network_latency',
   DECODE_LATENCY = 'decode_latency',
   HOST_LATENCY = 'host_latency',
   BATTERY = 'battery'
 }
 
-// 吸附位置枚举
 export enum SnapPosition {
   TOP_LEFT = 'top_left',
   TOP_CENTER = 'top_center',
@@ -71,7 +58,6 @@ export enum SnapPosition {
   BOTTOM_RIGHT = 'bottom_right'
 }
 
-// 性能数据类
 export class PerformanceData {
   streamWidth: number = 0;
   streamHeight: number = 0;
@@ -89,17 +75,15 @@ export class PerformanceData {
   isCharging: boolean = false;
 }
 
-// 覆盖层配置类（@Observed 以便解锁后覆盖层图标等 UI 能响应更新）
 @Observed
 export class OverlayConfig {
-  isVertical: boolean = true;          // 是否垂直布局
-  isLocked: boolean = false;           // 是否锁定（不可拖动）
-  position: SnapPosition = SnapPosition.TOP_RIGHT;  // 当前位置（默认右上角）
-  enabledItems: Set<string> = new Set<string>();   // 启用的项目（使用 string 类型）
-  bgOpacity: number = 0.53;                        // 背景透明度（0.0-1.0）
+  isVertical: boolean = true;
+  isLocked: boolean = false;
+  position: SnapPosition = SnapPosition.TOP_RIGHT;
+  enabledItems: Set<string> = new Set<string>();
+  bgOpacity: number = 0.53;
 }
 
-// 性能项目信息类
 export class PerformanceItemInfo {
   title: string;
   description: string;
@@ -110,7 +94,6 @@ export class PerformanceItemInfo {
   }
 }
 
-// 坐标类
 export class Position {
   x: number;
   y: number;
@@ -121,12 +104,11 @@ export class Position {
   }
 }
 
-// 默认配置
 export function getDefaultOverlayConfig(): OverlayConfig {
   const config = new OverlayConfig();
-  config.isVertical = true;   // 默认竖向布局
+  config.isVertical = true;
   config.isLocked = false;
-  config.position = SnapPosition.TOP_RIGHT;  // 默认右上角
+  config.position = SnapPosition.TOP_RIGHT;
   config.enabledItems = new Set<string>([
     PerformanceItem.RESOLUTION,
     PerformanceItem.DECODER,
@@ -140,7 +122,6 @@ export function getDefaultOverlayConfig(): OverlayConfig {
   return config;
 }
 
-// 获取性能项目信息
 export function getPerformanceItemInfo(item: PerformanceItem): PerformanceItemInfo {
   switch (item) {
     case PerformanceItem.RESOLUTION:
@@ -194,23 +175,18 @@ export function getPerformanceItemInfo(item: PerformanceItem): PerformanceItemIn
 }
 
 /**
- * 获取月相图标
- */
-/** 当前是否处于时钟显示时段（每刻钟 :00/:15/:30/:45 的 1 分钟内） */
 export function isClockTime(): boolean {
   return new Date().getMinutes() % 15 === 0;
 }
 
 export function getMoonPhaseIcon(locked: boolean = false): string {
-  // 锁定时显示图钉代替月相
   if (locked) {
     return '📌';
   }
 
-  // 简化的月相计算（基于朔望月周期 29.53 天）
   const date = new Date();
-  const lp = 2551443; // 月相周期（秒）
-  const newMoon = new Date(1970, 0, 7, 20, 35, 0); // 已知新月时间
+  const lp = 2551443;
+  const newMoon = new Date(1970, 0, 7, 20, 35, 0);
   const phase = ((date.getTime() - newMoon.getTime()) / 1000) % lp;
   const phaseIndex = Math.floor(phase / (lp / 8));
 
@@ -218,12 +194,8 @@ export function getMoonPhaseIcon(locked: boolean = false): string {
   return icons[phaseIndex] || '🌙';
 }
 
-/**
- * 格式化数据流量显示（从码率 bps 转换为每秒数据量）
- * 码率 (bps) 转换为字节/秒 需要除以 8
- */
 export function formatDataRate(bps: number): string {
-  const bytesPerSec = bps / 8;  // 从 bits 转换为 bytes
+  const bytesPerSec = bps / 8;
   
   if (bytesPerSec >= 1024 * 1024) {
     return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
@@ -233,9 +205,6 @@ export function formatDataRate(bps: number): string {
   return `${bytesPerSec.toFixed(0)} B/s`;
 }
 
-/**
- * 获取解码器显示字符串
- */
 export function getDecoderString(codec: string, isHdr: boolean): string {
   let result = codec.toUpperCase();
   if (result.includes('HEVC') || result.includes('H265')) {
@@ -251,36 +220,24 @@ export function getDecoderString(codec: string, isHdr: boolean): string {
   return result;
 }
 
-/**
- * 获取丢包率颜色
- */
 export function getPacketLossColor(loss: number): string {
-  if (loss < 1.0) return '#7D9D7D';  // 绿色 - 优秀
-  if (loss < 5.0) return '#D4A574';  // 橙色 - 可接受
-  return '#B57D7D';  // 红色 - 差
+  if (loss < 1.0) return '#7D9D7D';
+  if (loss < 5.0) return '#D4A574';
+  return '#B57D7D';
 }
 
-/**
- * 获取延迟颜色
- */
 export function getLatencyColor(ms: number): string {
-  if (ms < 10) return '#7D9D7D';   // 绿色 - 优秀
-  if (ms < 20) return '#D597E3';   // 紫色 - 正常
-  return '#B57D7D';  // 红色 - 差
+  if (ms < 10) return '#7D9D7D';
+  if (ms < 20) return '#D597E3';
+  return '#B57D7D';
 }
 
-/**
- * 获取电池颜色
- */
 export function getBatteryColor(level: number): string {
-  if (level > 50) return '#90EE90';  // 浅绿色 - 充足
-  if (level > 20) return '#FFA500';  // 橙色 - 偏低
-  return '#FF6B6B';  // 红色 - 不足
+  if (level > 50) return '#90EE90';
+  if (level > 20) return '#FFA500';
+  return '#FF6B6B';
 }
 
-/**
- * 计算吸附位置坐标（完全贴边，0 padding）
- */
 export function calculateSnapPosition(
   position: SnapPosition,
   screenWidth: number,
@@ -336,11 +293,7 @@ export function calculateSnapPosition(
   return new Position(x, y);
 }
 
-/**
- * 根据吸附位置获取圆角（仅不贴边方向有圆角）
- */
 export function getSnapBorderRadius(position: SnapPosition, radius: number = 12): BorderRadiuses {
-  // 贴边方向圆角为 0，不贴边方向保留圆角
   switch (position) {
     case SnapPosition.TOP_LEFT:
       return { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: radius };
@@ -365,7 +318,6 @@ export function getSnapBorderRadius(position: SnapPosition, radius: number = 12)
   }
 }
 
-// 所有吸附位置列表
 const ALL_SNAP_POSITIONS: SnapPosition[] = [
   SnapPosition.TOP_LEFT,
   SnapPosition.TOP_CENTER,
@@ -378,9 +330,6 @@ const ALL_SNAP_POSITIONS: SnapPosition[] = [
   SnapPosition.BOTTOM_RIGHT
 ];
 
-/**
- * 找到最近的吸附位置
- */
 export function findNearestSnapPosition(
   currentX: number,
   currentY: number,

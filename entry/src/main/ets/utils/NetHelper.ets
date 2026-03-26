@@ -9,40 +9,28 @@
  */
 
 /**
- * 网络地址分析工具类
  *
- * 移植自 Android Moonlight 的 NetHelper.java / ComputerDetails.java / MdnsDiscoveryAgent.java，
- * 提供 IP 地址类型判断（LAN / WAN / VPN / link-local）能力。
  */
 
-/**
- * 地址类型枚举
- */
 export enum AddressType {
-  /** RFC 1918 私有 IPv4 (10.x / 172.16-31.x / 192.168.x) 或 IPv4 loopback */
+  /**
   LAN_IPV4 = 'LAN_IPV4',
   /** IPv6 link-local (fe80::/10) */
   IPV6_LINK_LOCAL = 'IPV6_LINK_LOCAL',
-  /** IPv6 site-local / ULA (fc00::/7 即 fc/fd 前缀) */
+  /**
   IPV6_ULA = 'IPV6_ULA',
-  /** IPv6 全局单播地址 (排除 6to4 / Teredo) */
+  /**
   IPV6_GLOBAL = 'IPV6_GLOBAL',
-  /** IPv6 6to4 (2002::/16) 或 Teredo (2001:0000::/32) — 性能差 */
+  /**
   IPV6_TUNNEL = 'IPV6_TUNNEL',
-  /** 公网 IPv4 地址 */
+  /**
   WAN = 'WAN',
-  /** 环回地址 (127.x 或 ::1) */
+  /**
   LOOPBACK = 'LOOPBACK',
-  /** 无法识别 */
+  /**
   UNKNOWN = 'UNKNOWN',
 }
 
-// ─────────────────────── IPv4 工具 ───────────────────────
-
-/**
- * 将点分十进制的 IPv4 地址字符串解析为 4 字节数组。
- * 返回 null 表示格式无效。
- */
 function parseIPv4(address: string): number[] | null {
   const parts = address.split('.');
   if (parts.length !== 4) {
@@ -60,13 +48,11 @@ function parseIPv4(address: string): number[] | null {
 }
 
 /**
- * 判断是否为 IPv4 私有地址 (RFC 1918)
  *
  * - 10.0.0.0/8
  * - 172.16.0.0/12  (172.16.0.0 – 172.31.255.255)
  * - 192.168.0.0/16
  *
- * 对应 Android NetHelper.isPrivateAddress()
  */
 export function isPrivateIPv4(address: string): boolean {
   const bytes = parseIPv4(address);
@@ -88,41 +74,25 @@ export function isPrivateIPv4(address: string): boolean {
   return false;
 }
 
-/**
- * 判断是否为 IPv4 环回地址 (127.0.0.0/8)
- */
 export function isLoopbackIPv4(address: string): boolean {
   const bytes = parseIPv4(address);
   return bytes !== null && bytes[0] === 127;
 }
 
-/**
- * 判断是否为 IPv4 link-local 地址 (169.254.0.0/16)
- */
 export function isLinkLocalIPv4(address: string): boolean {
   const bytes = parseIPv4(address);
   return bytes !== null && bytes[0] === 169 && bytes[1] === 254;
 }
 
-/**
- * 判断地址字符串是否为合法的 IPv4 格式
- */
 export function isIPv4Address(address: string): boolean {
   return parseIPv4(address) !== null;
 }
 
-// ─────────────────────── IPv6 工具 ───────────────────────
-
-/**
- * 标准化 IPv6 地址：去除可能的 [] 包裹和 %scopeId 后缀
- */
 function normalizeIPv6(address: string): string {
   let addr = address;
-  // 去 []
   if (addr.startsWith('[') && addr.includes(']')) {
     addr = addr.substring(1, addr.indexOf(']'));
   }
-  // 去 %scopeId
   const pctIdx = addr.indexOf('%');
   if (pctIdx !== -1) {
     addr = addr.substring(0, pctIdx);
@@ -130,9 +100,6 @@ function normalizeIPv6(address: string): string {
   return addr.toLowerCase();
 }
 
-/**
- * 判断地址字符串是否为 IPv6 格式（包含至少 2 个冒号）
- */
 export function isIPv6Address(address: string): boolean {
   if (!address) {
     return false;
@@ -147,9 +114,7 @@ export function isIPv6Address(address: string): boolean {
 }
 
 /**
- * 判断是否为 IPv6 link-local 地址 (fe80::/10)
  *
- * 对应 Android InetAddress.isLinkLocalAddress()
  */
 export function isIPv6LinkLocal(address: string): boolean {
   if (!isIPv6Address(address)) {
@@ -160,9 +125,6 @@ export function isIPv6LinkLocal(address: string): boolean {
     addr.startsWith('fe9') || addr.startsWith('fea') || addr.startsWith('feb');
 }
 
-/**
- * 判断是否为 IPv6 ULA 地址 (fc00::/7，即 fc 或 fd 开头)
- */
 export function isIPv6ULA(address: string): boolean {
   if (!isIPv6Address(address)) {
     return false;
@@ -172,9 +134,7 @@ export function isIPv6ULA(address: string): boolean {
 }
 
 /**
- * 判断是否为 IPv6 site-local 地址 (fec0::/10，已弃用但仍需识别)
  *
- * 对应 Android InetAddress.isSiteLocalAddress()
  */
 export function isIPv6SiteLocal(address: string): boolean {
   if (!isIPv6Address(address)) {
@@ -184,9 +144,6 @@ export function isIPv6SiteLocal(address: string): boolean {
   return addr.startsWith('fec') || addr.startsWith('fed') || addr.startsWith('fee') || addr.startsWith('fef');
 }
 
-/**
- * 判断是否为 IPv6 6to4 隧道地址 (2002::/16) — 性能差
- */
 export function isIPv6_6to4(address: string): boolean {
   if (!isIPv6Address(address)) {
     return false;
@@ -195,21 +152,14 @@ export function isIPv6_6to4(address: string): boolean {
   return addr.startsWith('2002:');
 }
 
-/**
- * 判断是否为 IPv6 Teredo 隧道地址 (2001:0000::/32) — 性能差
- */
 export function isIPv6Teredo(address: string): boolean {
   if (!isIPv6Address(address)) {
     return false;
   }
   const addr = normalizeIPv6(address);
-  // 2001:0000: 或 2001:0:
   return addr.startsWith('2001:0000:') || addr.startsWith('2001:0:');
 }
 
-/**
- * 判断是否为 IPv6 环回地址 (::1)
- */
 export function isIPv6Loopback(address: string): boolean {
   if (!isIPv6Address(address)) {
     return false;
@@ -218,12 +168,8 @@ export function isIPv6Loopback(address: string): boolean {
   return addr === '::1' || addr === '0000:0000:0000:0000:0000:0000:0000:0001';
 }
 
-// ─────────────────────── 综合判断 ───────────────────────
-
 /**
- * 判断地址是否为 LAN 地址（私有 IPv4 / loopback / link-local IPv4）
  *
- * 等价于 Android NetHelper.isLanAddress():
  *   addr.isSiteLocalAddress() || addr.isLoopbackAddress() || isPrivateAddress(addr)
  */
 export function isLanAddress(addressStr: string | undefined | null): boolean {
@@ -231,14 +177,12 @@ export function isLanAddress(addressStr: string | undefined | null): boolean {
     return false;
   }
 
-  // 去掉端口号
   const address = stripPort(addressStr);
 
   if (isIPv4Address(address)) {
     return isPrivateIPv4(address) || isLoopbackIPv4(address) || isLinkLocalIPv4(address);
   }
 
-  // IPv6: link-local / ULA / site-local 都视为 LAN
   if (isIPv6Address(address)) {
     return isIPv6LinkLocal(address) || isIPv6ULA(address) || isIPv6SiteLocal(address) || isIPv6Loopback(address);
   }
@@ -247,9 +191,7 @@ export function isLanAddress(addressStr: string | undefined | null): boolean {
 }
 
 /**
- * 判断地址是否为公网地址
  *
- * 等价于 Android ComputerDetails.isPublicAddress()
  */
 export function isPublicAddress(addressStr: string | undefined | null): boolean {
   if (!addressStr) {
@@ -261,7 +203,6 @@ export function isPublicAddress(addressStr: string | undefined | null): boolean 
     return !isPrivateIPv4(address) && !isLoopbackIPv4(address) && !isLinkLocalIPv4(address);
   }
 
-  // 非 LAN 类型的 IPv6 全局地址（排除隧道）
   if (isIPv6Address(address)) {
     return !isIPv6LinkLocal(address) && !isIPv6ULA(address) && !isIPv6SiteLocal(address) &&
       !isIPv6Loopback(address) && !isIPv6_6to4(address) && !isIPv6Teredo(address);
@@ -271,9 +212,7 @@ export function isPublicAddress(addressStr: string | undefined | null): boolean 
 }
 
 /**
- * 判断 IPv4 地址是否为 LAN IPv4 地址
  *
- * 等价于 Android ComputerDetails.isLanIpv4Address()
  */
 export function isLanIPv4Address(addressStr: string | undefined | null): boolean {
   if (!addressStr) {
@@ -286,9 +225,6 @@ export function isLanIPv4Address(addressStr: string | undefined | null): boolean
   return isPrivateIPv4(address) || isLoopbackIPv4(address) || isLinkLocalIPv4(address);
 }
 
-/**
- * 检测地址类型
- */
 export function detectAddressType(addressStr: string | undefined | null): AddressType {
   if (!addressStr) {
     return AddressType.UNKNOWN;
@@ -326,9 +262,6 @@ export function detectAddressType(addressStr: string | undefined | null): Addres
   return AddressType.UNKNOWN;
 }
 
-/**
- * 获取地址类型的中文描述（用于 UI 显示）
- */
 export function getAddressTypeLabel(addressStr: string | undefined | null): string {
   const type = detectAddressType(addressStr);
   switch (type) {
@@ -351,20 +284,10 @@ export function getAddressTypeLabel(addressStr: string | undefined | null): stri
   }
 }
 
-// ─────────────────────── 内部工具 ───────────────────────
-
 /**
- * 从一组地址中选出最佳 IPv6 全局地址
  *
- * 移植自 Android MdnsDiscoveryAgent.getBestIpv6Address()
  *
- * 过滤规则：
- *   - 排除 link-local、site-local/ULA、loopback
- *   - 排除 6to4 (2002::/16) 和 Teredo (2001:0000::/32) 隧道地址
- *   - 优先选择 IPv6 全局单播地址
  *
- * @param addresses 地址字符串数组（纯 IP，无端口）
- * @returns 最佳 IPv6 全局地址，无则返回 undefined
  */
 export function getBestIpv6Address(addresses: string[]): string | undefined {
   for (const addr of addresses) {
@@ -377,33 +300,25 @@ export function getBestIpv6Address(addresses: string[]): string | undefined {
   return undefined;
 }
 
-/**
- * 判断地址是否为 IPv6 全局单播地址（可用于 WAN 连接）
- */
 export function isIPv6Global(address: string): boolean {
   return detectAddressType(address) === AddressType.IPV6_GLOBAL;
 }
 
 /**
- * 从地址字符串中去除端口号
- * 支持: "192.168.1.1:47989" -> "192.168.1.1"
  *       "[fe80::1]:47989"   -> "fe80::1"
  *       "fe80::1%eth0"      -> "fe80::1"
  */
 function stripPort(addressStr: string): string {
   let addr = addressStr.trim();
 
-  // [IPv6]:port 格式
   if (addr.startsWith('[')) {
     const closeBracket = addr.indexOf(']');
     if (closeBracket !== -1) {
       addr = addr.substring(1, closeBracket);
     }
   } else if (isIPv6Address(addr)) {
-    // 纯 IPv6 无端口，直接返回
     return normalizeIPv6(addr);
   } else {
-    // IPv4:port 或纯 IPv4
     const colonIdx = addr.lastIndexOf(':');
     if (colonIdx !== -1) {
       const possiblePort = addr.substring(colonIdx + 1);
@@ -414,7 +329,6 @@ function stripPort(addressStr: string): string {
     }
   }
 
-  // 去 %scopeId
   const pctIdx = addr.indexOf('%');
   if (pctIdx !== -1) {
     addr = addr.substring(0, pctIdx);

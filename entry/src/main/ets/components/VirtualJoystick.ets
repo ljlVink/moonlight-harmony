@@ -9,81 +9,61 @@
  */
 
 /**
- * 自定义按键用虚拟摇杆组件
  *
- * 参照 AnalogStick.ets（虚拟控制器摇杆）的设计和实现方式，提供完整的 2D 模拟输入。
- * 关键行为与 AnalogStick.ets 保持一致：
- * - 立即响应触摸，通过死区连续重映射（而非二态激活）
- * - 双击触发 L3/R3 短按+自动释放
- * - 手指追踪（trackingTouchId）避免多指冲突
- * - 输出归一化 x/y (-1.0 ~ 1.0)
  */
 
-/**
- * 摇杆移动回调
- * @param x 水平轴 -1.0(左) ~ 0 ~ 1.0(右)
- * @param y 垂直轴 -1.0(上) ~ 0 ~ 1.0(下)（屏幕坐标系）
- */
 export type JoystickMovementCallback = (x: number, y: number) => void;
 
-/** 摇杆双击回调（L3/R3 短按触发） */
+/**
 export type JoystickClickCallback = () => void;
 
-/** 摇杆释放回调（手指抬起，摇杆归零） */
+/**
 export type JoystickRevokeCallback = () => void;
 
-/** 是否处于编辑模式（编辑模式下禁用摇杆输入） */
+/**
 export type EditModeGetter = () => boolean;
 
 @Component
 export struct VirtualJoystick {
-  /** 摇杆尺寸 (vp)，外圆直径（避免与 CustomComponent.size 冲突） */
+  /**
   @Prop joystickSize: number = 120;
-  /** 外圆颜色 */
+  /**
   @Prop ringColor: string = '#6050C080';
-  /** 内摇杆颜色 */
+  /**
   @Prop stickColor: string = '#A050C080';
-  /** 按下时颜色 */
+  /**
   @Prop pressedColor: string = '#C070E090';
-  /** 透明度 0-100 */
+  /**
   @Prop opacity_: number = 80;
-  /** 隐形模式：未按下时不可见，触摸位置成为摇杆中心 */
+  /**
   @Prop invisibleMode: boolean = false;
 
-  // 回调
   onMovement: JoystickMovementCallback = (_x: number, _y: number): void => {};
   onStickClick: JoystickClickCallback = (): void => {};
   onDoubleClick: JoystickClickCallback = (): void => {};
   onRevoke: JoystickRevokeCallback = (): void => {};
   isEditMode: EditModeGetter = (): boolean => false;
 
-  // === 内部状态 ===
-  @State private stickX: number = 0;   // 视觉归一化偏移 -1~1
+  @State private stickX: number = 0;
   @State private stickY: number = 0;
   @State private isPressed: boolean = false;
 
-  // 隐形模式：触摸按下位置相对于组件中心的偏移
   @State private dynamicOffsetX: number = 0;
   @State private dynamicOffsetY: number = 0;
 
-  // 预计算的尺寸值（在 aboutToAppear 中初始化，避免 private get 在 struct 中不可靠）
   private stickOuterRadius: number = 60;
   private stickInnerRadius: number = 15;
   private stickMaxTravel: number = 45;
 
-  // 死区比例（归一化空间）
   private deadzone: number = 0.15;
 
-  // 触摸追踪（与 AnalogStick.ets 一致）
   private trackingTouchId: number = -1;
 
-  // 双击检测
   private lastTapTime: number = 0;
   private static readonly DOUBLE_TAP_MS: number = 300;
 
   aboutToAppear(): void {
     if (this.invisibleMode) {
-      // 隐形模式：视觉大小固定为标准摇杆尺寸，触摸区域使用 joystickSize
       this.stickOuterRadius = 60;
     } else {
       this.stickOuterRadius = this.joystickSize / 2;
@@ -94,7 +74,6 @@ export struct VirtualJoystick {
 
   build() {
     Stack() {
-      // 隐形模式下需要一个不可见但可点击的全尺寸触摸区
       if (this.invisibleMode) {
         Column()
           .width('100%')
@@ -102,7 +81,6 @@ export struct VirtualJoystick {
           .backgroundColor('#01000000')
       }
 
-      // 外圆环
       Circle()
         .width(this.stickOuterRadius * 2)
         .height(this.stickOuterRadius * 2)
@@ -112,7 +90,6 @@ export struct VirtualJoystick {
         .translate(this.invisibleMode ? { x: this.dynamicOffsetX, y: this.dynamicOffsetY } : {})
         .opacity(this.invisibleMode && !this.isPressed ? 0 : 1)
 
-      // 内摇杆头
       Circle()
         .width(this.stickInnerRadius * 2)
         .height(this.stickInnerRadius * 2)
@@ -139,27 +116,22 @@ export struct VirtualJoystick {
   }
 
   private handleTouch(event: TouchEvent): void {
-    // 隐形模式下组件尺寸可能大于视觉圆，中心为组件中心
     const compCenterX: number = this.invisibleMode ? this.joystickSize / 2 : this.stickOuterRadius;
     const compCenterY: number = this.invisibleMode ? this.joystickSize / 2 : this.stickOuterRadius;
 
     if (event.type === TouchType.Down) {
-      // 使用 changedTouches 获取按下的手指（与 AnalogStick 一致）
       const changed: TouchObject[] = event.changedTouches;
       if (changed.length === 0) return;
       const touch: TouchObject = changed[0];
 
-      // 如果已有追踪手指，则忽略—只追踪一个
       if (this.trackingTouchId >= 0) return;
 
       this.trackingTouchId = touch.id;
       this.isPressed = true;
 
       if (this.invisibleMode) {
-        // 隐形模式：触摸位置成为摇杆中心，不发送初始偏移
         this.dynamicOffsetX = touch.x - compCenterX;
         this.dynamicOffsetY = touch.y - compCenterY;
-        // 初始位置在中心—不发送移动
       } else {
         this.updateStickPosition(touch.x - compCenterX, touch.y - compCenterY);
       }
@@ -172,7 +144,6 @@ export struct VirtualJoystick {
       const touch: TouchObject | null = this.findTrackedTouch(event.touches);
       if (touch !== null) {
         if (this.invisibleMode) {
-          // 隐形模式：相对于动态中心计算
           const dynCenterX: number = compCenterX + this.dynamicOffsetX;
           const dynCenterY: number = compCenterY + this.dynamicOffsetY;
           this.updateStickPosition(touch.x - dynCenterX, touch.y - dynCenterY);
@@ -185,7 +156,6 @@ export struct VirtualJoystick {
 
     // Up / Cancel
     if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-      // 检查释放的是否为我们追踪的手指
       const changed: TouchObject[] = event.changedTouches;
       let isOurFinger: boolean = false;
       for (let i = 0; i < changed.length; i++) {
@@ -202,9 +172,6 @@ export struct VirtualJoystick {
     }
   }
 
-  /**
-   * 在触摸列表中查找我们正在跟踪的手指（与 AnalogStick.ets 一致）
-   */
   private findTrackedTouch(touches: TouchObject[]): TouchObject | null {
     for (let i = 0; i < touches.length; i++) {
       if (touches[i].id === this.trackingTouchId) {
@@ -214,32 +181,23 @@ export struct VirtualJoystick {
     return null;
   }
 
-  /**
-   * 更新摇杆位置 + 发送移动事件
-   * 使用与 AnalogStick.ets 相同的死区重映射算法
-   */
   private updateStickPosition(dx: number, dy: number): void {
     const maxDistance: number = this.stickMaxTravel;
 
-    // 极坐标
     let distance: number = Math.sqrt(dx * dx + dy * dy);
     const angle: number = Math.atan2(dy, dx);
 
-    // 限制在可移动范围内
     if (distance > maxDistance) {
       distance = maxDistance;
     }
 
-    // 视觉偏移（归一化到 -1~1，不应用死区，保证滑动视觉流畅）
     const visualNorm: number = distance / maxDistance;
     this.stickX = visualNorm * Math.cos(angle);
     this.stickY = visualNorm * Math.sin(angle);
 
-    // 归一化坐标
     let normalizedX: number = this.stickX;
     let normalizedY: number = this.stickY;
 
-    // 连续死区重映射（与 AnalogStick.ets 一致）
     const magnitude: number = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
     if (magnitude < this.deadzone) {
       normalizedX = 0;
@@ -254,9 +212,6 @@ export struct VirtualJoystick {
     this.onMovement(normalizedX, normalizedY);
   }
 
-  /**
-   * 重置摇杆到中心位置 + 通知归零
-   */
   private resetStick(): void {
     this.stickX = 0;
     this.stickY = 0;
@@ -264,9 +219,6 @@ export struct VirtualJoystick {
     this.onRevoke();
   }
 
-  /**
-   * 双击检测（与 AnalogStick.ets 一致的 300ms 阈值）
-   */
   private checkDoubleTap(): void {
     const now: number = Date.now();
     if (now - this.lastTapTime < VirtualJoystick.DOUBLE_TAP_MS) {

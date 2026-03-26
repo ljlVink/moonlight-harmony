@@ -8,11 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 背景图组件
- * 可复用的页面背景图组件，支持网络图片和渐变叠加
- * 使用 SaveButton 安全控件保存图片，无需申请 WRITE_IMAGEVIDEO 权限
- */
 import { AppColors } from '../common/Theme';
 import { BackgroundImageUtil } from '../utils/BackgroundImageUtil';
 import { common } from '@kit.AbilityKit';
@@ -21,9 +16,6 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 
-/**
- * 背景图组件属性
- */
 interface BackgroundImageProps {
   imageUrl: string;
   imageOpacity?: number;
@@ -36,71 +28,59 @@ export struct BackgroundImage {
   @Prop imageOpacity: number = 0.15;
   @Prop enableLongPressSave: boolean = true;
   @State showSaveDialog: boolean = false;
-  // 淡入过渡效果：图片加载完成前透明度为 0
   @State currentOpacity: number = 0;
-  // 记录上一次的 URL，检测变化时重置淡入
   private lastImageUrl: string = '';
-  
+
   private backgroundUtil = BackgroundImageUtil.getInstance();
-  
-  /**
-   * SaveButton 点击回调处理
-   * 使用安全控件授权后保存图片到相册
-   */
+
   handleSaveButtonClick: SaveButtonCallback = async (
-    event: ClickEvent, 
-    result: SaveButtonOnClickResult, 
+    event: ClickEvent,
+    result: SaveButtonOnClickResult,
     error?: BusinessError
   ) => {
     if (result === SaveButtonOnClickResult.SUCCESS) {
       try {
         const context = getContext(this) as common.UIAbilityContext;
-        promptAction.showToast({ message: '正在保存图片...' });
-        
-        // 获取图片数据
+        promptAction.showToast({ message: 'Saving image...' });
+
         let imageData = this.backgroundUtil.getCachedImageData();
         if (!imageData) {
-          // 如果没有缓存数据，重新获取
           imageData = await this.backgroundUtil.downloadImageData(this.imageUrl);
         }
-        
+
         if (!imageData) {
-          promptAction.showToast({ message: '图片数据获取失败' });
+          promptAction.showToast({ message: 'Failed to get image data' });
           this.showSaveDialog = false;
           return;
         }
-        
-        // 使用 SaveButton 授权后创建图片资源
+
         const helper = photoAccessHelper.getPhotoAccessHelper(context);
         const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpg');
-        
-        // 写入图片数据
+
         const file = await fileIo.open(uri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
         await fileIo.write(file.fd, imageData);
         await fileIo.close(file.fd);
-        
-        promptAction.showToast({ message: '图片已保存到相册' });
+
+        promptAction.showToast({ message: 'Image saved to album' });
       } catch (err) {
-        console.error('BackgroundImage: 保存图片失败', err);
+        console.error('BackgroundImage: Failed to save image', err);
         const e = err as BusinessError;
-        promptAction.showToast({ message: `保存失败: ${e.message || '未知错误'}` });
+        promptAction.showToast({ message: `Save failed: ${e.message || 'Unknown error'}` });
       }
     } else if (result === SaveButtonOnClickResult.TEMPORARY_AUTHORIZATION_FAILED) {
-      console.error('BackgroundImage: 授权失败', error);
-      promptAction.showToast({ message: '保存授权失败' });
+      console.error('BackgroundImage: Authorization failed', error);
+      promptAction.showToast({ message: 'Save authorization failed' });
     }
     this.showSaveDialog = false;
   };
 
   build() {
     Stack() {
-      // 纯色基础背景
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor(AppColors.Background)
 
-      // 网络图片背景 - 带淡入过渡效果
       if (this.imageUrl && this.imageUrl.length > 0) {
         Image(this.imageUrl)
           .width('100%')
@@ -112,22 +92,19 @@ export struct BackgroundImage {
             curve: Curve.EaseOut
           })
           .onAppear(() => {
-            // URL 变化时重置透明度
             if (this.lastImageUrl !== this.imageUrl) {
               this.currentOpacity = 0;
               this.lastImageUrl = this.imageUrl;
             }
           })
           .onComplete(() => {
-            // 图片加载完成，淡入到目标透明度
             this.currentOpacity = this.imageOpacity;
-            // 仅在支持长按保存时预缓存图片数据
             if (this.enableLongPressSave) {
               this.backgroundUtil.preloadAndCacheImage();
             }
           })
           .onError(() => {
-            console.warn('BackgroundImage: 背景图加载失败', this.imageUrl);
+            console.warn('BackgroundImage: Failed to load background image', this.imageUrl);
           })
           .gesture(
             LongPressGesture({ repeat: false, duration: 800 })
@@ -137,8 +114,7 @@ export struct BackgroundImage {
                 }
               })
           )
-        
-        // 简化渐变叠加层 - 使用更少的颜色stops
+
         Column()
           .width('100%')
           .height('100%')
@@ -159,24 +135,20 @@ export struct BackgroundImage {
       backgroundColor: AppColors.CardBackground,
       blurStyle: BlurStyle.COMPONENT_ULTRA_THICK,
       preferType: SheetType.BOTTOM,
-      title: { title: '保存背景图' }
+      title: { title: 'Save Background Image' }
     })
   }
-  
-  /**
-   * 保存图片的底部弹窗
-   * 使用 SaveButton 安全控件替代传统权限申请
-   */
+
   @Builder
   SaveImageSheet() {
     Column() {
-      Text('是否将当前背景图保存到相册？')
+      Text('Save current background image to album?')
         .fontSize(14)
         .fontColor(AppColors.TextSecondary)
         .margin({ bottom: 24, top: 8 })
-      
+
       Row({ space: 16 }) {
-        Button('取消')
+        Button('Cancel')
           .backgroundColor(AppColors.CardBackgroundHover)
           .fontColor(AppColors.TextPrimary)
           .height(44)
@@ -184,12 +156,11 @@ export struct BackgroundImage {
           .onClick(() => {
             this.showSaveDialog = false;
           })
-        
-        // 使用 SaveButton 安全控件
-        SaveButton({ 
-          icon: SaveIconStyle.FULL_FILLED, 
-          text: SaveDescription.SAVE_IMAGE, 
-          buttonType: ButtonType.Capsule 
+
+        SaveButton({
+          icon: SaveIconStyle.FULL_FILLED,
+          text: SaveDescription.SAVE_IMAGE,
+          buttonType: ButtonType.Capsule
         })
           .onClick(this.handleSaveButtonClick)
           .height(44)
@@ -202,9 +173,6 @@ export struct BackgroundImage {
   }
 }
 
-/**
- * 简单背景图组件（无渐变）
- */
 @Component
 export struct SimpleBackgroundImage {
   @Prop imageUrl: string = '';

@@ -11,30 +11,24 @@
 import socket from '@ohos.net.socket';
 import { NvHttp } from './NvHttp';
 
-/**
- * 发送结果统计
- */
 interface SendResult {
   sent: number;
   errors: number;
 }
 
 /**
- * Wake-on-LAN 魔术包发送器
  * 
- * 通过发送特殊的 UDP 数据包唤醒休眠的电脑
- * 魔术包格式: 6 字节 0xFF + 16 次目标 MAC 地址 = 102 字节
  */
 export class WakeOnLan {
-  /** 标准 WOL 端口 */
+  /**
   private static readonly STATIC_PORTS: number[] = [
-    9,      // 标准 WOL 端口 (特权端口)
-    47009,  // Moonlight Internet Hosting Tool 的 WOL 端口
+    9,
+    47009,
   ];
 
-  /** 动态端口基础值 (相对于 HTTP 端口 47989 的偏移量) */
+  /**
   private static readonly DYNAMIC_PORT_BASES: number[] = [
-    47998, 47999, 48000, 48002, 48010,  // GFE 打开的端口
+    47998, 47999, 48000, 48002, 48010,
   ];
   
   private static readonly DEFAULT_HTTP_PORT = NvHttp.DEFAULT_HTTP_PORT;
@@ -44,11 +38,7 @@ export class WakeOnLan {
   private static readonly ZERO_MAC = '00:00:00:00:00:00';
 
   /**
-   * 发送 WOL 魔术包唤醒目标设备
    * 
-   * @param macAddress MAC 地址 (格式: XX:XX:XX:XX:XX:XX 或 XX-XX-XX-XX-XX-XX)
-   * @param address 目标地址 (IPv4/IPv6)
-   * @param httpPort HTTP 端口用于计算动态端口 (默认 47989)
    */
   static async sendWolPacket(macAddress: string, address: string, httpPort: number = WakeOnLan.DEFAULT_HTTP_PORT): Promise<void> {
     WakeOnLan.validateMacAddress(macAddress);
@@ -60,13 +50,11 @@ export class WakeOnLan {
     try {
       await WakeOnLan.bindSocket(udpSocket, isIPv6);
       
-      // IPv4 时先发送广播
       if (!isIPv6) {
         await WakeOnLan.enableBroadcast(udpSocket);
         await WakeOnLan.sendToAllPorts(udpSocket, '255.255.255.255', httpPort, payload, false);
       }
       
-      // 发送到目标地址
       await WakeOnLan.sendToAllPorts(udpSocket, address, httpPort, payload, isIPv6);
     } finally {
       udpSocket.close();
@@ -74,12 +62,7 @@ export class WakeOnLan {
   }
 
   /**
-   * 批量发送 WOL 到多个地址
-   * 发送到: 全局广播 + 子网广播 + 目标地址
    * 
-   * @param macAddress MAC 地址
-   * @param addresses 目标地址列表
-   * @param httpPort HTTP 端口用于计算动态端口
    */
   static async sendWolToAddresses(macAddress: string, addresses: string[], httpPort: number = WakeOnLan.DEFAULT_HTTP_PORT): Promise<void> {
     WakeOnLan.validateMacAddress(macAddress);
@@ -90,14 +73,12 @@ export class WakeOnLan {
     
     const payload = WakeOnLan.createMagicPacket(macAddress);
     
-    // 构建完整的目标地址列表（包括子网广播地址）
     const allAddresses = new Set<string>();
-    allAddresses.add('255.255.255.255');  // 全局广播
+    allAddresses.add('255.255.255.255');
     
     for (const addr of addresses) {
       if (!WakeOnLan.isIPv6Address(addr)) {
         allAddresses.add(addr);
-        // 计算子网广播地址 (假设 /24 子网)
         const subnetBroadcast = WakeOnLan.getSubnetBroadcast(addr);
         if (subnetBroadcast) {
           allAddresses.add(subnetBroadcast);
@@ -107,12 +88,10 @@ export class WakeOnLan {
       }
     }
     
-    // 按地址类型分组
     const addressArray = Array.from(allAddresses);
     const ipv4Addresses = addressArray.filter(addr => !WakeOnLan.isIPv6Address(addr));
     const ipv6Addresses = addressArray.filter(addr => WakeOnLan.isIPv6Address(addr));
     
-    // 发送 IPv4
     if (ipv4Addresses.length > 0) {
       const udpSocket = socket.constructUDPSocketInstance();
       try {
@@ -127,7 +106,6 @@ export class WakeOnLan {
       }
     }
     
-    // 发送 IPv6
     if (ipv6Addresses.length > 0) {
       const udpSocket = socket.constructUDPSocketInstance();
       try {
@@ -142,9 +120,6 @@ export class WakeOnLan {
     }
   }
   
-  /**
-   * 从 IPv4 地址计算子网广播地址 (假设 /24 子网)
-   */
   private static getSubnetBroadcast(ipv4Address: string): string | null {
     const parts = ipv4Address.split('.');
     if (parts.length !== 4) {
@@ -153,8 +128,6 @@ export class WakeOnLan {
     parts[3] = '255';
     return parts.join('.');
   }
-
-  // ==================== 私有方法 ====================
 
   private static validateMacAddress(macAddress: string): void {
     if (!macAddress || macAddress === WakeOnLan.ZERO_MAC) {
@@ -182,7 +155,6 @@ export class WakeOnLan {
     try {
       await udpSocket.setExtraOptions({ broadcast: true });
     } catch {
-      // 广播选项可能不被支持，忽略错误
     }
   }
 
@@ -234,10 +206,8 @@ export class WakeOnLan {
     const macBytes = WakeOnLan.parseMacAddress(macAddress);
     const payload = new Uint8Array(WakeOnLan.MAGIC_PACKET_SIZE);
     
-    // 填充 6 字节 0xFF 前导
     payload.fill(0xFF, 0, WakeOnLan.MAC_BYTES);
     
-    // 填充 16 次 MAC 地址
     for (let i = 0; i < WakeOnLan.MAC_REPETITIONS; i++) {
       const offset = WakeOnLan.MAC_BYTES + i * WakeOnLan.MAC_BYTES;
       payload.set(macBytes, offset);
@@ -258,9 +228,6 @@ export class WakeOnLan {
     return macBytes;
   }
 
-  /**
-   * 验证 MAC 地址格式是否正确
-   */
   static isValidMacAddress(macAddress: string): boolean {
     return /^([0-9A-Fa-f]{2}[:\-]){5}[0-9A-Fa-f]{2}$/.test(macAddress);
   }

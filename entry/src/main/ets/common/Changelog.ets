@@ -2,71 +2,48 @@
  * Moonlight for HarmonyOS
  * Copyright (C) 2024-2025 Moonlight/AlkaidLab
  *
- * 更新日志 - Markdown 解析器
- *
- * 维护说明：
- * - 更新日志数据存储在 resources/rawfile/CHANGELOG.md
- * - 格式：## [版本号] - YYYY-MM-DD + ### 新增/优化/修复/移除 + - 条目
- * - 最新版本放在文件最前面
- * - 本模块负责将 Markdown 解析为结构化数据供 UI 使用
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  */
 
 import { common } from '@kit.AbilityKit';
 import { util } from '@kit.ArkTS';
 
-/**
- * 单条变更项
- */
+
 export interface ChangeItem {
-  /** 变更类型 */
   type: 'added' | 'improved' | 'fixed' | 'removed';
-  /** 变更描述 */
   text: string;
 }
 
-/**
- * 单个版本的更新日志
- */
 export interface ChangelogEntry {
-  /** 版本号 */
   version: string;
-  /** 发布日期 (YYYY-MM-DD) */
   date: string;
-  /** 版本摘要（可选，一句话概括） */
   summary?: string;
-  /** 变更列表 */
   changes: ChangeItem[];
 }
 
-/**
- * 变更类型的显示配置
- */
 export interface ChangeTypeConfig {
   label: string;
   color: string;
 }
 
-/**
- * 获取变更类型的标签和颜色
- */
 export function getChangeTypeConfig(type: string): ChangeTypeConfig {
   switch (type) {
     case 'added':
-      return { label: '新增', color: '#34C759' } as ChangeTypeConfig;
+      return { label: 'Added', color: '#34C759' } as ChangeTypeConfig;
     case 'improved':
-      return { label: '优化', color: '#007AFF' } as ChangeTypeConfig;
+      return { label: 'Improved', color: '#007AFF' } as ChangeTypeConfig;
     case 'fixed':
-      return { label: '修复', color: '#FF9500' } as ChangeTypeConfig;
+      return { label: 'Fixed', color: '#FF9500' } as ChangeTypeConfig;
     case 'removed':
-      return { label: '移除', color: '#FF3B30' } as ChangeTypeConfig;
+      return { label: 'Removed', color: '#FF3B30' } as ChangeTypeConfig;
     default:
-      return { label: '其他', color: '#8E8E93' } as ChangeTypeConfig;
+      return { label: 'Other', color: '#8E8E93' } as ChangeTypeConfig;
   }
 }
 
-/**
- * 中文类型标题 → 内部 type 映射
- */
 const TYPE_MAP: Record<string, string> = {
   '新增': 'added',
   '优化': 'improved',
@@ -76,9 +53,6 @@ const TYPE_MAP: Record<string, string> = {
   '删除': 'removed',
 };
 
-/**
- * 解析 CHANGELOG.md 文本为结构化数据
- */
 export function parseChangelog(markdown: string): ChangelogEntry[] {
   const entries: ChangelogEntry[] = [];
   const lines = markdown.split('\n');
@@ -90,10 +64,7 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-
-    // 匹配版本标题：## [1.0.0] - 2025-01-01
     if (line.startsWith('## [')) {
-      // 保存上一个 entry 的摘要
       if (currentEntry !== null && summaryLines.length > 0) {
         currentEntry.summary = summaryLines.join(' ').trim();
       }
@@ -117,9 +88,7 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
       continue;
     }
 
-    // 匹配类型标题：### 新增
     if (line.startsWith('### ') && currentEntry !== null) {
-      // 摘要收集结束
       if (collectingSummary && summaryLines.length > 0) {
         currentEntry.summary = summaryLines.join(' ').trim();
         summaryLines = [];
@@ -133,8 +102,6 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
       }
       continue;
     }
-
-    // 匹配变更条目：- xxx
     if (line.startsWith('- ') && currentEntry !== null) {
       collectingSummary = false;
       const text = line.substring(2).trim();
@@ -143,8 +110,6 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
       }
       continue;
     }
-
-    // 收集摘要行（版本标题和第一个 ### 之间的非空行）
     if (collectingSummary && currentEntry !== null) {
       const trimmed = line.trim();
       if (trimmed.length > 0 && !trimmed.startsWith('<!--') && !trimmed.startsWith('-->')) {
@@ -152,8 +117,6 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
       }
     }
   }
-
-  // 处理最后一个 entry 的摘要
   if (currentEntry !== null && summaryLines.length > 0) {
     currentEntry.summary = summaryLines.join(' ').trim();
   }
@@ -161,12 +124,6 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
   return entries;
 }
 
-/**
- * 从 rawfile 加载并解析更新日志
- *
- * @param context 应用上下文
- * @returns 解析后的更新日志条目数组
- */
 export async function loadChangelog(context: common.Context): Promise<ChangelogEntry[]> {
   try {
     const resourceManager = context.resourceManager;
@@ -175,7 +132,7 @@ export async function loadChangelog(context: common.Context): Promise<ChangelogE
     const markdown = decoder.decodeToString(rawData);
     return parseChangelog(markdown);
   } catch (err) {
-    console.error('加载更新日志失败:', err);
+    console.error('Failed to load changelog:', err);
     return [];
   }
 }

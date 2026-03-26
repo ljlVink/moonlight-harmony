@@ -9,10 +9,7 @@
  */
 
 /**
- * Game Controller Kit Native 实现
  * 
- * 封装 HarmonyOS Game Controller Kit C API
- * 提供统一的 USB/蓝牙手柄输入
  */
 
 #include "game_controller_native.h"
@@ -24,8 +21,6 @@
 #include <string>
 #include <dlfcn.h>
 
-// 尝试包含 Game Controller Kit 头文件 (仅用于类型定义)
-// 注意：这些头文件在 API 21+ 可用
 #if defined(__OHOS__)
 #if __has_include(<GameControllerKit/game_device.h>) && __has_include(<GameControllerKit/game_pad.h>)
 #include <GameControllerKit/game_device.h>
@@ -38,20 +33,12 @@
 #define GAME_CONTROLLER_KIT_AVAILABLE 0
 #endif
 
-// ==================== 动态加载 Game Controller Kit ====================
-// libohgame_controller.z.so 不存在于所有设备 (如 HarmonyOS 5.0.5 Mate 60)
-// 从 CMake 移除硬链接依赖，改为运行时 dlopen + dlsym
-// 所有 OH_Game* 函数通过函数指针调用，避免未解析符号导致 native 模块加载失败
-
 #if GAME_CONTROLLER_KIT_AVAILABLE
 
-// Step 1: 使用 decltype 从 SDK 头文件声明中获取函数指针类型，并声明静态函数指针变量
-// decltype 是不求值上下文，不会产生对原始函数符号的引用
 #define DECLARE_FUNC_PTR(name) \
     using PFN_##name = decltype(&name); \
     static PFN_##name pfn_##name = nullptr;
 
-// DeviceEvent 查询函数
 DECLARE_FUNC_PTR(OH_GameDevice_DeviceEvent_GetChangedType)
 DECLARE_FUNC_PTR(OH_GameDevice_DeviceEvent_GetDeviceInfo)
 DECLARE_FUNC_PTR(OH_GameDevice_DeviceInfo_GetDeviceId)
@@ -62,12 +49,10 @@ DECLARE_FUNC_PTR(OH_GameDevice_DeviceInfo_GetPhysicalAddress)
 DECLARE_FUNC_PTR(OH_GameDevice_DeviceInfo_GetDeviceType)
 DECLARE_FUNC_PTR(OH_GameDevice_DestroyDeviceInfo)
 
-// ButtonEvent 查询函数
 DECLARE_FUNC_PTR(OH_GamePad_ButtonEvent_GetDeviceId)
 DECLARE_FUNC_PTR(OH_GamePad_ButtonEvent_GetButtonAction)
 DECLARE_FUNC_PTR(OH_GamePad_ButtonEvent_GetButtonCode)
 
-// AxisEvent 查询函数
 DECLARE_FUNC_PTR(OH_GamePad_AxisEvent_GetDeviceId)
 DECLARE_FUNC_PTR(OH_GamePad_AxisEvent_GetXAxisValue)
 DECLARE_FUNC_PTR(OH_GamePad_AxisEvent_GetYAxisValue)
@@ -78,11 +63,9 @@ DECLARE_FUNC_PTR(OH_GamePad_AxisEvent_GetHatYAxisValue)
 DECLARE_FUNC_PTR(OH_GamePad_AxisEvent_GetBrakeAxisValue)
 DECLARE_FUNC_PTR(OH_GamePad_AxisEvent_GetGasAxisValue)
 
-// 设备监听注册/注销
 DECLARE_FUNC_PTR(OH_GameDevice_RegisterDeviceMonitor)
 DECLARE_FUNC_PTR(OH_GameDevice_UnregisterDeviceMonitor)
 
-// 按键监听注册
 DECLARE_FUNC_PTR(OH_GamePad_ButtonA_RegisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_ButtonB_RegisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_ButtonX_RegisterButtonInputMonitor)
@@ -101,14 +84,12 @@ DECLARE_FUNC_PTR(OH_GamePad_Dpad_DownButton_RegisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_Dpad_LeftButton_RegisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_Dpad_RightButton_RegisterButtonInputMonitor)
 
-// 轴监听注册
 DECLARE_FUNC_PTR(OH_GamePad_LeftThumbstick_RegisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_RightThumbstick_RegisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_Dpad_RegisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_LeftTrigger_RegisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_RightTrigger_RegisterAxisInputMonitor)
 
-// 按键监听注销
 DECLARE_FUNC_PTR(OH_GamePad_ButtonA_UnregisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_ButtonB_UnregisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_ButtonX_UnregisterButtonInputMonitor)
@@ -127,14 +108,12 @@ DECLARE_FUNC_PTR(OH_GamePad_Dpad_DownButton_UnregisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_Dpad_LeftButton_UnregisterButtonInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_Dpad_RightButton_UnregisterButtonInputMonitor)
 
-// 轴监听注销
 DECLARE_FUNC_PTR(OH_GamePad_LeftThumbstick_UnregisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_RightThumbstick_UnregisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_Dpad_UnregisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_LeftTrigger_UnregisterAxisInputMonitor)
 DECLARE_FUNC_PTR(OH_GamePad_RightTrigger_UnregisterAxisInputMonitor)
 
-// 全设备查询
 DECLARE_FUNC_PTR(OH_GameDevice_GetAllDeviceInfos)
 DECLARE_FUNC_PTR(OH_GameDevice_AllDeviceInfos_GetCount)
 DECLARE_FUNC_PTR(OH_GameDevice_AllDeviceInfos_GetDeviceInfo)
@@ -142,8 +121,6 @@ DECLARE_FUNC_PTR(OH_GameDevice_DestroyAllDeviceInfos)
 
 #undef DECLARE_FUNC_PTR
 
-// Step 2: 宏重定向 - 将所有 OH_Game* 函数调用重定向为函数指针调用
-// 代码中的直接函数调用 OH_Xxx() 将被预处理器展开为 pfn_OH_Xxx()
 #define OH_GameDevice_DeviceEvent_GetChangedType pfn_OH_GameDevice_DeviceEvent_GetChangedType
 #define OH_GameDevice_DeviceEvent_GetDeviceInfo pfn_OH_GameDevice_DeviceEvent_GetDeviceInfo
 #define OH_GameDevice_DeviceInfo_GetDeviceId pfn_OH_GameDevice_DeviceInfo_GetDeviceId
@@ -227,40 +204,27 @@ DECLARE_FUNC_PTR(OH_GameDevice_DestroyAllDeviceInfos)
 #define LOGW(...) OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, __VA_ARGS__)
 
-// ==================== 全局状态 ====================
-
 static bool g_initialized = false;
 static bool g_monitoring = false;
-static bool g_inputPaused = false;  // 输入监听暂停标志（设备监听保持活跃）
+static bool g_inputPaused = false;
 static std::mutex g_mutex;
 
-// 运行时动态库加载状态
-// Game Controller Kit 的 .so 可能不存在于所有设备上 (如 HarmonyOS 5.0.5 Mate 60)
-// 使用 dlopen 在运行时按需加载，避免硬依赖导致整个 native 模块加载失败
 static void* g_gcLibHandle = nullptr;
 static bool g_gcLibAvailable = false;
 
-/**
- * 尝试在运行时加载 Game Controller Kit 动态库
- * 使用 dlopen 加载 .so，然后用 dlsym 获取所有函数指针
- */
 static bool TryLoadGameControllerLib() {
     if (g_gcLibHandle) return true;
     
     g_gcLibHandle = dlopen("libohgame_controller.z.so", RTLD_LAZY);
     if (!g_gcLibHandle) {
-        LOGW("Game Controller Kit 动态库不可用: %s", dlerror());
+        LOGW("Game Controller Kit dynamic library not available: %s", dlerror());
         g_gcLibAvailable = false;
         return false;
     }
     
 #if GAME_CONTROLLER_KIT_AVAILABLE
-    // 使用 dlsym 加载所有函数指针
-    // 注意: 函数名在 #define 重定向之前已被宏展开为 pfn_ 前缀
-    // 这里使用字符串字面量直接指定原始符号名
     #define LOAD_FUNC(name) pfn_##name = (PFN_##name)dlsym(g_gcLibHandle, #name)
     
-    // DeviceEvent 查询函数
     LOAD_FUNC(OH_GameDevice_DeviceEvent_GetChangedType);
     LOAD_FUNC(OH_GameDevice_DeviceEvent_GetDeviceInfo);
     LOAD_FUNC(OH_GameDevice_DeviceInfo_GetDeviceId);
@@ -271,12 +235,10 @@ static bool TryLoadGameControllerLib() {
     LOAD_FUNC(OH_GameDevice_DeviceInfo_GetDeviceType);
     LOAD_FUNC(OH_GameDevice_DestroyDeviceInfo);
     
-    // ButtonEvent 查询函数
     LOAD_FUNC(OH_GamePad_ButtonEvent_GetDeviceId);
     LOAD_FUNC(OH_GamePad_ButtonEvent_GetButtonAction);
     LOAD_FUNC(OH_GamePad_ButtonEvent_GetButtonCode);
     
-    // AxisEvent 查询函数
     LOAD_FUNC(OH_GamePad_AxisEvent_GetDeviceId);
     LOAD_FUNC(OH_GamePad_AxisEvent_GetXAxisValue);
     LOAD_FUNC(OH_GamePad_AxisEvent_GetYAxisValue);
@@ -287,11 +249,9 @@ static bool TryLoadGameControllerLib() {
     LOAD_FUNC(OH_GamePad_AxisEvent_GetBrakeAxisValue);
     LOAD_FUNC(OH_GamePad_AxisEvent_GetGasAxisValue);
     
-    // 设备监听注册/注销
     LOAD_FUNC(OH_GameDevice_RegisterDeviceMonitor);
     LOAD_FUNC(OH_GameDevice_UnregisterDeviceMonitor);
     
-    // 按键监听注册
     LOAD_FUNC(OH_GamePad_ButtonA_RegisterButtonInputMonitor);
     LOAD_FUNC(OH_GamePad_ButtonB_RegisterButtonInputMonitor);
     LOAD_FUNC(OH_GamePad_ButtonX_RegisterButtonInputMonitor);
@@ -310,14 +270,12 @@ static bool TryLoadGameControllerLib() {
     LOAD_FUNC(OH_GamePad_Dpad_LeftButton_RegisterButtonInputMonitor);
     LOAD_FUNC(OH_GamePad_Dpad_RightButton_RegisterButtonInputMonitor);
     
-    // 轴监听注册
     LOAD_FUNC(OH_GamePad_LeftThumbstick_RegisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_RightThumbstick_RegisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_Dpad_RegisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_LeftTrigger_RegisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_RightTrigger_RegisterAxisInputMonitor);
     
-    // 按键监听注销
     LOAD_FUNC(OH_GamePad_ButtonA_UnregisterButtonInputMonitor);
     LOAD_FUNC(OH_GamePad_ButtonB_UnregisterButtonInputMonitor);
     LOAD_FUNC(OH_GamePad_ButtonX_UnregisterButtonInputMonitor);
@@ -336,14 +294,12 @@ static bool TryLoadGameControllerLib() {
     LOAD_FUNC(OH_GamePad_Dpad_LeftButton_UnregisterButtonInputMonitor);
     LOAD_FUNC(OH_GamePad_Dpad_RightButton_UnregisterButtonInputMonitor);
     
-    // 轴监听注销
     LOAD_FUNC(OH_GamePad_LeftThumbstick_UnregisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_RightThumbstick_UnregisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_Dpad_UnregisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_LeftTrigger_UnregisterAxisInputMonitor);
     LOAD_FUNC(OH_GamePad_RightTrigger_UnregisterAxisInputMonitor);
     
-    // 全设备查询
     LOAD_FUNC(OH_GameDevice_GetAllDeviceInfos);
     LOAD_FUNC(OH_GameDevice_AllDeviceInfos_GetCount);
     LOAD_FUNC(OH_GameDevice_AllDeviceInfos_GetDeviceInfo);
@@ -351,9 +307,8 @@ static bool TryLoadGameControllerLib() {
     
     #undef LOAD_FUNC
     
-    // 验证关键函数是否加载成功
     if (!pfn_OH_GameDevice_RegisterDeviceMonitor) {
-        LOGW("Game Controller Kit 核心函数加载失败");
+        LOGW("Game Controller Kit core functions failed to load");
         dlclose(g_gcLibHandle);
         g_gcLibHandle = nullptr;
         g_gcLibAvailable = false;
@@ -361,21 +316,18 @@ static bool TryLoadGameControllerLib() {
     }
 #endif
     
-    LOGI("Game Controller Kit 动态库加载成功");
+    LOGI("Game Controller Kit dynamic library loaded successfully");
     g_gcLibAvailable = true;
     return true;
 }
 
-// 回调函数
 static GameControllerDeviceCallback g_deviceCallback = nullptr;
 static GameControllerButtonCallback g_buttonCallback = nullptr;
 static GameControllerAxisCallback g_axisCallback = nullptr;
 
-// 设备状态缓存 (deviceId -> state)
 static std::map<std::string, GameControllerState> g_deviceStates;
 static std::map<std::string, GameControllerInfo> g_deviceInfos;
 
-// NAPI 环境和回调引用 (用于异步通知 JS 层)
 static napi_env g_napiEnv = nullptr;
 static napi_ref g_jsDeviceCallbackRef = nullptr;
 static napi_ref g_jsButtonCallbackRef = nullptr;
@@ -386,11 +338,6 @@ static napi_threadsafe_function g_tsfnAxis = nullptr;
 
 #if GAME_CONTROLLER_KIT_AVAILABLE
 
-// ==================== Game Controller Kit 回调实现 ====================
-
-/**
- * 设备状态变化回调 (C++)
- */
 static void OnDeviceChanged(const struct GameDevice_DeviceEvent* deviceEvent) {
     if (!deviceEvent) return;
     
@@ -403,12 +350,10 @@ static void OnDeviceChanged(const struct GameDevice_DeviceEvent* deviceEvent) {
     char* deviceId = nullptr;
     OH_GameDevice_DeviceInfo_GetDeviceId(deviceInfo, &deviceId);
     
-    // 枚举值是 ONLINE/OFFLINE，不是 GAME_DEVICE_STATUS_CHANGED_TYPE_ONLINE
     bool isConnected = (type == ONLINE);
     
-    LOGI("设备状态变化: deviceId=%s, isConnected=%d", deviceId ? deviceId : "null", isConnected);
+    LOGI("Device state changed: deviceId=%s, isConnected=%d", deviceId ? deviceId : "null", isConnected);
     
-    // 构建设备信息
     GameControllerInfo info = {};
     if (deviceId) {
         strncpy(info.deviceId, deviceId, sizeof(info.deviceId) - 1);
@@ -442,7 +387,6 @@ static void OnDeviceChanged(const struct GameDevice_DeviceEvent* deviceEvent) {
     
     info.isConnected = isConnected;
     
-    // 更新缓存
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         if (isConnected) {
@@ -455,14 +399,11 @@ static void OnDeviceChanged(const struct GameDevice_DeviceEvent* deviceEvent) {
         }
     }
     
-    // 通知回调
     if (g_deviceCallback) {
         g_deviceCallback(deviceId, isConnected, &info);
     }
     
-    // 通知 JS 层
     if (g_tsfnDevice) {
-        // 复制数据用于异步传递
         struct DeviceEventData {
             char deviceId[64];
             bool isConnected;
@@ -481,9 +422,6 @@ static void OnDeviceChanged(const struct GameDevice_DeviceEvent* deviceEvent) {
     OH_GameDevice_DestroyDeviceInfo(&deviceInfo);
 }
 
-/**
- * 按键事件回调 (通用)
- */
 static void OnButtonEvent(const struct GamePad_ButtonEvent* buttonEvent, const char* buttonName) {
     if (!buttonEvent) return;
     
@@ -496,13 +434,11 @@ static void OnButtonEvent(const struct GamePad_ButtonEvent* buttonEvent, const c
     int32_t buttonCode;
     OH_GamePad_ButtonEvent_GetButtonCode(buttonEvent, &buttonCode);
     
-    // 枚举值是 DOWN/UP，不是 GAMEPAD_BUTTON_ACTION_TYPE_DOWN
     bool isPressed = (action == DOWN);
     
-    LOGD("按键事件: deviceId=%s, button=%s, code=%d, isPressed=%d", 
+    LOGD("Button event: deviceId=%s, button=%s, code=%d, isPressed=%d", 
          deviceId ? deviceId : "null", buttonName, buttonCode, isPressed);
     
-    // 更新设备状态
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         auto it = g_deviceStates.find(deviceId ? deviceId : "");
@@ -511,14 +447,14 @@ static void OnButtonEvent(const struct GamePad_ButtonEvent* buttonEvent, const c
             switch (buttonCode) {
                 case GC_KEYCODE_BUTTON_A: flag = GC_BTN_A; break;
                 case GC_KEYCODE_BUTTON_B: flag = GC_BTN_B; break;
-                case GC_KEYCODE_BUTTON_C: flag = GC_BTN_BACK; break;  // ButtonC = Select/Back（鸿蒙无原生 Select 按键）
+                case GC_KEYCODE_BUTTON_C: flag = GC_BTN_BACK; break;
                 case GC_KEYCODE_BUTTON_X: flag = GC_BTN_X; break;
                 case GC_KEYCODE_BUTTON_Y: flag = GC_BTN_Y; break;
                 case GC_KEYCODE_LEFT_SHOULDER: flag = GC_BTN_LB; break;
                 case GC_KEYCODE_RIGHT_SHOULDER: flag = GC_BTN_RB; break;
                 case GC_KEYCODE_LEFT_THUMBSTICK: flag = GC_BTN_LS_CLK; break;
                 case GC_KEYCODE_RIGHT_THUMBSTICK: flag = GC_BTN_RS_CLK; break;
-                case GC_KEYCODE_BUTTON_HOME: flag = GC_BTN_BACK; break;  // GCK 名为 Home，实测为 Select/Back
+                case GC_KEYCODE_BUTTON_HOME: flag = GC_BTN_BACK; break;
                 case GC_KEYCODE_BUTTON_MENU: flag = GC_BTN_START; break;
                 case GC_KEYCODE_DPAD_UP: flag = GC_BTN_UP; break;
                 case GC_KEYCODE_DPAD_DOWN: flag = GC_BTN_DOWN; break;
@@ -533,12 +469,10 @@ static void OnButtonEvent(const struct GamePad_ButtonEvent* buttonEvent, const c
         }
     }
     
-    // 通知回调
     if (g_buttonCallback) {
         g_buttonCallback(deviceId, buttonCode, isPressed);
     }
     
-    // 通知 JS 层
     if (g_tsfnButton) {
         struct ButtonEventData {
             char deviceId[64];
@@ -557,7 +491,6 @@ static void OnButtonEvent(const struct GamePad_ButtonEvent* buttonEvent, const c
     if (deviceId) free(deviceId);
 }
 
-// 各按键的回调函数
 static void OnButtonA(const struct GamePad_ButtonEvent* e) { OnButtonEvent(e, "ButtonA"); }
 static void OnButtonB(const struct GamePad_ButtonEvent* e) { OnButtonEvent(e, "ButtonB"); }
 static void OnButtonX(const struct GamePad_ButtonEvent* e) { OnButtonEvent(e, "ButtonX"); }
@@ -576,16 +509,11 @@ static void OnDpadDown(const struct GamePad_ButtonEvent* e) { OnButtonEvent(e, "
 static void OnDpadLeft(const struct GamePad_ButtonEvent* e) { OnButtonEvent(e, "DpadLeft"); }
 static void OnDpadRight(const struct GamePad_ButtonEvent* e) { OnButtonEvent(e, "DpadRight"); }
 
-/**
- * 轴事件通知 (通用)
- */
 static void NotifyAxisEvent(const char* deviceId, int32_t axisType, double x, double y) {
-    // 通知回调
     if (g_axisCallback) {
         g_axisCallback(deviceId, axisType, x, y);
     }
     
-    // 通知 JS 层
     if (g_tsfnAxis) {
         struct AxisEventData {
             char deviceId[64];
@@ -601,17 +529,14 @@ static void NotifyAxisEvent(const char* deviceId, int32_t axisType, double x, do
         
         napi_status status = napi_call_threadsafe_function(g_tsfnAxis, data, napi_tsfn_nonblocking);
         if (status != napi_ok) {
-            LOGE("napi_call_threadsafe_function(axis) 失败: status=%d", status);
+            LOGE("napi_call_threadsafe_function(axis) failed: status=%d", status);
             delete data;
         }
     } else {
-        LOGW("NotifyAxisEvent: g_tsfnAxis 为空，轴事件丢失 (axisType=%d)", axisType);
+        LOGW("NotifyAxisEvent: g_tsfnAxis is null, axis event lost (axisType=%d)", axisType);
     }
 }
 
-/**
- * 左摇杆轴事件
- */
 static void OnLeftThumbstickAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (!axisEvent) return;
     
@@ -623,9 +548,8 @@ static void OnLeftThumbstickAxis(const struct GamePad_AxisEvent* axisEvent) {
     OH_GamePad_AxisEvent_GetXAxisValue(axisEvent, &xValue);
     OH_GamePad_AxisEvent_GetYAxisValue(axisEvent, &yValue);
     
-    LOGD("左摇杆轴: deviceId=%s, X=%.3f, Y=%.3f", deviceId ? deviceId : "null", xValue, yValue);
+    LOGD("Left stick axis: deviceId=%s, X=%.3f, Y=%.3f", deviceId ? deviceId : "null", xValue, yValue);
     
-    // 更新设备状态
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         auto it = g_deviceStates.find(deviceId ? deviceId : "");
@@ -640,9 +564,6 @@ static void OnLeftThumbstickAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (deviceId) free(deviceId);
 }
 
-/**
- * 右摇杆轴事件
- */
 static void OnRightThumbstickAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (!axisEvent) return;
     
@@ -654,7 +575,7 @@ static void OnRightThumbstickAxis(const struct GamePad_AxisEvent* axisEvent) {
     OH_GamePad_AxisEvent_GetZAxisValue(axisEvent, &zValue);
     OH_GamePad_AxisEvent_GetRZAxisValue(axisEvent, &rzValue);
     
-    LOGD("右摇杆轴: deviceId=%s, Z=%.3f, RZ=%.3f", deviceId ? deviceId : "null", zValue, rzValue);
+    LOGD("Right stick axis: deviceId=%s, Z=%.3f, RZ=%.3f", deviceId ? deviceId : "null", zValue, rzValue);
     
     {
         std::lock_guard<std::mutex> lock(g_mutex);
@@ -670,9 +591,6 @@ static void OnRightThumbstickAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (deviceId) free(deviceId);
 }
 
-/**
- * D-Pad 轴事件
- */
 static void OnDpadAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (!axisEvent) return;
     
@@ -684,7 +602,7 @@ static void OnDpadAxis(const struct GamePad_AxisEvent* axisEvent) {
     OH_GamePad_AxisEvent_GetHatXAxisValue(axisEvent, &hatX);
     OH_GamePad_AxisEvent_GetHatYAxisValue(axisEvent, &hatY);
     
-    LOGD("D-Pad轴: deviceId=%s, HatX=%.3f, HatY=%.3f", deviceId ? deviceId : "null", hatX, hatY);
+    LOGD("D-Pad axis: deviceId=%s, HatX=%.3f, HatY=%.3f", deviceId ? deviceId : "null", hatX, hatY);
     
     {
         std::lock_guard<std::mutex> lock(g_mutex);
@@ -693,7 +611,6 @@ static void OnDpadAxis(const struct GamePad_AxisEvent* axisEvent) {
             it->second.hatX = (int16_t)hatX;
             it->second.hatY = (int16_t)hatY;
             
-            // 更新 D-Pad 按钮状态
             it->second.buttons &= ~(GC_BTN_UP | GC_BTN_DOWN | GC_BTN_LEFT | GC_BTN_RIGHT);
             if (hatX < -0.5) it->second.buttons |= GC_BTN_LEFT;
             if (hatX > 0.5) it->second.buttons |= GC_BTN_RIGHT;
@@ -707,9 +624,6 @@ static void OnDpadAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (deviceId) free(deviceId);
 }
 
-/**
- * 左扳机轴事件
- */
 static void OnLeftTriggerAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (!axisEvent) return;
     
@@ -719,13 +633,12 @@ static void OnLeftTriggerAxis(const struct GamePad_AxisEvent* axisEvent) {
     double brakeValue = 0.0;
     OH_GamePad_AxisEvent_GetBrakeAxisValue(axisEvent, &brakeValue);
     
-    LOGD("左扳机轴: deviceId=%s, Brake=%.3f", deviceId ? deviceId : "null", brakeValue);
+    LOGD("Left trigger axis: deviceId=%s, Brake=%.3f", deviceId ? deviceId : "null", brakeValue);
     
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         auto it = g_deviceStates.find(deviceId ? deviceId : "");
         if (it != g_deviceStates.end()) {
-            // 扳机值范围 0.0-1.0，转换为 0-255
             it->second.leftTrigger = (uint8_t)(brakeValue * 255);
         }
     }
@@ -735,9 +648,6 @@ static void OnLeftTriggerAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (deviceId) free(deviceId);
 }
 
-/**
- * 右扳机轴事件
- */
 static void OnRightTriggerAxis(const struct GamePad_AxisEvent* axisEvent) {
     if (!axisEvent) return;
     
@@ -747,7 +657,7 @@ static void OnRightTriggerAxis(const struct GamePad_AxisEvent* axisEvent) {
     double gasValue = 0.0;
     OH_GamePad_AxisEvent_GetGasAxisValue(axisEvent, &gasValue);
     
-    LOGD("右扳机轴: deviceId=%s, Gas=%.3f", deviceId ? deviceId : "null", gasValue);
+    LOGD("Right trigger axis: deviceId=%s, Gas=%.3f", deviceId ? deviceId : "null", gasValue);
     
     {
         std::lock_guard<std::mutex> lock(g_mutex);
@@ -764,18 +674,7 @@ static void OnRightTriggerAxis(const struct GamePad_AxisEvent* axisEvent) {
 
 #endif // GAME_CONTROLLER_KIT_AVAILABLE
 
-// ==================== API 实现 ====================
-
-// ==================== 输入监听注册/注销 helpers ====================
-// 按键 + 轴监听的注册/注销在 StartMonitor、StopMonitor、Pause、Resume 中重复出现 4 次
-// 提取为内部 helper 消除重复
-
-/**
- * 注册所有按键 + 轴输入监听（不含设备监听）
- * 调用者需持有 g_mutex 或保证线程安全
- */
 static void RegisterAllInputMonitors() {
-    // 按键监听
     OH_GamePad_ButtonA_RegisterButtonInputMonitor(OnButtonA);
     OH_GamePad_ButtonB_RegisterButtonInputMonitor(OnButtonB);
     OH_GamePad_ButtonX_RegisterButtonInputMonitor(OnButtonX);
@@ -794,7 +693,6 @@ static void RegisterAllInputMonitors() {
     OH_GamePad_Dpad_LeftButton_RegisterButtonInputMonitor(OnDpadLeft);
     OH_GamePad_Dpad_RightButton_RegisterButtonInputMonitor(OnDpadRight);
 
-    // 轴监听
     OH_GamePad_LeftThumbstick_RegisterAxisInputMonitor(OnLeftThumbstickAxis);
     OH_GamePad_RightThumbstick_RegisterAxisInputMonitor(OnRightThumbstickAxis);
     OH_GamePad_Dpad_RegisterAxisInputMonitor(OnDpadAxis);
@@ -802,12 +700,7 @@ static void RegisterAllInputMonitors() {
     OH_GamePad_RightTrigger_RegisterAxisInputMonitor(OnRightTriggerAxis);
 }
 
-/**
- * 注销所有按键 + 轴输入监听（不含设备监听）
- * 调用者需持有 g_mutex 或保证线程安全
- */
 static void UnregisterAllInputMonitors() {
-    // 按键监听
     OH_GamePad_ButtonA_UnregisterButtonInputMonitor();
     OH_GamePad_ButtonB_UnregisterButtonInputMonitor();
     OH_GamePad_ButtonX_UnregisterButtonInputMonitor();
@@ -826,7 +719,6 @@ static void UnregisterAllInputMonitors() {
     OH_GamePad_Dpad_LeftButton_UnregisterButtonInputMonitor();
     OH_GamePad_Dpad_RightButton_UnregisterButtonInputMonitor();
 
-    // 轴监听
     OH_GamePad_LeftThumbstick_UnregisterAxisInputMonitor();
     OH_GamePad_RightThumbstick_UnregisterAxisInputMonitor();
     OH_GamePad_Dpad_UnregisterAxisInputMonitor();
@@ -834,12 +726,8 @@ static void UnregisterAllInputMonitors() {
     OH_GamePad_RightTrigger_UnregisterAxisInputMonitor();
 }
 
-// ==================== 公共 API ====================
-
 bool GameController_IsAvailable(void) {
 #if GAME_CONTROLLER_KIT_AVAILABLE
-    // 编译时头文件可用, 运行时通过 dlopen 检查库是否存在
-    // 首次调用时尝试加载，确保在 Init() 之前调用也能正确返回
     if (!g_gcLibHandle) {
         TryLoadGameControllerLib();
     }
@@ -853,24 +741,22 @@ int GameController_Init(void) {
     std::lock_guard<std::mutex> lock(g_mutex);
     
     if (g_initialized) {
-        LOGW("Game Controller Kit 已初始化");
+        LOGW("Game Controller Kit already initialized");
         return 0;
     }
     
 #if GAME_CONTROLLER_KIT_AVAILABLE
-    // 运行时尝试加载动态库
     if (!TryLoadGameControllerLib()) {
-        LOGW("Game Controller Kit 动态库不存在，手柄功能将不可用");
-        // 标记初始化完成但不可用，不报错 - 这是可选功能
+        LOGW("Game Controller Kit dynamic library not found, gamepad features will be unavailable");
         g_initialized = true;
         return 0;
     }
     
-    LOGI("初始化 Game Controller Kit");
+    LOGI("Initializing Game Controller Kit");
     g_initialized = true;
     return 0;
 #else
-    LOGE("Game Controller Kit 不可用 (需要 API 21+)");
+    LOGE("Game Controller Kit unavailable (requires API 21+)");
     return -1;
 #endif
 }
@@ -888,14 +774,13 @@ void GameController_Uninit(void) {
     g_deviceInfos.clear();
     g_initialized = false;
     
-    // 关闭动态库
     if (g_gcLibHandle) {
         dlclose(g_gcLibHandle);
         g_gcLibHandle = nullptr;
         g_gcLibAvailable = false;
     }
     
-    LOGI("Game Controller Kit 已反初始化");
+    LOGI("Game Controller Kit deinitialized");
 }
 
 void GameController_SetDeviceCallback(GameControllerDeviceCallback callback) {
@@ -915,50 +800,45 @@ int GameController_StartMonitor(void) {
     std::lock_guard<std::mutex> lock(g_mutex);
     
     if (!g_initialized) {
-        LOGE("Game Controller Kit 未初始化");
+        LOGE("Game Controller Kit not initialized");
         return -1;
     }
     
     if (!g_gcLibAvailable) {
-        LOGW("Game Controller Kit 动态库未加载，跳过手柄监听");
+        LOGW("Game Controller Kit library not loaded, skipping gamepad monitoring");
         return -1;
     }
     
     if (g_monitoring) {
-        // 如果输入监听被暂停，恢复它
         if (g_inputPaused) {
-            LOGI("startMonitor: 已在监听中但输入已暂停，恢复输入监听");
+            LOGI("startMonitor: already monitoring but input paused, resuming input");
             g_inputPaused = false;
             RegisterAllInputMonitors();
         }
         return 0;
     }
     
-    LOGI("开始监听游戏控制器...");
+    LOGI("Starting game controller monitoring...");
     
-    // 注册设备监听
     GameController_ErrorCode errorCode = OH_GameDevice_RegisterDeviceMonitor(OnDeviceChanged);
     if (errorCode != GAME_CONTROLLER_SUCCESS) {
-        LOGE("注册设备监听失败: %d", errorCode);
+        LOGE("Failed to register device listener: %d", errorCode);
         return errorCode;
     }
     
-    // 注册按键 + 轴监听
     RegisterAllInputMonitors();
     
-    // 查询当前已连接的设备
     GameDevice_AllDeviceInfos* allDeviceInfos;
     errorCode = OH_GameDevice_GetAllDeviceInfos(&allDeviceInfos);
     if (errorCode == GAME_CONTROLLER_SUCCESS) {
         int count = 0;
         OH_GameDevice_AllDeviceInfos_GetCount(allDeviceInfos, &count);
-        LOGI("当前已连接 %d 个设备", count);
+        LOGI("Currently %d device(s) connected", count);
         
         for (int i = 0; i < count; i++) {
             GameDevice_DeviceInfo* deviceInfo;
             errorCode = OH_GameDevice_AllDeviceInfos_GetDeviceInfo(allDeviceInfos, i, &deviceInfo);
             if (errorCode == GAME_CONTROLLER_SUCCESS) {
-                // 模拟设备上线事件
                 GameControllerInfo info = {};
                 
                 char* deviceId = nullptr;
@@ -996,18 +876,17 @@ int GameController_StartMonitor(void) {
     }
     
     g_monitoring = true;
-    LOGI("监听已启动");
+    LOGI("Monitoring started");
     return 0;
     
 #else
-    LOGE("Game Controller Kit 不可用");
+    LOGE("Game Controller Kit unavailable");
     return -1;
 #endif
 }
 
 void GameController_StopMonitor(void) {
 #if GAME_CONTROLLER_KIT_AVAILABLE
-    // 注意: 此函数可能在 Uninit 的锁内被调用，不要再加锁
     
     if (!g_monitoring) return;
     
@@ -1016,24 +895,18 @@ void GameController_StopMonitor(void) {
         return;
     }
     
-    LOGI("停止监听游戏控制器...");
+    LOGI("Stopping game controller monitoring...");
     
-    // 取消设备监听
     OH_GameDevice_UnregisterDeviceMonitor();
     
-    // 取消按键 + 轴监听
     UnregisterAllInputMonitors();
     
     g_monitoring = false;
     g_inputPaused = false;
-    LOGI("监听已停止");
+    LOGI("Monitoring stopped");
 #endif
 }
 
-/**
- * 暂停输入监听（仅按键+轴），保留设备上下线监听
- * 用于无手柄场景减少系统轮询干扰，同时保持设备热插拔检测
- */
 void GameController_PauseInputMonitor(void) {
 #if GAME_CONTROLLER_KIT_AVAILABLE
     std::lock_guard<std::mutex> lock(g_mutex);
@@ -1042,19 +915,15 @@ void GameController_PauseInputMonitor(void) {
 
     if (!g_gcLibAvailable) return;
 
-    LOGI("暂停输入监听（保留设备监听）...");
+    LOGI("Pausing input monitoring (keeping device monitoring)...");
 
     UnregisterAllInputMonitors();
 
     g_inputPaused = true;
-    LOGI("输入监听已暂停，设备监听仍活跃");
+    LOGI("Input monitoring paused, device monitoring still active");
 #endif
 }
 
-/**
- * 恢复输入监听（重新注册按键+轴）
- * 在手柄重新连接时调用
- */
 void GameController_ResumeInputMonitor(void) {
 #if GAME_CONTROLLER_KIT_AVAILABLE
     std::lock_guard<std::mutex> lock(g_mutex);
@@ -1063,12 +932,12 @@ void GameController_ResumeInputMonitor(void) {
 
     if (!g_gcLibAvailable) return;
 
-    LOGI("恢复输入监听...");
+    LOGI("Resuming input monitoring...");
 
     RegisterAllInputMonitors();
 
     g_inputPaused = false;
-    LOGI("输入监听已恢复");
+    LOGI("Input monitoring resumed");
 #endif
 }
 
@@ -1077,23 +946,21 @@ int GameController_RefreshDevices(void) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!g_initialized || !g_gcLibAvailable) {
-        LOGW("RefreshDevices: GCK 未初始化或不可用");
+        LOGW("RefreshDevices: GCK not initialized or unavailable");
         return -1;
     }
 
-    // 查询系统当前连接的设备
     GameDevice_AllDeviceInfos* allDeviceInfos;
     GameController_ErrorCode errorCode = OH_GameDevice_GetAllDeviceInfos(&allDeviceInfos);
     if (errorCode != GAME_CONTROLLER_SUCCESS) {
-        LOGW("RefreshDevices: OH_GameDevice_GetAllDeviceInfos 失败, errorCode=%d", errorCode);
+        LOGW("RefreshDevices: OH_GameDevice_GetAllDeviceInfos failed, errorCode=%d", errorCode);
         return -1;
     }
 
     int count = 0;
     OH_GameDevice_AllDeviceInfos_GetCount(allDeviceInfos, &count);
-    LOGI("RefreshDevices: 系统报告 %d 个设备", count);
+    LOGI("RefreshDevices: system reports %d device(s)", count);
 
-    // 构建当前设备集合
     std::map<std::string, GameControllerInfo> currentDevices;
     for (int i = 0; i < count; i++) {
         GameDevice_DeviceInfo* deviceInfo;
@@ -1144,7 +1011,6 @@ int GameController_RefreshDevices(void) {
     }
     OH_GameDevice_DestroyAllDeviceInfos(&allDeviceInfos);
 
-    // 差异对比：找出新上线的设备
     int newDeviceCount = 0;
     std::vector<std::pair<std::string, GameControllerInfo>> newDevices;
     for (auto& pair : currentDevices) {
@@ -1154,7 +1020,6 @@ int GameController_RefreshDevices(void) {
         }
     }
 
-    // 差异对比：找出消失的设备
     std::vector<std::pair<std::string, GameControllerInfo>> goneDevices;
     for (auto& pair : g_deviceInfos) {
         if (currentDevices.find(pair.first) == currentDevices.end()) {
@@ -1162,25 +1027,22 @@ int GameController_RefreshDevices(void) {
         }
     }
 
-    // 更新缓存：添加新设备
     for (auto& pair : newDevices) {
         g_deviceInfos[pair.first] = pair.second;
         g_deviceStates[pair.first] = GameControllerState{};
         strncpy(g_deviceStates[pair.first].deviceId, pair.first.c_str(),
                 sizeof(g_deviceStates[pair.first].deviceId) - 1);
-        LOGI("RefreshDevices: 新设备上线 deviceId=%s, name=%s",
+        LOGI("RefreshDevices: new device online deviceId=%s, name=%s",
              pair.first.c_str(), pair.second.name);
     }
 
-    // 更新缓存：移除消失的设备
     for (auto& pair : goneDevices) {
         g_deviceInfos.erase(pair.first);
         g_deviceStates.erase(pair.first);
-        LOGI("RefreshDevices: 设备离线 deviceId=%s, name=%s",
+        LOGI("RefreshDevices: device offline deviceId=%s, name=%s",
              pair.first.c_str(), pair.second.name);
     }
 
-    // 发送回调（在锁内，简化处理）
     for (auto& pair : newDevices) {
         if (g_deviceCallback) {
             g_deviceCallback(pair.first.c_str(), true, &pair.second);
@@ -1221,7 +1083,7 @@ int GameController_RefreshDevices(void) {
         }
     }
 
-    LOGI("RefreshDevices: 新增 %d 个, 移除 %d 个, 当前共 %d 个设备",
+    LOGI("RefreshDevices: added %d, removed %d, total %d device(s)",
          (int)newDevices.size(), (int)goneDevices.size(), (int)g_deviceInfos.size());
     return newDeviceCount;
 #else
@@ -1251,13 +1113,8 @@ int GameController_GetDeviceInfo(int index, GameControllerInfo* outInfo) {
 }
 
 /**
- * 心跳检测 - 检查设备是否仍然连接
  * 
- * 对于某些设备（如雷蛇手柄），电源管理不透明，
- * 系统可能不会及时发送断开事件。
- * 此函数通过重新查询设备列表来检测设备断开。
  * 
- * @return 断开的设备数量
  */
 int GameController_HeartbeatCheck(void) {
 #if GAME_CONTROLLER_KIT_AVAILABLE
@@ -1269,15 +1126,13 @@ int GameController_HeartbeatCheck(void) {
     
     int disconnectedCount = 0;
     
-    // 查询当前实际连接的设备
     GameDevice_AllDeviceInfos* allDeviceInfos;
     GameController_ErrorCode errorCode = OH_GameDevice_GetAllDeviceInfos(&allDeviceInfos);
     if (errorCode != GAME_CONTROLLER_SUCCESS) {
-        LOGW("心跳检测: 无法获取设备列表, errorCode=%d", errorCode);
+        LOGW("Heartbeat: failed to get device list, errorCode=%d", errorCode);
         return 0;
     }
     
-    // 获取当前连接的设备 ID 集合
     std::map<std::string, bool> currentDevices;
     int count = 0;
     OH_GameDevice_AllDeviceInfos_GetCount(allDeviceInfos, &count);
@@ -1297,17 +1152,13 @@ int GameController_HeartbeatCheck(void) {
     }
     OH_GameDevice_DestroyAllDeviceInfos(&allDeviceInfos);
     
-    // 检查缓存的设备是否仍然连接
     std::vector<std::string> disconnectedIds;
     for (auto& pair : g_deviceInfos) {
         if (currentDevices.find(pair.first) == currentDevices.end()) {
-            // 设备不在当前连接列表中，标记为断开
             disconnectedIds.push_back(pair.first);
         }
     }
     
-    // 发送断开通知（在锁外执行以避免死锁）
-    // 注意: 这里我们释放锁后才发送回调
     std::vector<std::pair<std::string, GameControllerInfo>> disconnectedDevices;
     for (const auto& deviceId : disconnectedIds) {
         auto it = g_deviceInfos.find(deviceId);
@@ -1319,11 +1170,8 @@ int GameController_HeartbeatCheck(void) {
         disconnectedCount++;
     }
     
-    // 释放锁后发送回调
-    // 注: 由于回调可能很快，这里简化处理，直接在锁内调用
-    // 如果有问题可以改为在锁外调用
     for (const auto& pair : disconnectedDevices) {
-        LOGI("心跳检测: 设备断开 deviceId=%s, name=%s", 
+        LOGI("Heartbeat: device disconnected deviceId=%s, name=%s",
              pair.first.c_str(), pair.second.name);
         
         if (g_deviceCallback) {
@@ -1332,7 +1180,6 @@ int GameController_HeartbeatCheck(void) {
             g_deviceCallback(pair.first.c_str(), false, &info);
         }
         
-        // NAPI 异步通知
         if (g_tsfnDevice) {
             struct DeviceEventData {
                 char deviceId[64];
@@ -1349,7 +1196,7 @@ int GameController_HeartbeatCheck(void) {
     }
     
     if (disconnectedCount > 0) {
-        LOGI("心跳检测: 检测到 %d 个设备断开", disconnectedCount);
+        LOGI("Heartbeat: detected %d device(s) disconnected", disconnectedCount);
     }
     
     return disconnectedCount;
@@ -1357,8 +1204,6 @@ int GameController_HeartbeatCheck(void) {
     return 0;
 #endif
 }
-
-// ==================== NAPI 回调分发 ====================
 
 static void DeviceCallbackCallJS(napi_env env, napi_value js_callback, void* context, void* data) {
     if (!data) return;
@@ -1370,7 +1215,6 @@ static void DeviceCallbackCallJS(napi_env env, napi_value js_callback, void* con
     };
     DeviceEventData* eventData = (DeviceEventData*)data;
     
-    // env 为空说明 tsfn 正在 teardown，仅释放数据
     if (!env || !js_callback) {
         delete eventData;
         return;
@@ -1380,7 +1224,6 @@ static void DeviceCallbackCallJS(napi_env env, napi_value js_callback, void* con
     napi_create_string_utf8(env, eventData->deviceId, NAPI_AUTO_LENGTH, &argv[0]);
     napi_get_boolean(env, eventData->isConnected, &argv[1]);
     
-    // 创建设备信息对象
     napi_create_object(env, &argv[2]);
     
     napi_value val;
@@ -1459,8 +1302,6 @@ static void AxisCallbackCallJS(napi_env env, napi_value js_callback, void* conte
     delete eventData;
 }
 
-// ==================== NAPI 导出函数 ====================
-
 /**
  * isAvailable(): boolean
  */
@@ -1487,7 +1328,6 @@ static napi_value NapiInit(napi_env env, napi_callback_info info) {
 static napi_value NapiUninit(napi_env env, napi_callback_info info) {
     GameController_Uninit();
     
-    // 清理 threadsafe function
     if (g_tsfnDevice) {
         napi_release_threadsafe_function(g_tsfnDevice, napi_tsfn_release);
         g_tsfnDevice = nullptr;
@@ -1547,7 +1387,6 @@ static napi_value NapiSetDeviceCallback(napi_env env, napi_callback_info info) {
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
     if (argc < 1) {
-        // 清除回调
         if (g_tsfnDevice) {
             napi_release_threadsafe_function(g_tsfnDevice, napi_tsfn_release);
             g_tsfnDevice = nullptr;
@@ -1555,7 +1394,6 @@ static napi_value NapiSetDeviceCallback(napi_env env, napi_callback_info info) {
         return nullptr;
     }
     
-    // 先保存旧的 tsfn，创建新的后再释放旧的，避免 g_tsfnDevice 在并发读取时无效
     napi_threadsafe_function oldTsfn = g_tsfnDevice;
     
     napi_value resourceName;
@@ -1567,12 +1405,11 @@ static napi_value NapiSetDeviceCallback(napi_env env, napi_callback_info info) {
         DeviceCallbackCallJS, &g_tsfnDevice
     );
     if (status != napi_ok) {
-        LOGE("创建 Device threadsafe function 失败: %d", status);
-        g_tsfnDevice = oldTsfn;  // 恢复旧的
+        LOGE("Failed to create Device threadsafe function: %d", status);
+        g_tsfnDevice = oldTsfn;
         return nullptr;
     }
     
-    // 释放旧的 threadsafe function，防止资源泄漏
     if (oldTsfn) {
         napi_release_threadsafe_function(oldTsfn, napi_tsfn_release);
     }
@@ -1607,7 +1444,7 @@ static napi_value NapiSetButtonCallback(napi_env env, napi_callback_info info) {
         ButtonCallbackCallJS, &g_tsfnButton
     );
     if (status != napi_ok) {
-        LOGE("创建 Button threadsafe function 失败: %d", status);
+        LOGE("Failed to create Button threadsafe function: %d", status);
         g_tsfnButton = oldTsfn;
         return nullptr;
     }
@@ -1646,7 +1483,7 @@ static napi_value NapiSetAxisCallback(napi_env env, napi_callback_info info) {
         AxisCallbackCallJS, &g_tsfnAxis
     );
     if (status != napi_ok) {
-        LOGE("创建 Axis threadsafe function 失败: %d", status);
+        LOGE("Failed to create Axis threadsafe function: %d", status);
         g_tsfnAxis = oldTsfn;
         return nullptr;
     }
@@ -1714,7 +1551,6 @@ static napi_value NapiGetDeviceInfo(napi_env env, napi_callback_info info) {
 
 /**
  * heartbeatCheck(): number
- * 心跳检测 - 返回断开的设备数量
  */
 static napi_value NapiHeartbeatCheck(napi_env env, napi_callback_info info) {
     napi_value result;
@@ -1724,7 +1560,6 @@ static napi_value NapiHeartbeatCheck(napi_env env, napi_callback_info info) {
 
 /**
  * refreshDevices(): number
- * 主动刷新设备缓存 - 返回新发现的设备数量
  */
 static napi_value NapiRefreshDevices(napi_env env, napi_callback_info info) {
     napi_value result;
@@ -1732,13 +1567,9 @@ static napi_value NapiRefreshDevices(napi_env env, napi_callback_info info) {
     return result;
 }
 
-/**
- * 初始化 NAPI 模块
- */
 napi_value GameControllerNapi_Init(napi_env env, napi_value exports) {
-    LOGI("GameController NAPI 模块初始化");
+    LOGI("GameController NAPI module init");
     
-    // 创建 GameController 对象
     napi_value gameControllerObj;
     napi_create_object(env, &gameControllerObj);
     
@@ -1761,10 +1592,8 @@ napi_value GameControllerNapi_Init(napi_env env, napi_value exports) {
     
     napi_define_properties(env, gameControllerObj, sizeof(props) / sizeof(props[0]), props);
     
-    // 添加常量
     napi_value val;
     
-    // 轴类型常量
     napi_create_int32(env, GC_AXIS_LEFT_THUMBSTICK, &val);
     napi_set_named_property(env, gameControllerObj, "AXIS_LEFT_THUMBSTICK", val);
     
@@ -1780,7 +1609,6 @@ napi_value GameControllerNapi_Init(napi_env env, napi_value exports) {
     napi_create_int32(env, GC_AXIS_RIGHT_TRIGGER, &val);
     napi_set_named_property(env, gameControllerObj, "AXIS_RIGHT_TRIGGER", val);
     
-    // 按钮码常量
     napi_create_int32(env, GC_KEYCODE_BUTTON_A, &val);
     napi_set_named_property(env, gameControllerObj, "KEYCODE_BUTTON_A", val);
     
@@ -1793,10 +1621,9 @@ napi_value GameControllerNapi_Init(napi_env env, napi_value exports) {
     napi_create_int32(env, GC_KEYCODE_BUTTON_Y, &val);
     napi_set_named_property(env, gameControllerObj, "KEYCODE_BUTTON_Y", val);
     
-    // 导出到 exports
     napi_set_named_property(env, exports, "GameController", gameControllerObj);
     
-    LOGI("GameController NAPI 模块初始化完成");
+    LOGI("GameController NAPI module initialized");
     
     return exports;
 }

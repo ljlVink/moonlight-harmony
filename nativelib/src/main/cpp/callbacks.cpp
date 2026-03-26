@@ -10,10 +10,7 @@
 
 /**
  * @file callbacks.cpp
- * @brief moonlight-common-c 回调处理实现
- * 
- * 实现从 C 库回调到 ArkTS 的机制
- * 参照 Android 的 callbacks.c 实现
+ * @brief moonlight-common-c callback handling implementation
  */
 
 #include "callbacks.h"
@@ -24,7 +21,7 @@
 #include <hilog/log.h>
 #include <cstring>
 
-// 外部函数：更新 mic 编码器丢包率（定义在 moonlight_bridge.cpp）
+// External function: update mic encoder packet loss rate (defined in moonlight_bridge.cpp)
 extern void MicCapturerUpdatePacketLossPercent(int percent);
 #include <cstdarg>
 #include <mutex>
@@ -41,30 +38,30 @@ extern "C" {
 #define LOG_TAG "MoonlightCallbacks"
 
 // =============================================================================
-// 全局变量
+// Global variables
 // =============================================================================
 
 static napi_env g_env = nullptr;
 static std::mutex g_mutex;
 
-// 回调实例
+// Callback instances
 VideoDecoderCallbacks g_videoCallbacks = {0};
 AudioRendererCallbacks g_audioCallbacks = {0};
 ConnectionListenerCallbacks g_connCallbacks = {0};
 
-// Opus 配置
+// Opus configuration
 static OPUS_MULTISTREAM_CONFIGURATION g_opusConfig;
 static short* g_decodedAudioBuffer = nullptr;
 
-// 低频能量分析器（extern 供 moonlight_bridge.cpp 访问）
+// Bass energy analyzer (extern for moonlight_bridge.cpp access)
 BassEnergyAnalyzer g_bassAnalyzer;
 
 // =============================================================================
-// 辅助函数
+// Helper functions
 // =============================================================================
 
 /**
- * 创建线程安全函数
+ * Create thread-safe function
  */
 static napi_status CreateThreadsafeFunction(
     napi_env env,
@@ -92,10 +89,10 @@ static napi_status CreateThreadsafeFunction(
 }
 
 // =============================================================================
-// 回调 JS 调用函数
+// Callback JS call functions
 // =============================================================================
 
-// 通用参数传递结构
+// Generic parameter passing structure
 typedef struct {
     int intParams[4];
     double doubleParams[2];
@@ -286,7 +283,6 @@ static void CallJs_DrSubmitDecodeUnit(napi_env env, napi_value js_callback, void
     if (env != nullptr && js_callback != nullptr && cbData->ptrParam != nullptr) {
         napi_value argv[3];
         
-        // 创建 ArrayBuffer
         void* bufferData;
         napi_create_arraybuffer(env, cbData->ptrSize, &bufferData, &argv[0]);
         memcpy(bufferData, cbData->ptrParam, cbData->ptrSize);
@@ -323,7 +319,6 @@ static void CallJs_ArPlaySample(napi_env env, napi_value js_callback, void* cont
     if (env != nullptr && js_callback != nullptr && cbData->ptrParam != nullptr) {
         napi_value argv[1];
         
-        // 创建 Int16Array
         void* bufferData;
         napi_value arrayBuffer;
         napi_create_arraybuffer(env, cbData->ptrSize, &bufferData, &arrayBuffer);
@@ -363,7 +358,7 @@ static void CallJs_BassEnergy(napi_env env, napi_value js_callback, void* contex
 }
 
 // =============================================================================
-// 回调初始化
+// Callback initialization
 // =============================================================================
 
 void Callbacks_Init(napi_env env, napi_value callbacks) {
@@ -372,7 +367,7 @@ void Callbacks_Init(napi_env env, napi_value callbacks) {
     
     napi_value callback;
     
-    // 视频解码器回调
+    // Video decoder callbacks
     if (napi_get_named_property(env, callbacks, "drSetup", &callback) == napi_ok) {
         CreateThreadsafeFunction(env, callback, "drSetup", CallJs_DrSetup, &g_videoCallbacks.tsfn_setup);
     }
@@ -389,7 +384,7 @@ void Callbacks_Init(napi_env env, napi_value callbacks) {
         CreateThreadsafeFunction(env, callback, "drSubmitDecodeUnit", CallJs_DrSubmitDecodeUnit, &g_videoCallbacks.tsfn_submitDecodeUnit);
     }
     
-    // 音频渲染器回调
+    // Audio renderer callbacks
     if (napi_get_named_property(env, callbacks, "arInit", &callback) == napi_ok) {
         CreateThreadsafeFunction(env, callback, "arInit", CallJs_ArInit, &g_audioCallbacks.tsfn_init);
     }
@@ -409,7 +404,7 @@ void Callbacks_Init(napi_env env, napi_value callbacks) {
         CreateThreadsafeFunction(env, callback, "bassEnergy", CallJs_BassEnergy, &g_audioCallbacks.tsfn_bassEnergy);
     }
     
-    // 连接监听器回调
+    // Connection listener callbacks
     if (napi_get_named_property(env, callbacks, "stageStarting", &callback) == napi_ok) {
         CreateThreadsafeFunction(env, callback, "stageStarting", CallJs_StageStarting, &g_connCallbacks.tsfn_stageStarting);
     }
@@ -453,7 +448,7 @@ void Callbacks_Init(napi_env env, napi_value callbacks) {
 void Callbacks_Cleanup(void) {
     std::lock_guard<std::mutex> lock(g_mutex);
     
-    // 释放线程安全函数
+    // Release thread-safe functions
     if (g_videoCallbacks.tsfn_setup) napi_release_threadsafe_function(g_videoCallbacks.tsfn_setup, napi_tsfn_release);
     if (g_videoCallbacks.tsfn_start) napi_release_threadsafe_function(g_videoCallbacks.tsfn_start, napi_tsfn_release);
     if (g_videoCallbacks.tsfn_stop) napi_release_threadsafe_function(g_videoCallbacks.tsfn_stop, napi_tsfn_release);
@@ -484,7 +479,7 @@ void Callbacks_Cleanup(void) {
     memset(&g_audioCallbacks, 0, sizeof(g_audioCallbacks));
     memset(&g_connCallbacks, 0, sizeof(g_connCallbacks));
     
-    // 清理 AVCodec Opus 解码器
+    // Clean up AVCodec Opus decoder
     MoonlightOpusDecoder::Cleanup();
     
     if (g_decodedAudioBuffer) {
@@ -498,36 +493,36 @@ void Callbacks_Cleanup(void) {
 }
 
 // =============================================================================
-// moonlight-common-c 回调桥接实现
+// moonlight-common-c callback bridge implementation
 // =============================================================================
 
-// 视频解码器配置参数（保存用于创建解码器）
+// Video decoder config parameters (saved for decoder creation)
 static int g_videoFormat = 0;
 static int g_videoWidth = 0;
 static int g_videoHeight = 0;
 static int g_videoFps = 0;
 
-// 视频解码器回调
+// Video decoder callback
 int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
     OH_LOG_INFO(LOG_APP, "BridgeDrSetup: format=0x%{public}x, %{public}dx%{public}d@%{public}d, drFlags=0x%{public}x", 
                 videoFormat, width, height, redrawRate, drFlags);
     
-    // 先清理之前的解码器资源（如果有的话）
+    // Clean up previous decoder resources (if any)
     VideoDecoderInstance::Cleanup();
     
-    // 保存视频参数
+    // Save video parameters
     g_videoFormat = videoFormat;
     g_videoWidth = width;
     g_videoHeight = height;
     g_videoFps = redrawRate;
     
-    // 初始化视频解码器（如果 Surface 已设置，会立即创建解码器）
+    // Initialize video decoder (creates decoder immediately if Surface is set)
     int ret = VideoDecoderInstance::Setup(videoFormat, width, height, redrawRate);
     if (ret != 0) {
         OH_LOG_ERROR(LOG_APP, "VideoDecoderInstance::Setup failed: %{public}d", ret);
     }
     
-    // 通知 ArkTS 层设置视频参数
+    // Notify ArkTS layer to set video parameters
     if (g_videoCallbacks.tsfn_setup) {
         CallbackData* data = new CallbackData();
         data->intParams[0] = videoFormat;
@@ -544,12 +539,12 @@ int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* 
 void BridgeDrStart(void) {
     OH_LOG_INFO(LOG_APP, "BridgeDrStart: starting video decoder...");
     
-    // 启动视频解码器（此时才真正创建解码器）
+    // Start video decoder (actually creates decoder at this point)
     int ret = VideoDecoderInstance::Start();
     if (ret != 0) {
         OH_LOG_ERROR(LOG_APP, "VideoDecoderInstance::Start failed: %{public}d", ret);
-        // BridgeDrStart 返回类型是 void，无法返回错误
-        // 但解码器会在 SubmitDecodeUnit 时失败
+        // BridgeDrStart returns void, cannot return error
+        // But decoder will fail at SubmitDecodeUnit
     } else {
         OH_LOG_INFO(LOG_APP, "BridgeDrStart: video decoder started successfully");
     }
@@ -564,7 +559,7 @@ void BridgeDrStart(void) {
 void BridgeDrStop(void) {
     OH_LOG_INFO(LOG_APP, "BridgeDrStop");
     
-    // 停止视频解码器
+    // Stop video decoder
     VideoDecoderInstance::Stop();
     
     if (g_videoCallbacks.tsfn_stop) {
@@ -575,7 +570,7 @@ void BridgeDrStop(void) {
 void BridgeDrCleanup(void) {
     OH_LOG_INFO(LOG_APP, "BridgeDrCleanup");
     
-    // 清理视频解码器
+    // Clean up video decoder
     VideoDecoderInstance::Cleanup();
     
     if (g_videoCallbacks.tsfn_cleanup) {
@@ -586,7 +581,7 @@ void BridgeDrCleanup(void) {
 int BridgeDrSubmitDecodeUnit(void* decodeUnitPtr) {
     PDECODE_UNIT decodeUnit = (PDECODE_UNIT)decodeUnitPtr;
     
-    // 计算总大小和分段数量
+    // Calculate total size and segment count
     int totalSize = 0;
     int segmentCount = 0;
     PLENTRY entry = decodeUnit->bufferList;
@@ -596,13 +591,13 @@ int BridgeDrSubmitDecodeUnit(void* decodeUnitPtr) {
         entry = entry->next;
     }
     
-    // 构建 scatter-gather 分段数组（栈上分配，避免动态内存）
-    // 典型帧由 SPS/PPS/VPS + NAL 组成，分段数很少（通常 < 16）
+    // Build scatter-gather segment array (stack allocated, avoid dynamic memory)
+    // Typical frame consists of SPS/PPS/VPS + NAL, few segments (usually < 16)
     constexpr int kMaxStackSegments = 32;
     BufferSegment stackSegments[kMaxStackSegments];
     BufferSegment* segments = stackSegments;
     
-    // 极端情况下分段数超限，回退到堆分配
+    // Fall back to heap allocation in extreme cases where segment count exceeds limit
     bool heapAllocated = false;
     if (segmentCount > kMaxStackSegments) {
         segments = new BufferSegment[segmentCount];
@@ -618,7 +613,7 @@ int BridgeDrSubmitDecodeUnit(void* decodeUnitPtr) {
         entry = entry->next;
     }
     
-    // 直接提交到硬件解码器（scatter-gather 零拷贝：链表数据直写 AVBuffer）
+    // Submit directly to hardware decoder (scatter-gather zero-copy: list data directly to AVBuffer)
     int result = VideoDecoderInstance::SubmitDecodeUnitScatter(
         segments,
         segmentCount,
@@ -632,42 +627,42 @@ int BridgeDrSubmitDecodeUnit(void* decodeUnitPtr) {
         delete[] segments;
     }
     
-    // 注意: 不再通过 tsfn_submitDecodeUnit 通知 ArkTS 层
-    // 之前每帧都分配 CallbackData (ptrParam=nullptr) 并 dispatch 到 JS 线程，
-    // 但 CallJs_DrSubmitDecodeUnit 检测到 ptrParam==null 后直接 delete，
-    // 导致 ~60Hz 的无用 new/delete + 事件循环唤醒，累积 GC 压力引起顿卡。
-    // 视频帧已在本地直接提交硬件解码器，无需再通知 JS。
+    // Note: No longer notify ArkTS layer via tsfn_submitDecodeUnit
+    // Previously allocated CallbackData (ptrParam=nullptr) per frame and dispatched to JS thread,
+    // but CallJs_DrSubmitDecodeUnit just deleted it when ptrParam==null,
+    // causing ~60Hz useless new/delete + event loop wake-up, accumulating GC pressure causing stuttering.
+    // Video frames are now submitted directly to hardware decoder, no need to notify JS.
     
     return result == 0 ? DR_OK : DR_NEED_IDR;
 }
 
-// 音频渲染器回调
+// Audio renderer callback
 int BridgeArInit(int audioConfiguration, void* opusConfigPtr, void* context, int flags) {
     POPUS_MULTISTREAM_CONFIGURATION opusConfig = (POPUS_MULTISTREAM_CONFIGURATION)opusConfigPtr;
     OH_LOG_INFO(LOG_APP, "BridgeArInit: config=%{public}d, sampleRate=%{public}d, channels=%{public}d", 
                 audioConfiguration, opusConfig->sampleRate, opusConfig->channelCount);
     
-    // 保存配置
+    // Save configuration
     memcpy(&g_opusConfig, opusConfig, sizeof(g_opusConfig));
     
-    // 使用 HarmonyOS AVCodec Opus 解码器
+    // Use HarmonyOS AVCodec Opus decoder
     int err = MoonlightOpusDecoder::Init(opusConfig);
     if (err != 0) {
         OH_LOG_ERROR(LOG_APP, "Failed to create AVCodec Opus decoder: %{public}d", err);
         return -1;
     }
     
-    // 分配解码缓冲区
+    // Allocate decode buffer
     g_decodedAudioBuffer = (short*)malloc(opusConfig->channelCount * opusConfig->samplesPerFrame * sizeof(short));
     
-    // 初始化音频播放器
+    // Initialize audio player
     err = AudioRendererInstance::Init(opusConfig->sampleRate, opusConfig->channelCount, opusConfig->samplesPerFrame);
     if (err != 0) {
         OH_LOG_ERROR(LOG_APP, "Failed to init audio renderer: %{public}d", err);
-        // 继续执行，让 ArkTS 层处理音频
+        // Continue execution, let ArkTS layer handle audio
     }
     
-    // 初始化低频能量分析器
+    // Initialize bass energy analyzer
     g_bassAnalyzer.Init(opusConfig->sampleRate, opusConfig->channelCount);
     OH_LOG_INFO(LOG_APP, "Bass energy analyzer initialized: rate=%{public}d, ch=%{public}d",
                 opusConfig->sampleRate, opusConfig->channelCount);
@@ -686,7 +681,7 @@ int BridgeArInit(int audioConfiguration, void* opusConfigPtr, void* context, int
 void BridgeArStart(void) {
     OH_LOG_INFO(LOG_APP, "BridgeArStart");
     
-    // 启动音频播放器
+    // Start audio player
     AudioRendererInstance::Start();
     
     if (g_audioCallbacks.tsfn_start) {
@@ -697,7 +692,7 @@ void BridgeArStart(void) {
 void BridgeArStop(void) {
     OH_LOG_INFO(LOG_APP, "BridgeArStop");
     
-    // 停止音频播放器
+    // Stop audio player
     AudioRendererInstance::Stop();
     
     if (g_audioCallbacks.tsfn_stop) {
@@ -708,10 +703,10 @@ void BridgeArStop(void) {
 void BridgeArCleanup(void) {
     OH_LOG_INFO(LOG_APP, "BridgeArCleanup");
     
-    // 清理音频播放器
+    // Clean up audio player
     AudioRendererInstance::Cleanup();
     
-    // 清理 AVCodec Opus 解码器
+    // Clean up AVCodec Opus decoder
     MoonlightOpusDecoder::Cleanup();
     
     if (g_decodedAudioBuffer) {
@@ -725,13 +720,10 @@ void BridgeArCleanup(void) {
 }
 
 void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
-    // DIRECT_SUBMIT 模式下，此函数运行在 AudioRecv 线程
-    // 设置 QoS 和大核绑定以降低调度延迟（thread_local 确保每线程只执行一次）
     static thread_local bool audioThreadSetup = false;
     if (!audioThreadSetup) {
         audioThreadSetup = true;
         
-        // 设置 QoS：优先 USER_INTERACTIVE（最高等级）
         int qosRet = OH_QoS_SetThreadQoS(QOS_USER_INTERACTIVE);
         if (qosRet == 0) {
             OH_LOG_INFO(LOG_APP, "AudioRecv thread QoS: USER_INTERACTIVE (highest)");
@@ -744,7 +736,6 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
             }
         }
         
-        // 尝试绑定大核 — 读取 cpufreq 检测高频核心
         int numCpus = sysconf(_SC_NPROCESSORS_CONF);
         if (numCpus > 1) {
             long maxFreq = 0;
@@ -761,7 +752,6 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
                 }
             }
             
-            // 将最高频率 80% 以上的核心视为大核
             if (maxFreq > 0) {
                 long threshold = maxFreq * 80 / 100;
                 cpu_set_t cpuset;
@@ -778,7 +768,6 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
                     if (ret == 0) {
                         OH_LOG_INFO(LOG_APP, "AudioRecv thread bound to %{public}d big cores", bigCount);
                     }
-                    // 失败也不要紧，QoS 已暗示调度器优先使用大核
                 }
             }
         }
@@ -788,8 +777,7 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
         return;
     }
     
-    // 使用 HarmonyOS AVCodec Opus 解码器
-    // 注意：sampleData 可能为 NULL（丢包补偿 PLC），MoonlightOpusDecoder::Decode 内部会处理
+    // Use HarmonyOS AVCodec Opus decoder
     int decodeLen = MoonlightOpusDecoder::Decode(
         (const unsigned char*)sampleData,
         sampleLength,
@@ -798,12 +786,8 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
     );
     
     if (decodeLen > 0) {
-        // 始终写入解码后的音频，不在解码层丢帧
-        // 延迟控制由环形缓冲区内部处理：满时丢弃旧数据、写入新数据
-        // 这样波形始终连续，避免丢帧导致的电流滋啦声
         AudioRendererInstance::PlaySamples(g_decodedAudioBuffer, decodeLen);
         
-        // 低频能量分析（音频振动）
         int bassIntensity = 0;
         int bassLowFreqRatio = 50;
         if (g_bassAnalyzer.ProcessFrame(g_decodedAudioBuffer, decodeLen, bassIntensity, bassLowFreqRatio)) {
@@ -818,7 +802,6 @@ void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
     }
 }
 
-// 连接监听器回调
 void BridgeClStageStarting(int stage) {
     OH_LOG_INFO(LOG_APP, "Stage starting: %{public}d", stage);
     if (g_connCallbacks.tsfn_stageStarting) {
@@ -877,16 +860,11 @@ void BridgeClRumble(unsigned short controllerNumber, unsigned short lowFreqMotor
 void BridgeClConnectionStatusUpdate(int connectionStatus) {
     OH_LOG_INFO(LOG_APP, "Connection status: %{public}d", connectionStatus);
     
-    // 网络质量差时主动请求 IDR 帧，加速画面恢复
-    // CONN_STATUS_POOR = 1，此时很可能有帧丢失导致解码器参考帧损坏
-    // 提前请求 IDR 可避免等待超时才触发恢复
     if (connectionStatus == 1) { // CONN_STATUS_POOR
         LiRequestIdrFrame();
         OH_LOG_WARN(LOG_APP, "Poor connection detected, proactively requesting IDR frame");
     }
     
-    // 动态更新所有 mic 编码器的丢包率预估
-    // POOR → 15%（增加 FEC 冗余），OKAY → 1%（恢复正常）
     {
         int lossPercent = (connectionStatus == 1) ? 15 : 1;
         MicCapturerUpdatePacketLossPercent(lossPercent);
@@ -903,18 +881,12 @@ void BridgeClConnectionStatusUpdate(int connectionStatus) {
 void BridgeClSetHdrMode(int enabled, void* hdrMetadata) {
     OH_LOG_INFO(LOG_APP, "Set HDR mode: %{public}d, metadata=%{public}p", enabled, hdrMetadata);
     
-    // 如果有 HDR 元数据，可以在这里处理
-    // hdrMetadata 包含 HDR10 静态元数据（如果有的话）
     if (enabled && hdrMetadata != nullptr) {
-        // HDR 元数据格式（来自 moonlight-common-c）:
-        // 24 字节的 SS_HDR_METADATA 结构体
-        // 包含显示主颜色坐标、白点、亮度等信息
         uint8_t* metadata = static_cast<uint8_t*>(hdrMetadata);
         OH_LOG_INFO(LOG_APP, "HDR metadata received: first 4 bytes = %02x %02x %02x %02x",
                     metadata[0], metadata[1], metadata[2], metadata[3]);
     }
     
-    // 通知 ArkTS 层 HDR 状态变化
     if (g_connCallbacks.tsfn_setHdrMode) {
         CallbackData* data = new CallbackData();
         data->intParams[0] = enabled;

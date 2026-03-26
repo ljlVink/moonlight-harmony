@@ -8,14 +8,10 @@
  * (at your option) any later version.
  */
 
-/**
- * 应用状态服务
- * 
- * 用于监听和通知应用的前后台状态变化
- */
+
 import { emitter } from '@kit.BasicServicesKit';
 
-// 应用状态变化事件 ID
+
 export const APP_STATE_EVENT_ID = 10001;
 
 export enum AppState {
@@ -28,9 +24,7 @@ export interface AppStateEvent {
   timestamp: number;
 }
 
-/**
- * 应用状态服务单例
- */
+
 export class AppStateService {
   private static instance: AppStateService;
   private currentState: AppState = AppState.FOREGROUND;
@@ -45,54 +39,42 @@ export class AppStateService {
     return AppStateService.instance;
   }
   
-  /**
-   * 获取当前应用状态
-   */
+
   getCurrentState(): AppState {
     return this.currentState;
   }
   
-  /**
-   * 应用进入前台
-   */
+
   onForeground(): void {
     if (this.currentState !== AppState.FOREGROUND) {
       this.currentState = AppState.FOREGROUND;
-      console.info('[AppStateService] 应用进入前台');
+      console.info('[AppStateService] App entered foreground');
       this.notifyListeners();
       this.emitEvent();
     }
   }
   
-  /**
-   * 应用进入后台
-   */
+
   onBackground(): void {
     if (this.currentState !== AppState.BACKGROUND) {
       this.currentState = AppState.BACKGROUND;
-      console.info('[AppStateService] 应用进入后台');
+      console.info('[AppStateService] App entered background');
       this.notifyListeners();
       this.emitEvent();
     }
   }
   
-  /**
-   * 添加状态变化监听器
-   */
+
   addListener(callback: (state: AppState) => void): void {
     this.listeners.add(callback);
   }
   
-  /**
-   * 移除状态变化监听器
-   */
+
   removeListener(callback: (state: AppState) => void): void {
     this.listeners.delete(callback);
   }
   
-  /**
-   * 订阅状态变化事件（使用 emitter）
-   */
+
   subscribe(callback: (event: emitter.EventData) => void): void {
     const innerEvent: emitter.InnerEvent = {
       eventId: APP_STATE_EVENT_ID
@@ -100,9 +82,7 @@ export class AppStateService {
     emitter.on(innerEvent, callback);
   }
   
-  /**
-   * 取消订阅状态变化事件
-   */
+
   unsubscribe(): void {
     emitter.off(APP_STATE_EVENT_ID);
   }
@@ -112,7 +92,7 @@ export class AppStateService {
       try {
         callback(this.currentState);
       } catch (err) {
-        console.error('[AppStateService] 监听器回调错误:', err);
+        console.error('[AppStateService] Listener callback error:', err);
       }
     });
   }

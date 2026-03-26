@@ -9,170 +9,129 @@
  */
 
 /**
- * 自定义按键数据模型
  *
- * 定义自定义按键的数据结构、按键动作类型和配置档案。
- * 参考 Android 王冠功能架构，使用 TypeScript 类型系统实现类型安全。
  */
 
 // =============================================================================
-// 按键动作类型（替代 Android 的字符串前缀 "k123"/"m1" 方案）
 // =============================================================================
 
-/** 键盘按键动作 */
+/**
 export interface KeyboardAction {
   type: 'keyboard';
   /** Windows Virtual-Key Code */
   vk: number;
 }
 
-/** 鼠标按键动作 */
+/**
 export interface MouseButtonAction {
   type: 'mouse';
-  /** 鼠标按键: 1=左键, 2=中键, 3=右键, 4=X1, 5=X2 */
+  /**
   button: number;
 }
 
-/** 鼠标滚轮动作 */
+/**
 export interface MouseScrollAction {
   type: 'mouseScroll';
-  /** 滚动方向: 1=上, -1=下 */
+  /**
   direction: number;
 }
 
-/** 手柄按钮动作 */
+/**
 export interface GamepadButtonAction {
   type: 'gamepadButton';
-  /** 按钮位掩码 (参照 MoonBridge 常量) */
+  /**
   mask: number;
 }
 
-/** 手柄扳机动作（LT/RT 模拟量） */
+/**
 export interface GamepadTriggerAction {
   type: 'gamepadTrigger';
   /** 'left' = LT, 'right' = RT */
   trigger: 'left' | 'right';
 }
 
-/** 手柄摇杆方向动作（按下推满、释放归零） */
+/**
 export interface GamepadStickAction {
   type: 'gamepadStick';
-  /** 摇杆：'left' = 左摇杆, 'right' = 右摇杆 */
+  /**
   stick: 'left' | 'right';
-  /** 方向 */
+  /**
   direction: 'up' | 'down' | 'left' | 'right';
 }
 
-/**
- * 模拟摇杆动作（完整的触摸虚拟摇杆）
- * 与 gamepadStick 的区别：这是可拖拽的 2D 模拟摇杆 UI，
- * 输出连续的 x/y (-1.0 ~ 1.0) 归一化轴值，而非离散的 4 方向。
- * 参照 Android AnalogStick.java 实现。
- */
 export interface AnalogStickAction {
   type: 'analogStick';
-  /** 摇杆：'left' = 左摇杆, 'right' = 右摇杆 */
+  /**
   stick: 'left' | 'right';
-  /**
-   * 隐形摇杆模式（参照 Android InvisibleAnalogStick.java）
-   * true: 常态不可见，触摸后以按下位置为中心显示摇杆
-   * false/undefined: 普通固定位置摇杆
-   */
   invisible?: boolean;
-  /**
-   * 灵敏度乘数（0.1~3.0，默认 1.0）
-   * 值越大摇杆输出幅度越大，越容易到达满偏
-   */
   sensitivity?: number;
 }
 
-/**
- * 十字键盘动作（D-Pad 单一控件输出 4/8 方向）
- * 参照 Android DigitalPad.java —— 一个控件代替 4 个独立方向按钮。
- * 支持对角线组合（最多同时按 2 个方向），输出 GamepadButton.UP/DOWN/LEFT/RIGHT 位掩码。
- */
 export interface DPadAction {
   type: 'dpad';
 }
 
-/** 轮盘菜单分区定义 */
+/**
 export interface WheelPadSegment {
-  /** 分区显示文字 */
+  /**
   label: string;
-  /** 绑定的按键动作 */
+  /**
   action: KeyAction;
 }
 
-/**
- * 轮盘菜单动作（放射状分区菜单）
- * 参照 Android WheelPad.java —— 圆形放射状菜单，N 个分区从12点方向顺时针排列。
- * 触摸后按角度判定激活的分区，滑动切换分区时自动释放旧分区 + 按下新分区。
- * 中心为死区，不触发任何动作。
- */
 export interface WheelPadAction {
   type: 'wheelPad';
-  /** 分区列表（从12点方向顺时针排列） */
+  /**
   segments: WheelPadSegment[];
 }
 
-/**
- * 数字摇杆动作（外观=模拟摇杆，输出=四方向数字开关）
- * 参照 Android DigitalStick.java —— 拖动时根据阈值判断当前方向，
- * 每个方向独立发送 pressed/released，支持同时激活相邻方向（对角线）。
- * 与 AnalogStick 共享 VirtualJoystick 视觉组件，仅在输出层做离散化。
- */
 export interface DigitalStickAction {
   type: 'digitalStick';
-  /** 上方向绑定动作 */
+  /**
   upAction: KeyAction;
-  /** 下方向绑定动作 */
+  /**
   downAction: KeyAction;
-  /** 左方向绑定动作 */
+  /**
   leftAction: KeyAction;
-  /** 右方向绑定动作 */
+  /**
   rightAction: KeyAction;
-  /** 双击绑定动作（可选，如 L3/R3） */
+  /**
   clickAction?: KeyAction;
 }
 
-/** 组合键动作：同时发送多个按键 */
+/**
 export interface ComboAction {
   type: 'combo';
   actions: KeyAction[];
 }
 
-/**
- * 快捷键动作：一次性发送组合键或多步按键序列
- * 与 keyboard 类型（持续按住/释放）不同，shortcut 在按下时一次性触发完整序列
- * 复用 ShortcutManager 的 Shortcut 数据模型
- */
 export interface ShortcutAction {
   type: 'shortcut';
-  /** 同时按下的虚拟键码数组 */
+  /**
   keys: number[];
-  /** 多步按键序列（依次执行，每步间隔 200ms） */
+  /**
   keySequence?: number[][];
 }
 
-/** 特殊功能动作 */
+/**
 export interface SpecialAction {
   type: 'special';
-  /** 功能 ID */
+  /**
   id: SpecialActionId;
 }
 
-/** 特殊功能枚举 */
+/**
 export type SpecialActionId =
-  | 'toggleKeyboard'     // 切换 PC 键盘
-  | 'toggleIME'          // 切换系统输入法
-  | 'toggleMouseMode'    // 切换鼠标模式
-  | 'switchProfile'      // 切换配置档案
-  | 'openGameMenu'       // 打开游戏菜单
-  | 'editMode'           // 进入编辑模式
-  | 'hideCustomKeys'     // 隐藏自定义按键
-  | 'none';              // 无操作
+  | 'toggleKeyboard'
+  | 'toggleIME'
+  | 'toggleMouseMode'
+  | 'switchProfile'
+  | 'openGameMenu'
+  | 'editMode'
+  | 'hideCustomKeys'
+  | 'none';
 
-/** 所有按键动作联合类型 */
+/**
 export type KeyAction =
   | KeyboardAction
   | MouseButtonAction
@@ -189,93 +148,81 @@ export type KeyAction =
   | SpecialAction;
 
 // =============================================================================
-// 按键外观定义
 // =============================================================================
 
-/** 按键形态 */
+/**
 export type KeyShape = 'rect' | 'circle';
 
-/** 按键行为模式 */
+/**
 export type KeyBehavior = 'momentary' | 'toggle';
 
 // =============================================================================
-// 自定义按键定义
 // =============================================================================
 
-/** 自定义按键完整定义 */
+/**
 export interface CustomKeyDef {
-  /** 唯一标识（UUID 或时间戳字符串） */
+  /**
   id: string;
-  /** 显示标签 */
+  /**
   label: string;
-  /** 绑定的按键动作 */
+  /**
   action: KeyAction;
-  /** 形态 */
+  /**
   shape: KeyShape;
-  /** 行为模式 */
+  /**
   behavior: KeyBehavior;
-  /**
-   * 中心 X 坐标（百分比 0.0~1.0，相对屏幕宽度）
-   * 渲染时: xVp = xPercent * screenWidthVp
-   */
   xPercent: number;
-  /**
-   * 中心 Y 坐标（百分比 0.0~1.0，相对屏幕高度）
-   * 渲染时: yVp = yPercent * screenHeightVp
-   */
   yPercent: number;
-  /** @deprecated 旧绝对坐标，仅用于数据迁移兼容 */
+  /**
   x?: number;
-  /** @deprecated 旧绝对坐标，仅用于数据迁移兼容 */
+  /**
   y?: number;
-  /** 宽度 (vp) — 保持绝对值，不随屏幕缩放 */
+  /**
   width: number;
-  /** 高度 (vp) — 保持绝对值，不随屏幕缩放 */
+  /**
   height: number;
-  /** 层级 (0=最底, 越大越靠前) */
+  /**
   layer: number;
-  /** 透明度 0-100 */
+  /**
   opacity: number;
-  /** 圆角 (vp) */
+  /**
   borderRadius: number;
-  /** 常态边框/前景色 (十六进制) */
+  /**
   normalColor: string;
-  /** 按下时颜色 */
+  /**
   pressedColor: string;
-  /** 背景色 */
+  /**
   bgColor: string;
-  /** 文字颜色 */
+  /**
   textColor: string;
-  /** 文字大小 (fp) */
+  /**
   fontSize: number;
-  /** 边框线条宽度 (vp)，0 = 无边框 */
+  /**
   borderWidth: number;
-  /** 振动反馈等级: none=无, light=轻(15ms), medium=中(40ms), heavy=重(80ms) */
+  /**
   haptic: string;
 }
 
 // =============================================================================
-// 配置档案
 // =============================================================================
 
-/** 按键配置档案 */
+/**
 export interface CustomKeyProfile {
-  /** 配置名称 */
+  /**
   name: string;
-  /** 档案中的所有按键 */
+  /**
   keys: CustomKeyDef[];
 }
 
 // =============================================================================
-// 工厂方法
 // =============================================================================
 
-/** 生成唯一 ID */
+/**
 export function generateKeyId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
 }
 
-/** 浅拷贝一个 CustomKeyDef（ArkTS 不支持 spread 对象字面量） */
+/**
 export function cloneKeyDef(src: CustomKeyDef): CustomKeyDef {
   const dst: CustomKeyDef = {
     id: src.id,
@@ -301,12 +248,12 @@ export function cloneKeyDef(src: CustomKeyDef): CustomKeyDef {
   return dst;
 }
 
-/** 创建默认按键定义 */
+/**
 export function createDefaultKeyDef(partial?: Partial<CustomKeyDef>): CustomKeyDef {
   const def: CustomKeyDef = {
     id: generateKeyId(),
     label: 'Key',
-    action: { type: 'keyboard', vk: 0x41 } as KeyboardAction, // 默认 A 键
+    action: { type: 'keyboard', vk: 0x41 } as KeyboardAction,
     shape: 'rect',
     behavior: 'momentary',
     xPercent: 0.5,
@@ -348,7 +295,7 @@ export function createDefaultKeyDef(partial?: Partial<CustomKeyDef>): CustomKeyD
   return def;
 }
 
-/** 创建空白配置档案 */
+/**
 export function createDefaultProfile(name: string = '默认'): CustomKeyProfile {
   return {
     name,
@@ -357,17 +304,12 @@ export function createDefaultProfile(name: string = '默认'): CustomKeyProfile 
 }
 
 // =============================================================================
-// 统一的 Windows 虚拟键码常量
 // =============================================================================
 
 /**
- * Windows Virtual-Key Codes（统一常量表）
  *
- * 所有 VK 码定义的唯一来源，供快捷键、自定义按键、菜单等共用。
- * 原先分散在 StreamMenuManager.VirtualKey / MoonBridge.VK_* 中。
  */
 export class VirtualKey {
-  // 修饰键
   static readonly VK_SHIFT = 0x10;
   static readonly VK_CONTROL = 0x11;
   static readonly VK_MENU = 0x12;        // Alt
@@ -379,7 +321,6 @@ export class VirtualKey {
   static readonly VK_RCONTROL = 0xA3;
   static readonly VK_LMENU = 0xA4;
   static readonly VK_RMENU = 0xA5;
-  // 控制键
   static readonly VK_ESCAPE = 0x1B;
   static readonly VK_TAB = 0x09;
   static readonly VK_RETURN = 0x0D;
@@ -396,12 +337,10 @@ export class VirtualKey {
   static readonly VK_SCROLL = 0x91;      // Scroll Lock
   static readonly VK_PAUSE = 0x13;
   static readonly VK_NUMLOCK = 0x90;
-  // 方向键
   static readonly VK_LEFT = 0x25;
   static readonly VK_UP = 0x26;
   static readonly VK_RIGHT = 0x27;
   static readonly VK_DOWN = 0x28;
-  // 功能键
   static readonly VK_F1 = 0x70;
   static readonly VK_F2 = 0x71;
   static readonly VK_F3 = 0x72;
@@ -414,7 +353,6 @@ export class VirtualKey {
   static readonly VK_F10 = 0x79;
   static readonly VK_F11 = 0x7A;
   static readonly VK_F12 = 0x7B;
-  // 字母 (用于组合键引用，如 VK_B = Ctrl+B)
   static readonly VK_A = 0x41;
   static readonly VK_B = 0x42;
   static readonly VK_C = 0x43;
@@ -441,7 +379,6 @@ export class VirtualKey {
   static readonly VK_X = 0x58;
   static readonly VK_Y = 0x59;
   static readonly VK_Z = 0x5A;
-  // 媒体键
   static readonly VK_VOLUME_MUTE = 0xAD;
   static readonly VK_VOLUME_DOWN = 0xAE;
   static readonly VK_VOLUME_UP = 0xAF;
@@ -452,15 +389,10 @@ export class VirtualKey {
 }
 
 // =============================================================================
-// 统一的手柄按钮掩码常量
 // =============================================================================
 
 /**
- * 手柄按钮位掩码（统一常量表）
  *
- * 所有手柄按钮掩码定义的唯一来源，供自定义按键、显示名称、预设等共用。
- * 值与 moonlight-common-c/Limelight.h 保持一致。
- * 原先分散在 MoonBridge / GamepadTypes.MoonlightButton / ControllerConstants.ButtonFlags 中。
  */
 export class GamepadButton {
   // D-Pad
@@ -468,82 +400,64 @@ export class GamepadButton {
   static readonly DOWN = 0x0002;
   static readonly LEFT = 0x0004;
   static readonly RIGHT = 0x0008;
-  // 功能键
   static readonly START = 0x0010;        // Play/Menu
   static readonly BACK = 0x0020;         // Select/View
-  // 摇杆按下
   static readonly LS = 0x0040;           // Left Stick Click (L3)
   static readonly RS = 0x0080;           // Right Stick Click (R3)
-  // 肩键
   static readonly LB = 0x0100;
   static readonly RB = 0x0200;
-  // 特殊
-  static readonly GUIDE = 0x0400;        // Xbox/PS/Home 按钮
-  // 面板键
+  static readonly GUIDE = 0x0400;
   static readonly A = 0x1000;
   static readonly B = 0x2000;
   static readonly X = 0x4000;
   static readonly Y = 0x8000;
-  // 扩展按钮（值必须与 moonlight-common-c/Limelight.h 一致）
   static readonly PADDLE1 = 0x010000;
   static readonly PADDLE2 = 0x020000;
   static readonly PADDLE3 = 0x040000;
   static readonly PADDLE4 = 0x080000;
-  static readonly TOUCHPAD = 0x100000;   // 触摸板按钮 (DualShock4/DualSense)
-  static readonly MISC = 0x200000;       // 杂项按钮 (Capture/Mute 等)
-  // 组合掩码
+  static readonly TOUCHPAD = 0x100000;
+  static readonly MISC = 0x200000;
   static readonly DPAD_MASK = 0x000F;    // UP | DOWN | LEFT | RIGHT
 }
 
 // =============================================================================
-// 常用按键预设
 // =============================================================================
 
-/** VK 码显示名称映射 */
+/**
 export const VK_DISPLAY_NAMES: Record<number, string> = {
-  // 字母 A-Z
   0x41: 'A', 0x42: 'B', 0x43: 'C', 0x44: 'D', 0x45: 'E',
   0x46: 'F', 0x47: 'G', 0x48: 'H', 0x49: 'I', 0x4A: 'J',
   0x4B: 'K', 0x4C: 'L', 0x4D: 'M', 0x4E: 'N', 0x4F: 'O',
   0x50: 'P', 0x51: 'Q', 0x52: 'R', 0x53: 'S', 0x54: 'T',
   0x55: 'U', 0x56: 'V', 0x57: 'W', 0x58: 'X', 0x59: 'Y', 0x5A: 'Z',
-  // 数字 0-9
   0x30: '0', 0x31: '1', 0x32: '2', 0x33: '3', 0x34: '4',
   0x35: '5', 0x36: '6', 0x37: '7', 0x38: '8', 0x39: '9',
-  // 功能键
   0x70: 'F1', 0x71: 'F2', 0x72: 'F3', 0x73: 'F4',
   0x74: 'F5', 0x75: 'F6', 0x76: 'F7', 0x77: 'F8',
   0x78: 'F9', 0x79: 'F10', 0x7A: 'F11', 0x7B: 'F12',
-  // 控制键
   0x1B: 'ESC', 0x09: 'Tab', 0x14: 'Caps', 0x0D: 'Enter',
   0x08: 'Backspace', 0x20: 'Space', 0x2D: 'Insert', 0x2E: 'Delete',
   0x24: 'Home', 0x23: 'End', 0x21: 'PgUp', 0x22: 'PgDn',
-  // 方向键
   0x25: '←', 0x26: '↑', 0x27: '→', 0x28: '↓',
-  // 修饰键
   0x10: 'Shift', 0x11: 'Ctrl', 0x12: 'Alt',
   0xA0: 'LShift', 0xA1: 'RShift', 0xA2: 'LCtrl', 0xA3: 'RCtrl',
   0xA4: 'LAlt', 0xA5: 'RAlt', 0x5B: 'LWin', 0x5C: 'RWin',
-  // 符号
   0xC0: '`', 0xBD: '-', 0xBB: '=', 0xDB: '[', 0xDD: ']',
   0xDC: '\\', 0xBA: ';', 0xDE: "'", 0xBC: ',', 0xBE: '.', 0xBF: '/',
-  // 截图/锁定
   0x2C: 'PrtSc', 0x91: 'ScrLk', 0x13: 'Pause', 0x90: 'NumLk',
-  // 小键盘
   0x60: 'Num0', 0x61: 'Num1', 0x62: 'Num2', 0x63: 'Num3', 0x64: 'Num4',
   0x65: 'Num5', 0x66: 'Num6', 0x67: 'Num7', 0x68: 'Num8', 0x69: 'Num9',
   0x6A: 'Num*', 0x6B: 'Num+', 0x6D: 'Num-', 0x6E: 'Num.', 0x6F: 'Num/',
-  // 媒体键
   0xAD: '🔇', 0xAE: '🔉', 0xAF: '🔊',
   0xB0: '⏭', 0xB1: '⏮', 0xB2: '⏹', 0xB3: '⏯',
 };
 
-/** 获取 VK 码的显示名称 */
+/**
 export function getVkDisplayName(vk: number): string {
   return VK_DISPLAY_NAMES[vk] ?? `0x${vk.toString(16).toUpperCase()}`;
 }
 
-/** 手柄按键掩码 → 显示名称（值与 GamepadButton.* 常量一致） */
+/**
 export const GAMEPAD_DISPLAY_NAMES: Record<number, string> = {
   0x1000: 'A', 0x2000: 'B', 0x4000: 'X', 0x8000: 'Y',
   0x0100: 'LB', 0x0200: 'RB',
@@ -551,17 +465,16 @@ export const GAMEPAD_DISPLAY_NAMES: Record<number, string> = {
   0x0040: 'L3', 0x0080: 'R3',
   0x0400: 'Guide',
   0x0001: 'D↑', 0x0002: 'D↓', 0x0004: 'D←', 0x0008: 'D→',
-  // 扩展按钮
   0x010000: 'P1', 0x020000: 'P2', 0x040000: 'P3', 0x080000: 'P4',
   0x100000: 'Touchpad', 0x200000: 'Misc',
 };
 
-/** 获取手柄按钮掩码的显示名称 */
+/**
 export function getGamepadDisplayName(mask: number): string {
   return GAMEPAD_DISPLAY_NAMES[mask] ?? `手柄0x${mask.toString(16)}`;
 }
 
-/** 获取 KeyAction 的显示名称 */
+/**
 export function getActionDisplayName(action: KeyAction): string {
   switch (action.type) {
     case 'keyboard':
@@ -606,7 +519,6 @@ export function getActionDisplayName(action: KeyAction): string {
     case 'combo':
       return action.actions.map(a => getActionDisplayName(a)).join('+');
     case 'shortcut': {
-      // 快捷键：显示组合键码名称
       if (action.keySequence && action.keySequence.length > 0) {
         return action.keySequence.map(step =>
           step.map(vk => getVkDisplayName(vk)).join('+')
@@ -627,10 +539,9 @@ export function getActionDisplayName(action: KeyAction): string {
 }
 
 // =============================================================================
-// 常用按键预设模板
 // =============================================================================
 
-/** 预设按键分类 */
+/**
 export interface KeyPresetCategory {
   name: string;
   presets: KeyPreset[];
@@ -641,7 +552,7 @@ export interface KeyPreset {
   action: KeyAction;
 }
 
-/** 所有预设分类 */
+/**
 export const KEY_PRESET_CATEGORIES: KeyPresetCategory[] = [
   {
     name: '常用键',
@@ -713,7 +624,6 @@ export const KEY_PRESET_CATEGORIES: KeyPresetCategory[] = [
       { label: 'D←', action: { type: 'gamepadButton', mask: GamepadButton.LEFT } },
       { label: 'D→', action: { type: 'gamepadButton', mask: GamepadButton.RIGHT } },
       { label: 'P1', action: { type: 'gamepadButton', mask: GamepadButton.PADDLE1 } },
-      // 摇杆方向
       { label: 'LS↑', action: { type: 'gamepadStick', stick: 'left', direction: 'up' } as GamepadStickAction },
       { label: 'LS↓', action: { type: 'gamepadStick', stick: 'left', direction: 'down' } as GamepadStickAction },
       { label: 'LS←', action: { type: 'gamepadStick', stick: 'left', direction: 'left' } as GamepadStickAction },
@@ -727,13 +637,10 @@ export const KEY_PRESET_CATEGORIES: KeyPresetCategory[] = [
       { label: 'P4', action: { type: 'gamepadButton', mask: GamepadButton.PADDLE4 } },
       { label: 'Touchpad', action: { type: 'gamepadButton', mask: GamepadButton.TOUCHPAD } },
       { label: 'Misc', action: { type: 'gamepadButton', mask: GamepadButton.MISC } },
-      // 模拟摇杆（完整虚拟摇杆 UI）
       { label: '左摇杆', action: { type: 'analogStick', stick: 'left' } as AnalogStickAction },
       { label: '右摇杆', action: { type: 'analogStick', stick: 'right' } as AnalogStickAction },
-      // 隐形摇杆（触摸区域内按下即显现）
       { label: '隐形左摇杆', action: { type: 'analogStick', stick: 'left', invisible: true } as AnalogStickAction },
       { label: '隐形右摇杆', action: { type: 'analogStick', stick: 'right', invisible: true } as AnalogStickAction },
-      // 十字键盘（D-Pad 单一控件）
       { label: '十字键', action: { type: 'dpad' } as DPadAction },
     ],
   },
@@ -809,7 +716,7 @@ export const KEY_PRESET_CATEGORIES: KeyPresetCategory[] = [
   },
 ];
 
-/** 构建字母 A-Z 预设列表 */
+/**
 function buildLetterPresets(): KeyPreset[] {
   const list: KeyPreset[] = [];
   for (let i = 0; i < 26; i++) {
@@ -822,7 +729,7 @@ function buildLetterPresets(): KeyPreset[] {
   return list;
 }
 
-/** 构建数字 0-9 预设列表 */
+/**
 function buildNumberPresets(): KeyPreset[] {
   const list: KeyPreset[] = [];
   for (let i = 0; i < 10; i++) {
@@ -835,7 +742,7 @@ function buildNumberPresets(): KeyPreset[] {
   return list;
 }
 
-/** 构建轮盘菜单预设列表 */
+/**
 function buildWheelPadPresets(): KeyPreset[] {
   const seg1: WheelPadSegment = { label: '1', action: { type: 'keyboard', vk: 0x31 } as KeyboardAction };
   const seg2: WheelPadSegment = { label: '2', action: { type: 'keyboard', vk: 0x32 } as KeyboardAction };
@@ -870,14 +777,10 @@ function buildWheelPadPresets(): KeyPreset[] {
 }
 
 // =============================================================================
-// 统一快捷键执行引擎
 // =============================================================================
 
 /**
- * 统一的快捷键执行函数
  *
- * 支持单次组合键和多步按键序列（每步间隔 200ms）。
- * 使用回调参数避免 ArkTS 结构化类型限制。
  */
 export function sendShortcutKeys(
   sendKeysFn: (keyCodes: number[]) => void,
@@ -895,7 +798,7 @@ export function sendShortcutKeys(
   }
 }
 
-/** 构建数字摇杆预设列表 */
+/**
 function buildDigitalStickPresets(): KeyPreset[] {
   const list: KeyPreset[] = [
     {

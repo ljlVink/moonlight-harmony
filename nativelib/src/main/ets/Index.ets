@@ -10,8 +10,6 @@
 
 /**
  * Moonlight Native Library Entry
- * 导出原生库模块
  */
 
-// 导出原生模块
 export { default as nativeLib } from 'libmoonlight_nativelib.so';

@@ -2,21 +2,21 @@
  * Moonlight for HarmonyOS
  * Copyright (C) 2024-2025 Moonlight/AlkaidLab
  *
- * USB DDK Poller - 基于 HarmonyOS USB DDK 的高速轮询实现
+ * USB DDK Poller - High-speed polling implementation based on HarmonyOS USB DDK
  *
- * 核心机制：
- *   1. dlopen("libusb_ndk.z.so") 动态加载 DDK (避免硬依赖)
- *   2. OH_Usb_Init() → OH_Usb_GetDevices() → 匹配 VID/PID
- *   3. OH_Usb_ClaimInterface() → OH_Usb_CreateDeviceMemMap()
- *   4. pthread 循环调用 OH_Usb_SendPipeRequest() 阻塞读取 IN 端点
- *   5. 数据通过 napi_threadsafe_function 回调到 JS 线程
- *   6. 输出(init/rumble) 由轮询线程在 IN 请求间隙发送 (非阻塞 JS)
+ * Core mechanism:
+ *   1. dlopen("libusb_ndk.z.so") dynamically loads DDK (avoids hard dependency)
+ *   2. OH_Usb_Init() -> OH_Usb_GetDevices() -> match VID/PID
+ *   3. OH_Usb_ClaimInterface() -> OH_Usb_CreateDeviceMemMap()
+ *   4. pthread loop calling OH_Usb_SendPipeRequest() to blocking read IN endpoint
+ *   5. Data callback to JS thread via napi_threadsafe_function
+ *   6. Output (init/rumble) sent by polling thread during IN request gaps (non-blocking JS)
  *
- * 性能优势：
- *   - SendPipeRequest 是纯同步内核调用，无 IPC 开销
- *   - pthread 直接等待内核事件，响应延迟 < 0.1ms
- *   - 理论轮询率可达 USB High Speed 上限 (1000Hz)
- *   - 输出 (rumble) 不阻塞 JS 主线程
+ * Performance advantages:
+ *   - SendPipeRequest is pure synchronous kernel call, no IPC overhead
+ *   - pthread directly waits for kernel events, response latency < 0.1ms
+ *   - Theoretical polling rate can reach USB High Speed limit (1000Hz)
+ *   - Output (rumble) doesn't block JS main thread
  */
 
 #include "usb_ddk_poller.h"
@@ -32,7 +32,6 @@
 #define LOG_TAG "USB-DDK-Poller"
 
 // ============================================================
-// USB DDK 类型定义 (手动定义，通过 dlopen 调用)
 // ============================================================
 
 #define USB_DDK_SUCCESS         0
@@ -80,7 +79,6 @@ struct UsbDeviceMemMap {
 };
 
 // ============================================================
-// DDK 函数指针
 // ============================================================
 
 typedef int32_t (*Fn_OH_Usb_Init)(void);
@@ -94,7 +92,6 @@ typedef void    (*Fn_OH_Usb_DestroyDeviceMemMap)(UsbDeviceMemMap *devMmap);
 typedef int32_t (*Fn_OH_Usb_SendPipeRequest)(const UsbRequestPipe *pipe, UsbDeviceMemMap *devMmap);
 
 // ============================================================
-// 全局 DDK 状态
 // ============================================================
 
 static void *g_ddkLib = nullptr;
@@ -112,13 +109,11 @@ static Fn_OH_Usb_DestroyDeviceMemMap fn_DestroyDeviceMemMap = nullptr;
 static Fn_OH_Usb_SendPipeRequest   fn_SendPipeRequest = nullptr;
 
 // ============================================================
-// Poller 上下文
 // ============================================================
 
 #define DDK_MAX_POLLERS 4
 
 struct DdkPollerContext {
-    // DDK 资源
     uint64_t deviceId;
     uint64_t interfaceHandle;
     uint8_t inEndpoint;
@@ -126,38 +121,32 @@ struct DdkPollerContext {
     uint32_t maxPacketSize;
     uint32_t timeoutMs;
 
-    UsbDeviceMemMap *inMemMap;   // 输入 (轮询线程专用)
-    UsbDeviceMemMap *outMemMap;  // 输出 (轮询线程发送)
+    UsbDeviceMemMap *inMemMap;
+    UsbDeviceMemMap *outMemMap;
 
-    // 线程控制
     std::atomic<bool> running;
     pthread_t thread;
     bool threadCreated;
     bool interfaceClaimed;
 
-    // JS 回调
-    napi_threadsafe_function tsfn;      // 数据回调
-    napi_threadsafe_function errorTsfn; // 错误回调
+    napi_threadsafe_function tsfn;
+    napi_threadsafe_function errorTsfn;
 
-    // 忽略断开信号 (对应用户设置 "忽略手柄断开")
     std::atomic<bool> ignoreDisconnect;
 
-    // 异步输出 (sendOutput 非阻塞, 由轮询线程发送)
     std::mutex outMutex;
     uint8_t pendingOutData[64];
     uint32_t pendingOutLen;
     uint8_t pendingOutEndpoint;
     std::atomic<bool> hasPendingOutput{false};
 
-    // 输入去重 (避免无变化数据淹没 tsfn 队列)
     uint8_t lastInputData[256];
     uint32_t lastInputLen;
     bool lastInputValid;
 
-    // 统计
     std::atomic<uint64_t> totalReads;
     std::atomic<uint64_t> totalBytes;
-    std::atomic<uint64_t> totalSkippedDups;  // 去重跳过的帧数
+    std::atomic<uint64_t> totalSkippedDups;
 };
 
 static DdkPollerContext g_ddkPollers[DDK_MAX_POLLERS];
@@ -165,7 +154,6 @@ static pthread_mutex_t g_ddkMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool g_ddkPoolInited = false;
 
 // ============================================================
-// 回调数据
 // ============================================================
 
 struct DdkCallbackData {
@@ -180,7 +168,6 @@ struct DdkErrorData {
 };
 
 // ============================================================
-// 辅助函数
 // ============================================================
 
 static const char *ddkErrStr(int32_t code) {
@@ -229,7 +216,7 @@ static bool loadDdkLibrary() {
 
     g_ddkLib = dlopen("libusb_ndk.z.so", RTLD_LAZY);
     if (!g_ddkLib) {
-        OH_LOG_ERROR(LOG_APP, "[%{public}s] dlopen 失败: %{public}s", LOG_TAG, dlerror());
+        OH_LOG_ERROR(LOG_APP, "[%{public}s] dlopen failed: %{public}s", LOG_TAG, dlerror());
         return false;
     }
 
@@ -245,7 +232,7 @@ static bool loadDdkLibrary() {
 
     if (!fn_Init || !fn_Release || !fn_ClaimInterface || !fn_ReleaseInterface ||
         !fn_CreateDeviceMemMap || !fn_DestroyDeviceMemMap || !fn_SendPipeRequest) {
-        OH_LOG_ERROR(LOG_APP, "[%{public}s] 核心函数加载失败 (Init=%{public}s Release=%{public}s Claim=%{public}s "
+        OH_LOG_ERROR(LOG_APP, "[%{public}s] Core functions failed to load (Init=%{public}s Release=%{public}s Claim=%{public}s "
                      "Release=%{public}s CreateMem=%{public}s DestroyMem=%{public}s SendPipe=%{public}s)",
                      LOG_TAG,
                      fn_Init ? "OK" : "MISS",
@@ -260,21 +247,19 @@ static bool loadDdkLibrary() {
         return false;
     }
 
-    // GetDevices 和 GetDeviceDescriptor 是 API 18，可选
     if (!fn_GetDevices) {
-        OH_LOG_WARN(LOG_APP, "[%{public}s] OH_Usb_GetDevices 不可用 (需要 API 18+)", LOG_TAG);
+        OH_LOG_WARN(LOG_APP, "[%{public}s] OH_Usb_GetDevices not available (needs API 18+)", LOG_TAG);
     }
     if (!fn_GetDeviceDescriptor) {
-        OH_LOG_WARN(LOG_APP, "[%{public}s] OH_Usb_GetDeviceDescriptor 不可用 (需要 API 10+)", LOG_TAG);
+        OH_LOG_WARN(LOG_APP, "[%{public}s] OH_Usb_GetDeviceDescriptor not available (needs API 10+)", LOG_TAG);
     }
 
     g_ddkLoaded = true;
-    OH_LOG_INFO(LOG_APP, "[%{public}s] DDK 库加载成功", LOG_TAG);
+    OH_LOG_INFO(LOG_APP, "[%{public}s] DDK library loaded successfully", LOG_TAG);
     return true;
 }
 
 // ============================================================
-// 线程安全回调 (JS 线程执行)
 // ============================================================
 
 static void ddkDataCallbackOnJs(napi_env env, napi_value js_callback, void *context, void *rawData) {
@@ -289,7 +274,6 @@ static void ddkDataCallbackOnJs(napi_env env, napi_value js_callback, void *cont
 
     DdkCallbackData *cbd = (DdkCallbackData *)rawData;
 
-    // 创建 ArrayBuffer + Uint8Array
     void *bufferData = nullptr;
     napi_value arrayBuffer;
     if (napi_create_arraybuffer(env, cbd->length, &bufferData, &arrayBuffer) != napi_ok || !bufferData) {
@@ -340,17 +324,15 @@ static void ddkErrorCallbackOnJs(napi_env env, napi_value js_callback, void *con
 }
 
 // ============================================================
-// 轮询线程
 // ============================================================
 
 static void *ddkPollThread(void *arg) {
     int pollerId = (int)(intptr_t)arg;
     DdkPollerContext *ctx = &g_ddkPollers[pollerId];
 
-    OH_LOG_INFO(LOG_APP, "[%{public}s] 轮询线程启动: id=%{public}d, inEp=0x%{public}x, maxPkt=%{public}u, timeout=%{public}ums",
+    OH_LOG_INFO(LOG_APP, "[%{public}s] Polling thread started: id=%{public}d, inEp=0x%{public}x, maxPkt=%{public}u, timeout=%{public}ums",
                 LOG_TAG, pollerId, ctx->inEndpoint, ctx->maxPacketSize, ctx->timeoutMs);
 
-    // 轮询率统计
     uint64_t statPollCount = 0;
     uint64_t statStartTime = 0;
     struct timespec ts;
@@ -363,18 +345,16 @@ static void *ddkPollThread(void *arg) {
     pipe.endpoint = ctx->inEndpoint;
     pipe.timeout = ctx->timeoutMs;
 
-    // IO 错误重试计数
     int consecutiveErrors = 0;
-    const int MAX_CONSECUTIVE_ERRORS = 10;  // 允许连续 10 次瞬态错误
+    const int MAX_CONSECUTIVE_ERRORS = 10;
     uint64_t queueFullCount = 0;
 
     while (ctx->running.load()) {
-        // ---- 优先处理挂起的输出数据 (rumble/init) ----
         if (ctx->outMemMap && ctx->hasPendingOutput.load(std::memory_order_acquire)) {
             UsbRequestPipe outPipe;
             memset(&outPipe, 0, sizeof(outPipe));
             outPipe.interfaceHandle = ctx->interfaceHandle;
-            outPipe.timeout = 100;  // 100ms 足够发送小数据包
+            outPipe.timeout = 100;
 
             uint32_t outLen;
             {
@@ -389,16 +369,13 @@ static void *ddkPollThread(void *arg) {
 
             int32_t outRet = fn_SendPipeRequest(&outPipe, ctx->outMemMap);
             if (outRet != USB_DDK_SUCCESS) {
-                OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d 轮询线程 sendOutput 失败: ep=0x%{public}x len=%{public}u ret=%{public}d (%{public}s)",
+                OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d polling thread sendOutput failed: ep=0x%{public}x len=%{public}u ret=%{public}d (%{public}s)",
                             LOG_TAG, pollerId, outPipe.endpoint, outLen, outRet, ddkErrStr(outRet));
-                // 发送失败时自动重试: 若 JS 未设置新数据则重新标记为 pending
-                // CAS: 仅当 hasPendingOutput 仍为 false 时才标记 (JS 新数据优先)
                 bool expected = false;
                 ctx->hasPendingOutput.compare_exchange_strong(expected, true, std::memory_order_release);
             }
         }
 
-        // ---- 输入轮询 ----
         ctx->inMemMap->offset = 0;
         ctx->inMemMap->bufferLength = ctx->maxPacketSize;
 
@@ -408,30 +385,25 @@ static void *ddkPollThread(void *arg) {
 
         if (ret == USB_DDK_SUCCESS) {
             uint32_t len = ctx->inMemMap->transferedLength;
-            if (len == 0) continue;  // 零长度 - 跳过
+            if (len == 0) continue;
 
             statPollCount++;
             ctx->totalReads.fetch_add(1);
             ctx->totalBytes.fetch_add(len);
 
-            // 输入去重：只有数据变化时才入队，避免无限队列内存增长
-            // 同时保证按键释放等状态变化一定会被传递
             if (ctx->lastInputValid && len == ctx->lastInputLen &&
                 len <= sizeof(ctx->lastInputData) &&
                 memcmp(ctx->inMemMap->address, ctx->lastInputData, len) == 0) {
                 ctx->totalSkippedDups.fetch_add(1);
-                // 数据未变化，跳过入队
                 goto skip_enqueue;
             }
 
-            // 更新最后输入缓存
             if (len <= sizeof(ctx->lastInputData)) {
                 memcpy(ctx->lastInputData, ctx->inMemMap->address, len);
                 ctx->lastInputLen = len;
                 ctx->lastInputValid = true;
             }
 
-            // 分配回调数据
             {
                 DdkCallbackData *cbd = (DdkCallbackData *)malloc(sizeof(DdkCallbackData));
                 if (cbd) {
@@ -446,13 +418,12 @@ static void *ddkPollThread(void *arg) {
                             free(cbd->data);
                             free(cbd);
                             if (st == napi_closing) {
-                                OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d tsfn 已关闭，退出轮询", LOG_TAG, pollerId);
+                                OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d tsfn closed, exiting polling", LOG_TAG, pollerId);
                                 goto exit_loop;
                             }
-                            // 队列满 - 记录但不退出
                             queueFullCount++;
                             if (queueFullCount % 100 == 1) {
-                                OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d tsfn 队列满 (累计 %{public}llu 次)，JS 线程可能繁忙",
+                                OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d tsfn queue full (total %{public}llu times), JS thread may be busy",
                                             LOG_TAG, pollerId, (unsigned long long)queueFullCount);
                             }
                         }
@@ -463,54 +434,47 @@ static void *ddkPollThread(void *arg) {
             }
 
 skip_enqueue:
-            // 成功读取 - 重置错误计数
             consecutiveErrors = 0;
 
-            // 统计日志 (每5秒)
             clock_gettime(CLOCK_MONOTONIC, &ts);
             uint64_t now = ts.tv_sec * 1000ULL + ts.tv_nsec / 1000000ULL;
             if (now - statStartTime >= 5000) {
                 double rate = (double)statPollCount * 1000.0 / (double)(now - statStartTime);
                 uint64_t dups = ctx->totalSkippedDups.load();
-                OH_LOG_INFO(LOG_APP, "[%{public}s] id=%{public}d 轮询率: %{public}.1f Hz (%{public}llu 次/%{public}.1f秒, 去重跳过=%{public}llu)%{public}s",
+                OH_LOG_INFO(LOG_APP, "[%{public}s] id=%{public}d polling rate: %{public}.1f Hz (%{public}llu times/%{public}.1fs, dedup skipped=%{public}llu)%{public}s",
                             LOG_TAG, pollerId, rate,
                             (unsigned long long)statPollCount,
                             (double)(now - statStartTime) / 1000.0,
                             (unsigned long long)dups,
-                            queueFullCount > 0 ? " [有队列满]" : "");
+                            queueFullCount > 0 ? " [queue full]" : "");
                 statPollCount = 0;
                 statStartTime = now;
                 queueFullCount = 0;
             }
         } else if (ret == USB_DDK_TIMEOUT) {
-            // 超时 - 正常，重置错误计数
             consecutiveErrors = 0;
             continue;
         } else {
-            // 错误
             consecutiveErrors++;
-            OH_LOG_ERROR(LOG_APP, "[%{public}s] id=%{public}d SendPipeRequest 失败: %{public}d (%{public}s), 连续错误=%{public}d/%{public}d",
+            OH_LOG_ERROR(LOG_APP, "[%{public}s] id=%{public}d SendPipeRequest failed: %{public}d (%{public}s), consecutive errors=%{public}d/%{public}d",
                          LOG_TAG, pollerId, ret, ddkErrStr(ret), consecutiveErrors, MAX_CONSECUTIVE_ERRORS);
 
-            // IO 错误处理 - 允许一定次数的瞬态错误重试
             if (ret == USB_DDK_IO_FAILED || ret == USB_DDK_INVALID_OP) {
                 if (ctx->ignoreDisconnect.load()) {
-                    OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d 错误(%{public}s)但忽略断开信号已启用，50ms 后继续轮询",
+                    OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d error(%{public}s) but ignore disconnect enabled, continue polling after 50ms",
                                 LOG_TAG, pollerId, ddkErrStr(ret));
                     usleep(50 * 1000);  // 50ms
                     continue;
                 }
 
-                // 非忽略模式：允许少量瞬态错误，连续达到阈值才退出
                 if (consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
-                    OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d 瞬态IO错误，%{public}dms 后重试 (%{public}d/%{public}d)",
+                    OH_LOG_WARN(LOG_APP, "[%{public}s] id=%{public}d transient IO error, retry after %{public}dms (%{public}d/%{public}d)",
                                 LOG_TAG, pollerId, 20 * consecutiveErrors, consecutiveErrors, MAX_CONSECUTIVE_ERRORS);
-                    usleep(20 * 1000 * consecutiveErrors);  // 递增退避: 20ms, 40ms, ...
+                    usleep(20 * 1000 * consecutiveErrors);
                     continue;
                 }
 
-                // 连续错误达到阈值 - 通知 JS 并退出
-                OH_LOG_ERROR(LOG_APP, "[%{public}s] id=%{public}d 连续 %{public}d 次IO错误，停止轮询",
+                OH_LOG_ERROR(LOG_APP, "[%{public}s] id=%{public}d %{public}d consecutive IO errors, stopping polling",
                              LOG_TAG, pollerId, consecutiveErrors);
 
                 DdkErrorData *ped = (DdkErrorData *)malloc(sizeof(DdkErrorData));
@@ -523,7 +487,6 @@ skip_enqueue:
                 break;
             }
 
-            // 其他非 IO 错误 - 通知 JS
             DdkErrorData *ped = (DdkErrorData *)malloc(sizeof(DdkErrorData));
             if (ped) {
                 ped->errorCode = ret;
@@ -535,7 +498,7 @@ skip_enqueue:
     }
 
 exit_loop:
-    OH_LOG_INFO(LOG_APP, "[%{public}s] 轮询线程退出: id=%{public}d, reads=%{public}llu",
+    OH_LOG_INFO(LOG_APP, "[%{public}s] Poll thread exiting: id=%{public}d, reads=%{public}llu",
                 LOG_TAG, pollerId,
                 (unsigned long long)ctx->totalReads.load());
 
@@ -544,7 +507,6 @@ exit_loop:
 }
 
 // ============================================================
-// NAPI: init() → 加载库 + OH_Usb_Init
 // ============================================================
 
 static napi_value DdkPoller_Init(napi_env env, napi_callback_info info) {
@@ -564,14 +526,12 @@ static napi_value DdkPoller_Init(napi_env env, napi_callback_info info) {
 
     initPollerPool();
 
-    // 加载 DDK
     if (!loadDdkLibrary()) {
         setField("code", -1);
         setStr("error", "DDK library load failed");
         return result;
     }
 
-    // 初始化 DDK (如果还没初始化)
     if (!g_ddkInited) {
         int32_t initResult = fn_Init();
         OH_LOG_INFO(LOG_APP, "[%{public}s] OH_Usb_Init: %{public}d (%{public}s)",
@@ -587,7 +547,6 @@ static napi_value DdkPoller_Init(napi_env env, napi_callback_info info) {
     setField("code", 0);
     setStr("status", "OK");
 
-    // 报告可选 API 可用性
     napi_value hasGetDevices;
     napi_get_boolean(env, fn_GetDevices != nullptr, &hasGetDevices);
     napi_set_named_property(env, result, "hasGetDevices", hasGetDevices);
@@ -600,7 +559,6 @@ static napi_value DdkPoller_Init(napi_env env, napi_callback_info info) {
 }
 
 // ============================================================
-// NAPI: findDevice(vid, pid) → 查找设备
 // ============================================================
 
 static napi_value DdkPoller_FindDevice(napi_env env, napi_callback_info info) {
@@ -643,7 +601,6 @@ static napi_value DdkPoller_FindDevice(napi_env env, napi_callback_info info) {
 
     OH_LOG_INFO(LOG_APP, "[%{public}s] 查找设备: VID=0x%{public}x PID=0x%{public}x", LOG_TAG, vid, pid);
 
-    // 获取设备列表
     Usb_DeviceArray devices;
     memset(&devices, 0, sizeof(devices));
     int32_t ret = fn_GetDevices(&devices);
@@ -659,7 +616,6 @@ static napi_value DdkPoller_FindDevice(napi_env env, napi_callback_info info) {
     OH_LOG_INFO(LOG_APP, "[%{public}s] 发现 %{public}u 个 USB 设备", LOG_TAG, devices.num);
     setField("deviceCount", (int64_t)devices.num);
 
-    // 遍历匹配 VID/PID
     bool found = false;
     uint64_t matchedDeviceId = 0;
 
@@ -686,7 +642,6 @@ static napi_value DdkPoller_FindDevice(napi_env env, napi_callback_info info) {
         }
     }
 
-    // 释放设备数组 (deviceIds 由 DDK 分配)
     if (devices.deviceIds) {
         free(devices.deviceIds);
     }
@@ -702,8 +657,6 @@ static napi_value DdkPoller_FindDevice(napi_env env, napi_callback_info info) {
 // ============================================================
 // NAPI: startPoller(deviceId, ifaceIndex, inEndpoint, outEndpoint,
 //                   maxPacketSize, onData, onError, timeoutMs)
-//       → 声明接口 + 创建内存映射 + 启动轮询线程
-//       返回 pollerId (-1 表示失败)
 // ============================================================
 
 static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
@@ -718,7 +671,6 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
         return r;
     }
 
-    // 解析参数
     int64_t deviceId64 = 0;
     int32_t ifaceIndex = 0, inEp = 0, outEp = 0, maxPkt = 64, timeoutMs = 100;
     napi_get_value_int64(env, args[0], &deviceId64);
@@ -761,7 +713,6 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
     ctx->totalSkippedDups.store(0);
     ctx->lastInputValid = false;
 
-    // Step 1: 声明接口 (带重试，等待 usbManager 释放设备)
     int32_t ret = -1;
     const int MAX_CLAIM_ATTEMPTS = 5;
     for (int attempt = 0; attempt < MAX_CLAIM_ATTEMPTS; attempt++) {
@@ -792,7 +743,6 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
     OH_LOG_INFO(LOG_APP, "[%{public}s] 接口已声明: handle=%{public}llu",
                 LOG_TAG, (unsigned long long)ctx->interfaceHandle);
 
-    // Step 2: 创建输入内存映射
     ret = fn_CreateDeviceMemMap(deviceId, (size_t)maxPkt, &ctx->inMemMap);
     if (ret != USB_DDK_SUCCESS || !ctx->inMemMap) {
         fn_ReleaseInterface(ctx->interfaceHandle);
@@ -804,15 +754,12 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
         return r;
     }
 
-    // Step 3: 创建输出内存映射 (用于 sendOutput)
     if (outEp != 0) {
-        // 输出缓冲区大小：64 字节足够大多数控制命令
         ret = fn_CreateDeviceMemMap(deviceId, 64, &ctx->outMemMap);
         if (ret != USB_DDK_SUCCESS || !ctx->outMemMap) {
             OH_LOG_ERROR(LOG_APP, "[%{public}s] CreateDeviceMemMap(OUT) 失败: %{public}d (%{public}s), DDK 整体回退",
                         LOG_TAG, ret, ddkErrStr(ret));
             ctx->outMemMap = nullptr;
-            // 输出不可用 → 回退到 usbManager，保障振动等输出功能
             fn_DestroyDeviceMemMap(ctx->inMemMap);
             fn_ReleaseInterface(ctx->interfaceHandle);
             ctx->interfaceClaimed = false;
@@ -829,7 +776,6 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
         OH_LOG_INFO(LOG_APP, "[%{public}s] 无输出端点 (outEp=0), 跳过输出 memmap 创建", LOG_TAG);
     }
 
-    // 保存配置
     ctx->deviceId = deviceId;
     ctx->inEndpoint = (uint8_t)inEp;
     ctx->outEndpoint = (uint8_t)outEp;
@@ -839,12 +785,11 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
     ctx->totalBytes.store(0);
     ctx->ignoreDisconnect.store(false);
 
-    // Step 4: 创建 threadsafe functions
     napi_value dataResName;
     napi_create_string_utf8(env, "DdkPollerData", NAPI_AUTO_LENGTH, &dataResName);
     napi_status status = napi_create_threadsafe_function(
         env, args[5], nullptr, dataResName,
-        0,    // max queue size (0 = unlimited, 确保按键释放事件不因队列满而丢失)
+        0,
         1, nullptr, nullptr, nullptr,
         ddkDataCallbackOnJs, &ctx->tsfn
     );
@@ -885,7 +830,6 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
         return r;
     }
 
-    // Step 5: 启动轮询线程
     ctx->running.store(true);
     int pret = pthread_create(&ctx->thread, nullptr, ddkPollThread, (void *)(intptr_t)pollerId);
     if (pret != 0) {
@@ -921,7 +865,6 @@ static napi_value DdkPoller_StartPoller(napi_env env, napi_callback_info info) {
 }
 
 // ============================================================
-// NAPI: stopPoller(pollerId) → 停止线程 + 释放资源
 // ============================================================
 
 static napi_value DdkPoller_StopPoller(napi_env env, napi_callback_info info) {
@@ -953,10 +896,8 @@ static napi_value DdkPoller_StopPoller(napi_env env, napi_callback_info info) {
     ctx->running.store(false);
     pthread_mutex_unlock(&g_ddkMutex);
 
-    // 等待线程退出
     pthread_join(ctx->thread, nullptr);
 
-    // 发送残留的挂起输出 (例如 stop() 前的 rumble(0,0))
     if (ctx->hasPendingOutput.load() && ctx->outMemMap && ctx->interfaceClaimed) {
         UsbRequestPipe outPipe;
         memset(&outPipe, 0, sizeof(outPipe));
@@ -979,7 +920,6 @@ static napi_value DdkPoller_StopPoller(napi_env env, napi_callback_info info) {
 
     pthread_mutex_lock(&g_ddkMutex);
 
-    // 释放 threadsafe functions
     if (ctx->tsfn) {
         napi_release_threadsafe_function(ctx->tsfn, napi_tsfn_release);
         ctx->tsfn = nullptr;
@@ -989,7 +929,6 @@ static napi_value DdkPoller_StopPoller(napi_env env, napi_callback_info info) {
         ctx->errorTsfn = nullptr;
     }
 
-    // 释放内存映射
     if (ctx->outMemMap) {
         fn_DestroyDeviceMemMap(ctx->outMemMap);
         ctx->outMemMap = nullptr;
@@ -999,7 +938,6 @@ static napi_value DdkPoller_StopPoller(napi_env env, napi_callback_info info) {
         ctx->inMemMap = nullptr;
     }
 
-    // 释放接口
     if (ctx->interfaceClaimed) {
         int32_t ret = fn_ReleaseInterface(ctx->interfaceHandle);
         OH_LOG_INFO(LOG_APP, "[%{public}s] ReleaseInterface: %{public}d", LOG_TAG, ret);
@@ -1017,9 +955,6 @@ static napi_value DdkPoller_StopPoller(napi_env env, napi_callback_info info) {
 }
 
 // ============================================================
-// NAPI: sendOutput(pollerId, endpoint, data) → 非阻塞发送输出
-//       将数据交给轮询线程发送 (latest-wins: 新数据覆盖旧数据)
-//       返回数据长度 (乐观), -1 表示参数错误
 // ============================================================
 
 static napi_value DdkPoller_SendOutput(napi_env env, napi_callback_info info) {
@@ -1049,7 +984,6 @@ static napi_value DdkPoller_SendOutput(napi_env env, napi_callback_info info) {
         return result;
     }
 
-    // 获取输入数据
     uint8_t *inputData = nullptr;
     size_t inputLen = 0;
 
@@ -1076,7 +1010,6 @@ static napi_value DdkPoller_SendOutput(napi_env env, napi_callback_info info) {
         return result;
     }
 
-    // 轮询线程运行中 → 非阻塞: 存入 pending buffer, 由轮询线程发送
     if (ctx->running.load()) {
         {
             std::lock_guard<std::mutex> lock(ctx->outMutex);
@@ -1089,7 +1022,6 @@ static napi_value DdkPoller_SendOutput(napi_env env, napi_callback_info info) {
         return result;
     }
 
-    // 轮询线程未运行 → 同步发送 (用于 init 命令)
     memcpy(ctx->outMemMap->address, inputData, inputLen);
     ctx->outMemMap->offset = 0;
     ctx->outMemMap->bufferLength = (uint32_t)inputLen;
@@ -1140,7 +1072,6 @@ static napi_value DdkPoller_GetStats(napi_env env, napi_callback_info info) {
 }
 
 // ============================================================
-// NAPI: setIgnoreDisconnect(pollerId, ignore) → 设置忽略断开信号
 // ============================================================
 
 static napi_value DdkPoller_SetIgnoreDisconnect(napi_env env, napi_callback_info info) {
@@ -1165,7 +1096,6 @@ static napi_value DdkPoller_SetIgnoreDisconnect(napi_env env, napi_callback_info
 }
 
 // ============================================================
-// NAPI: isPollerRunning(pollerId) → 查询原生轮询线程是否仍在运行
 // ============================================================
 
 static napi_value DdkPoller_IsPollerRunning(napi_env env, napi_callback_info info) {
@@ -1187,7 +1117,6 @@ static napi_value DdkPoller_IsPollerRunning(napi_env env, napi_callback_info inf
 }
 
 // ============================================================
-// NAPI: release() → 释放 DDK
 // ============================================================
 
 static napi_value DdkPoller_Release(napi_env env, napi_callback_info info) {
@@ -1203,11 +1132,7 @@ static napi_value DdkPoller_Release(napi_env env, napi_callback_info info) {
 }
 
 // ============================================================
-// NAPI: makeDeviceId(busNum, devAddress) → 从 usbManager 设备信息构造 DDK deviceId
 //
-// 由于 OH_Usb_GetDevices() 对普通应用返回空列表，
-// 我们通过 usbManager 的 busNum/devAddress 推算 DDK deviceId。
-// 尝试多种编码方式，用 OH_Usb_GetDeviceDescriptor 验证。
 // ============================================================
 
 static napi_value DdkPoller_MakeDeviceId(napi_env env, napi_callback_info info) {
@@ -1246,21 +1171,18 @@ static napi_value DdkPoller_MakeDeviceId(napi_env env, napi_callback_info info) 
     OH_LOG_INFO(LOG_APP, "[%{public}s] makeDeviceId: busNum=%{public}d devAddr=%{public}d",
                 LOG_TAG, busNum, devAddr);
 
-    // 已知编码: (busNum << 32) | devAddress
-    // 保留备选编码以防不同设备/系统版本有差异
     uint64_t candidates[] = {
-        ((uint64_t)busNum << 32) | (uint64_t)devAddr,           // A: bus << 32 | addr (已验证)
+        ((uint64_t)busNum << 32) | (uint64_t)devAddr,
         ((uint64_t)busNum << 16) | (uint64_t)devAddr,           // B: bus << 16 | addr
         (uint64_t)(busNum * 1000 + devAddr),                    // C: bus*1000 + addr
         (uint64_t)((busNum << 8) | devAddr),                    // D: bus << 8 | addr
-        (uint64_t)devAddr,                                      // E: 仅 addr
-        (uint64_t)busNum,                                       // F: 仅 busNum
+        (uint64_t)devAddr,
+        (uint64_t)busNum,
     };
     const char *candidateNames[] = { "A:bus<<32|addr", "B:bus<<16|addr", "C:bus*1000+addr",
                                      "D:bus<<8|addr", "E:addr_only", "F:bus_only" };
     int numCandidates = sizeof(candidates) / sizeof(candidates[0]);
 
-    // 用 GetDeviceDescriptor 验证哪个 deviceId 有效
     if (fn_GetDeviceDescriptor) {
         for (int i = 0; i < numCandidates; i++) {
             UsbDeviceDescriptor desc;
@@ -1280,7 +1202,6 @@ static napi_value DdkPoller_MakeDeviceId(napi_env env, napi_callback_info info) 
         }
     }
 
-    // 回退: 尝试 ClaimInterface 验证
     OH_LOG_WARN(LOG_APP, "[%{public}s] GetDeviceDescriptor 未匹配，尝试 ClaimInterface 验证...", LOG_TAG);
     for (int i = 0; i < numCandidates; i++) {
         uint64_t handle = 0;
@@ -1301,7 +1222,6 @@ static napi_value DdkPoller_MakeDeviceId(napi_env env, napi_callback_info info) 
 }
 
 // ============================================================
-// NAPI 注册
 // ============================================================
 
 void UsbDdkPoller_Init(napi_env env, napi_value exports) {

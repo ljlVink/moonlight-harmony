@@ -23,7 +23,7 @@ import { common } from '@kit.AbilityKit';
 import { buffer } from '@kit.ArkTS';
 
 /**
- * 地址解析结果
+ * Address parse result
  */
 class AddressParseResult {
   host: string = '';
@@ -31,18 +31,18 @@ class AddressParseResult {
 }
 
 /**
- * 轮询结果
+ * Poll result
  */
 interface PollResult {
   address: string;
   serverInfo: ServerInfo | null;
 }
 
-/** 轮询间隔（毫秒），参照 Android ComputerManagerService */
+/** Polling interval (ms), aligned with Android ComputerManagerService */
 const SERVERINFO_POLLING_PERIOD_MS = 5000;
 
 /**
- * 电脑管理器 - 管理所有已发现和手动添加的电脑
+ * Computer Manager - manages all discovered and manually added computers
  */
 export class ComputerManager {
   private static instance: ComputerManager;
@@ -54,15 +54,15 @@ export class ComputerManager {
   private pollingTimerId: number = -1;
   private isPollingActive: boolean = false;
   private netConnection: connection.NetConnection | null = null;
-  /** 离线轮询退避：记录连续离线次数，每 N 轮才真正轮询一次离线主机 */
+  /** Offline polling backoff: tracks consecutive offline count, polls offline hosts every N rounds */
   private offlineStreak: Map<string, number> = new Map();
-
-  // ═══════════════════════════════════════════════════════════
-  // 初始化 & 单例
-  // ═══════════════════════════════════════════════════════════
-
+  
+  // ===========================================================================
+  // Initialization & Singleton
+  // ===========================================================================
+  
   private constructor() {
-    // mdnsDiscovery 需要在 init 时使用 context 初始化
+    // mdnsDiscovery needs to be initialized with context in init()
   }
 
   static getInstance(): ComputerManager {
@@ -73,54 +73,54 @@ export class ComputerManager {
   }
 
   /**
-   * 初始化，需要传入 Context
+   * Initialize with context
    */
   async init(context: common.UIAbilityContext): Promise<void> {
-    // 避免重复初始化
+    // Avoid duplicate initialization
     if (this.isInitialized) {
-      console.info('ComputerManager: 已初始化，跳过');
+      console.info('ComputerManager: Already initialized, skipping');
       return;
     }
     
     this.context = context;
     this.mdnsDiscovery = new MdnsDiscovery(context);
     
-    // 初始化 PreferencesUtil
+    // Initialize PreferencesUtil
     PreferencesUtil.init(context);
-
-    // 设置 mDNS 发现回调
+  
+    // Set mDNS discovery callback
     this.mdnsDiscovery.setOnComputerFoundListener((discovered: DiscoveredComputer) => {
       this.handleDiscoveredComputer(discovered);
     });
-
-    // 加载已保存的电脑（等待完成）
+  
+    // Load saved computers (wait for completion)
     this.computers = await ComputerPersistence.loadComputers();
-    
-    // 注册网络变化监听（类似 Android 的 registerDefaultNetworkCallback）
+  
+    // Register network change listener (similar to Android registerDefaultNetworkCallback)
     this.registerNetworkListener();
-    
+  
     this.isInitialized = true;
-    console.info('ComputerManager: 初始化完成');
-
-    // 注意：不在这里触发刷新，让调用者设置好回调后再调用 refreshAllComputers()
+    console.info('ComputerManager: Initialization complete');
+  
+    // Note: Don't trigger refresh here, let caller set callback then call refreshAllComputers()
   }
 
   /**
-   * 设置电脑列表变化回调
+   * Set computer list change callback
    */
   setOnComputerListChangedListener(callback: () => void): void {
     this.onComputerListChanged = callback;
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // mDNS 发现
-  // ═══════════════════════════════════════════════════════════
-
+  // ===========================================================================
+  // mDNS Discovery
+  // ===========================================================================
+  
   /**
-   * 处理 mDNS 发现的电脑
+   * Handle mDNS discovered computer
    */
   private async handleDiscoveredComputer(discovered: DiscoveredComputer): Promise<void> {
-    console.info(`ComputerManager: mDNS 发现 ${discovered.name} @ ${discovered.address}:${discovered.port}`);
+    console.info(`ComputerManager: mDNS discovered ${discovered.name} @ ${discovered.address}:${discovered.port}`);
 
     const existing = this.findComputerByAddress(discovered.address);
 
@@ -131,7 +131,7 @@ export class ComputerManager {
       try {
         await this.addComputerInternal(discovered.address, discovered.name, discovered.port);
       } catch (err) {
-        console.error(`ComputerManager: 无法添加电脑 ${discovered.name}: ${err}`);
+        console.error(`ComputerManager: Failed to add computer ${discovered.name}: ${err}`);
       }
     }
 
@@ -139,7 +139,7 @@ export class ComputerManager {
   }
 
   /**
-   * 按地址查找已存在的电脑（匹配所有地址字段）
+   * Find existing computer by address (matches all address fields)
    */
   private findComputerByAddress(address: string): ComputerInfo | undefined {
     return Array.from(this.computers.values())
@@ -152,7 +152,7 @@ export class ComputerManager {
   }
 
   /**
-   * 将 mDNS 发现的信息合并到已有电脑
+   * Merge mDNS discovered info into existing computer
    */
   private mergeDiscoveredInfo(existing: ComputerInfo, discovered: DiscoveredComputer): void {
     if (existing.localAddress !== discovered.address) {
@@ -167,48 +167,48 @@ export class ComputerManager {
   }
 
   /**
-   * 尝试通过 mDNS 地址验证电脑在线，失败则回退到全地址轮询
+   * Try to verify computer online via mDNS address, fall back to full address polling on failure
    */
   private async verifyOrPollComputer(computer: ComputerInfo, address: string): Promise<void> {
     try {
       const nvHttp = new NvHttp(address, computer.serverCert, this.context || undefined, computer.httpPort);
       const serverInfo = await nvHttp.getServerInfo();
-
-      // 处理 UUID 归一：discovered-* 临时条目获得真实 UUID
+  
+      // Handle UUID reconciliation: discovered-* temporary entries get real UUID
       if (serverInfo.uniqueId && computer.uuid !== serverInfo.uniqueId) {
         this.reconcileUuid(computer, serverInfo.uniqueId);
       }
-
+  
       computer.state = ComputerState.ONLINE;
       if (!computer.address) computer.address = address;
       computer.runningGameId = serverInfo.currentGame;
       if (serverInfo.hostname) computer.name = serverInfo.hostname;
     } catch (err) {
-      console.warn(`ComputerManager: mDNS 地址无法连接 ${computer.name}，回退轮询`);
+      console.warn(`ComputerManager: mDNS address unreachable for ${computer.name}, falling back to polling`);
       await this.pollComputer(computer);
     }
   }
 
   /**
-   * UUID 归一：当轮询/验证返回的真实 UUID 与条目的临时 UUID 不同时
-   * 合并到已有真实条目，或重新映射 UUID
-   * @returns 应继续更新的目标条目（可能是合并后的已有条目）
+   * UUID reconciliation: when polling/verification returns a real UUID different from entry's temporary UUID,
+   * merge into existing real entry, or remap the UUID.
+   * @returns The target entry to continue updating (may be merged existing entry)
    */
   private reconcileUuid(computer: ComputerInfo, realUuid: string): ComputerInfo {
     const existingReal = this.computers.get(realUuid);
-
+  
     if (existingReal) {
-      // 真实 UUID 条目已存在 → 合并到已有条目，删除临时条目
-      console.info(`ComputerManager: 合并临时条目 ${computer.uuid} → 已有条目 ${realUuid}`);
+      // Real UUID entry exists -> merge into existing entry, delete temporary entry
+      console.info(`ComputerManager: Merging temporary entry ${computer.uuid} -> existing entry ${realUuid}`);
       this.computers.delete(computer.uuid);
       if (computer.manualAddress && !existingReal.manualAddress) {
         existingReal.manualAddress = computer.manualAddress;
       }
       return existingReal;
     }
-
-    // 真实 UUID 不存在 → 重新映射
-    console.info(`ComputerManager: 临时条目 ${computer.uuid} 获得真实 UUID ${realUuid}`);
+  
+    // Real UUID doesn't exist -> remap
+    console.info(`ComputerManager: Temporary entry ${computer.uuid} got real UUID ${realUuid}`);
     this.computers.delete(computer.uuid);
     computer.uuid = realUuid;
     this.computers.set(realUuid, computer);
@@ -216,7 +216,7 @@ export class ComputerManager {
   }
 
   /**
-   * 通知电脑列表变化
+   * Notify computer list changed
    */
   private notifyListChanged(): void {
     if (this.onComputerListChanged) {
@@ -224,20 +224,20 @@ export class ComputerManager {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // CRUD 操作
-  // ═══════════════════════════════════════════════════════════
-
+  // ===========================================================================
+  // CRUD Operations
+  // ===========================================================================
+  
   /**
-   * 获取所有电脑列表
-   * 返回深拷贝的对象，确保 ArkTS @State 能检测到变化
+   * Get all computers list
+   * Returns deep-copied objects to ensure ArkTS @State can detect changes
    */
   async getComputers(): Promise<ComputerInfo[]> {
     return Array.from(this.computers.values()).map(computer => ComputerPersistence.cloneComputer(computer));
   }
 
   /**
-   * 根据 UUID 获取电脑
+   * Get computer by UUID
    */
   getComputer(uuid: string): ComputerInfo | undefined {
     const computer = this.computers.get(uuid);
@@ -245,18 +245,18 @@ export class ComputerManager {
   }
 
   /**
-   * 更新电脑信息（用于配对成功后更新 serverCert 等）
-   * @param uuid 电脑 UUID
-   * @param updates 要更新的字段
+   * Update computer info (used after pairing to update serverCert etc.)
+   * @param uuid Computer UUID
+   * @param updates Fields to update
    */
   async updateComputer(uuid: string, updates: Partial<ComputerInfo>): Promise<void> {
     const computer = this.computers.get(uuid);
     if (!computer) {
-      console.warn(`ComputerManager: updateComputer 未找到电脑 ${uuid}`);
+      console.warn(`ComputerManager: updateComputer computer not found ${uuid}`);
       return;
     }
-    
-    // 更新指定字段
+  
+    // Update specified fields
     if (updates.pairState !== undefined) {
       computer.pairState = updates.pairState;
     }
@@ -273,30 +273,30 @@ export class ComputerManager {
       computer.state = updates.state;
     }
     
-    console.info(`ComputerManager: 更新电脑 ${computer.name} - pairState=${computer.pairState}, serverCert=${computer.serverCert ? '有' : '无'}`);
-    
-    // 保存到持久化存储
+    console.info(`ComputerManager: Updated computer ${computer.name} - pairState=${computer.pairState}, serverCert=${computer.serverCert ? 'yes' : 'no'}`);
+  
+    // Save to persistent storage
     await this.saveComputers();
   }
 
   /**
-   * 手动添加电脑
-   * @param addressInput 用户输入的地址，支持以下格式：
-   *   - "192.168.1.100" - IPv4 地址，使用默认端口
-   *   - "192.168.1.100:47989" - IPv4 地址 + 自定义端口
-   *   - "::1" 或 "[::1]" - IPv6 地址，使用默认端口
-   *   - "[::1]:47989" - IPv6 地址 + 自定义端口
-   *   - "mydomain.com" - 域名，会被保存为 manualAddress
+   * Manually add computer
+   * @param addressInput User input address, supports the following formats:
+   *   - "192.168.1.100" - IPv4 address, uses default port
+   *   - "192.168.1.100:47989" - IPv4 address + custom port
+   *   - "::1" or "[::1]" - IPv6 address, uses default port
+   *   - "[::1]:47989" - IPv6 address + custom port
+   *   - "mydomain.com" - Domain name, will be saved as manualAddress
    */
   async addComputer(addressInput: string): Promise<ComputerInfo> {
     const parsed = this.parseAddressInput(addressInput);
     const result = await this.addComputerInternal(parsed.host, undefined, parsed.port);
-    
-    // 保存用户手动输入的地址（仅主机部分，端口已存储在 httpPort 中）
-    // 这个地址永不会被自动发现覆盖，轮询时最优先尝试
+  
+    // Save user-entered address (host part only, port stored in httpPort)
+    // This address is never overwritten by auto-discovery, polling tries it first
     result.manualAddress = parsed.host;
-    
-    // 保存更新后的电脑信息
+  
+    // Save updated computer info
     this.computers.set(result.uuid, result);
     await this.saveComputers();
     
@@ -305,13 +305,13 @@ export class ComputerManager {
   }
 
   /**
-   * 解析用户输入的地址，提取主机和端口
+   * Parse user input address, extract host and port
    */
   private parseAddressInput(input: string): AddressParseResult {
     const trimmed = input.trim();
     const result = new AddressParseResult();
-    
-    // 检查是否为 IPv6 地址（包含多个冒号）
+  
+    // Check if it's an IPv6 address (contains multiple colons)
     let colonCount = 0;
     for (let i = 0; i < trimmed.length; i++) {
       if (trimmed.charAt(i) === ':') {
@@ -319,11 +319,11 @@ export class ComputerManager {
       }
     }
     const isLikelyIPv6 = colonCount >= 2;
-    
+  
     if (isLikelyIPv6) {
-      // IPv6 地址处理
+      // IPv6 address handling
       if (trimmed.startsWith('[')) {
-        // 格式: [::1] 或 [::1]:47989
+        // Format: [::1] or [::1]:47989
         const closeBracket = trimmed.indexOf(']');
         if (closeBracket > 0) {
           result.host = trimmed.substring(1, closeBracket);
@@ -337,18 +337,18 @@ export class ComputerManager {
           return result;
         }
       } else {
-        // 裸 IPv6 地址（无方括号），如 ::1 或 fe80::1
-        // 注意：裸 IPv6 地址无法无歧义地分离端口（地址本身就包含冒号）
-        // 只有 [addr]:port 格式才能指定 IPv6 + 端口
-        // 因此直接将整个字符串作为主机名
+        // Bare IPv6 address (no brackets), like ::1 or fe80::1
+        // Note: Bare IPv6 addresses cannot unambiguously separate port (address itself contains colons)
+        // Only [addr]:port format can specify IPv6 + port
+        // So use the entire string as hostname
         result.host = trimmed;
         return result;
       }
     } else {
-      // IPv4 或主机名
+      // IPv4 or hostname
       const colonIndex = trimmed.indexOf(':');
       if (colonIndex > 0) {
-        // 格式: 192.168.1.100:47989
+        // Format: 192.168.1.100:47989
         const host = trimmed.substring(0, colonIndex);
         const portStr = trimmed.substring(colonIndex + 1);
         const port = parseInt(portStr);
@@ -359,34 +359,34 @@ export class ComputerManager {
         }
       }
     }
-    
-    // 默认：没有端口
+  
+    // Default: no port
     result.host = trimmed;
     return result;
   }
 
   /**
-   * 内部添加电脑方法
-   * 如果该 UUID 的电脑已存在，合并更新而非替换，保留 serverCert 等配对信息
+   * Internal add computer method
+   * If computer with this UUID already exists, merge update instead of replace, preserving serverCert and pairing info
    */
   private async addComputerInternal(address: string, discoveredName?: string, httpPort?: number): Promise<ComputerInfo> {
     const nvHttp = new NvHttp(address, null, this.context || undefined, httpPort);
-
+  
     try {
-      // 获取服务器信息
+      // Get server info
       const serverInfo = await nvHttp.getServerInfo();
-
-      // 使用服务器返回的本地地址，如果没有则使用连接地址
+  
+      // Use local address returned by server, or connection address if not available
       const localAddr = serverInfo.localAddress || address;
       const remoteAddr = serverInfo.externalAddress || '';
-      
-      // 检测连接地址是否为 IPv6（包含至少2个冒号）
+  
+      // Check if connection address is IPv6 (contains at least 2 colons)
       const isIPv6 = address.includes(':') && address.split(':').length > 2;
-
-      // 检查是否已存在相同 UUID 的电脑
+  
+      // Check if computer with same UUID already exists
       const existing = this.computers.get(serverInfo.uniqueId);
       if (existing) {
-        // 合并更新：保留已有的配对信息，更新地址和状态
+        // Merge update: preserve existing pairing info, update address and state
         existing.name = serverInfo.hostname || existing.name;
         existing.address = address;
         existing.localAddress = localAddr;
@@ -404,42 +404,42 @@ export class ComputerManager {
         if (httpPort) {
           existing.httpPort = httpPort;
         }
-        // 关键：保留 serverCert 和 pairState（如已配对）
-        // 只有服务器明确返回 paired=true 时才更新配对状态
+        // Key: preserve serverCert and pairState (if already paired)
+        // Only update pairing state when server explicitly returns paired=true
         if (serverInfo.paired) {
           existing.pairState = PairState.PAIRED;
         }
-        // 如果 existing.serverCert 已有值，不覆盖
-        // serverCert 只能通过配对流程获取
-
-        console.info(`ComputerManager: 合并更新已有电脑 ${existing.name} (${existing.uuid}), 保留配对信息`);
+        // If existing.serverCert already has value, don't overwrite
+        // serverCert can only be obtained through pairing process
+  
+        console.info(`ComputerManager: Merged update for existing computer ${existing.name} (${existing.uuid}), preserving pairing info`);
         this.computers.set(existing.uuid, existing);
         await this.saveComputers();
         return existing;
       }
-
-      // 全新电脑，创建新条目
+  
+      // New computer, create new entry
       const computer = new ComputerInfoBuilder()
         .setUuid(serverInfo.uniqueId)
         .setName(serverInfo.hostname || discoveredName || address)
-        .setAddress(address) // 保持原始连接地址
-        .setLocalAddress(localAddr) // 服务器返回的本地地址
-        .setRemoteAddress(remoteAddr) // 服务器返回的外部地址
-        .setIpv6Address(isIPv6 ? address : undefined) // 如果连接地址是 IPv6，存储之
+        .setAddress(address) // Keep original connection address
+        .setLocalAddress(localAddr) // Local address returned by server
+        .setRemoteAddress(remoteAddr) // External address returned by server
+        .setIpv6Address(isIPv6 ? address : undefined) // If connection address is IPv6, store it
         .setMacAddress(serverInfo.macAddress || '')
         .setState(ComputerState.ONLINE)
         .setPairState(serverInfo.paired ? PairState.PAIRED : PairState.NOT_PAIRED)
         .setRunningGameId(serverInfo.currentGame || 0)
-        .setHttpPort(httpPort) // 保存自定义端口
+        .setHttpPort(httpPort) // Save custom port
         .build();
-
+  
       this.computers.set(computer.uuid, computer);
       await this.saveComputers();
-
-      console.info(`ComputerManager: 成功添加电脑 ${computer.name} (${computer.uuid}), localAddr=${localAddr}, remoteAddr=${remoteAddr}`);
+  
+      console.info(`ComputerManager: Successfully added computer ${computer.name} (${computer.uuid}), localAddr=${localAddr}, remoteAddr=${remoteAddr}`);
       return computer;
     } catch (err) {
-      // 如果无法获取服务器信息，仍然添加但标记为离线
+      // If unable to get server info, still add but mark as offline
       if (discoveredName) {
         const computer = new ComputerInfoBuilder()
           .setUuid(`discovered-${Date.now()}`)
@@ -449,48 +449,48 @@ export class ComputerManager {
           .setState(ComputerState.UNKNOWN)
           .setPairState(PairState.NOT_PAIRED)
           .build();
-
+  
         this.computers.set(computer.uuid, computer);
-        console.info(`ComputerManager: 添加未确认电脑 ${computer.name}`);
+        console.info(`ComputerManager: Added unconfirmed computer ${computer.name}`);
         return computer;
       }
-      throw new Error(`无法连接到 ${address}: ${err}`);
+      throw new Error(`Cannot connect to ${address}: ${err}`);
     }
   }
 
   /**
-   * 删除电脑
+   * Remove computer
    */
   async removeComputer(uuid: string): Promise<void> {
     this.computers.delete(uuid);
     await this.saveComputers();
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 轮询 & 网络监听
-  // ═══════════════════════════════════════════════════════════
-
+  // ===========================================================================
+  // Polling & Network Listener
+  // ===========================================================================
+  
   /**
-   * 刷新所有电脑状态
-   * 并行轮询，每台完成后立即通知 UI
+   * Refresh all computer status
+   * Parallel polling, notify UI immediately after each completes
    */
   async refreshAllComputers(): Promise<void> {
     try {
       await Promise.all(
         Array.from(this.computers.values()).map(async (computer) => {
           try {
-            // 离线退避：连续离线次数越多，跳过的轮询轮次越多
+            // Offline backoff: more consecutive offline count, more polling rounds skipped
             const streak = this.offlineStreak.get(computer.uuid) ?? 0;
             if (streak > 0) {
-              // streak=1→每2轮poll一次, streak>=3→每4轮poll一次（上限）
+              // streak=1 -> poll every 2 rounds, streak>=3 -> poll every 4 rounds (max)
               const skipInterval = Math.min(streak + 1, 4);
-              // 用 streak 本身做计数器，只在整除时轮询
+              // Use streak itself as counter, only poll when divisible
               this.offlineStreak.set(computer.uuid, streak + 1);
               if (streak % skipInterval !== 0) {
-                return; // 跳过本轮
+                return; // Skip this round
               }
             }
-
+  
             const online = await this.pollComputer(computer);
             if (online) {
               this.offlineStreak.delete(computer.uuid);
@@ -505,7 +505,7 @@ export class ComputerManager {
         })
       );
     } catch (err) {
-      console.error('ComputerManager: refreshAllComputers 异常:', err);
+      console.error('ComputerManager: refreshAllComputers error:', err);
       this.computers.forEach(computer => {
         if (computer.state === ComputerState.UNKNOWN) {
           computer.state = ComputerState.OFFLINE;
@@ -515,10 +515,6 @@ export class ComputerManager {
     }
   }
 
-  /**
-   * 启动状态轮询定时器
-   * 类似 Android 的 pollingThread
-   */
   startPolling(): void {
     if (this.isPollingActive) {
       return;
@@ -527,7 +523,6 @@ export class ComputerManager {
     this.isPollingActive = true;
     console.info('ComputerManager: 启动状态轮询');
     
-    // 立即执行一次刷新，然后定时轮询
     this.refreshAllComputers().catch((err: Error) => {
       console.warn('ComputerManager: 初始刷新失败', err);
     });
@@ -541,20 +536,14 @@ export class ComputerManager {
     }, SERVERINFO_POLLING_PERIOD_MS);
   }
   
-  /**
-   * 注册网络变化监听（类似 Android 的 registerDefaultNetworkCallback）
-   * 当网络切换（WiFi ↔ 蜂窝、切换 WiFi 等）时自动触发重新轮询
-   */
   private registerNetworkListener(): void {
     try {
-      // 创建默认网络连接监听（不指定 netSpecifier 表示监控默认网络）
       this.netConnection = connection.createNetConnection();
 
-      // 网络可用（WiFi 连接、蜂窝恢复等）→ 重置所有 PC 状态并立即重新轮询
       this.netConnection.on('netAvailable', () => {
         console.info('ComputerManager: 网络变为可用，重置并重新轮询');
         this.computers.forEach(c => { c.state = ComputerState.UNKNOWN; });
-        this.offlineStreak.clear(); // 网络恢复，重置退避
+        this.offlineStreak.clear();
 
         if (this.isPollingActive) {
           this.refreshAllComputers().catch((err: Error) => {
@@ -564,14 +553,12 @@ export class ComputerManager {
         this.notifyListChanged();
       });
 
-      // 网络丢失 → 标记所有 PC 为离线
       this.netConnection.on('netLost', () => {
         console.info('ComputerManager: 网络丢失，标记所有 PC 为离线');
         this.computers.forEach(c => { c.state = ComputerState.OFFLINE; });
         this.notifyListChanged();
       });
 
-      // 注册监听（开始接收回调）
       this.netConnection.register((err) => {
         if (err) {
           console.error(`ComputerManager: 注册网络监听失败: ${JSON.stringify(err)}`);
@@ -584,9 +571,6 @@ export class ComputerManager {
     }
   }
 
-  /**
-   * 取消注册网络变化监听
-   */
   private unregisterNetworkListener(): void {
     if (this.netConnection) {
       try {
@@ -604,9 +588,6 @@ export class ComputerManager {
     }
   }
 
-  /**
-   * 停止状态轮询定时器
-   */
   stopPolling(): void {
     if (this.pollingTimerId !== -1) {
       console.info('ComputerManager: 停止状态轮询');
@@ -616,10 +597,6 @@ export class ComputerManager {
     this.isPollingActive = false;
   }
 
-  /**
-   * 轮询单台电脑，并行尝试所有已知地址
-   * 任一地址成功即标记在线，无需等待所有地址超时
-   */
   async pollComputer(computer: ComputerInfo): Promise<boolean> {
     const addresses = this.collectAddresses(computer);
     if (addresses.length === 0) {
@@ -629,7 +606,6 @@ export class ComputerManager {
 
     console.info(`ComputerManager: 轮询 ${computer.name}，地址: ${addresses.join(', ')}`);
 
-    // 并行尝试所有地址，取第一个成功的结果
     const successResult = await this.raceForFirstSuccess(
       addresses.map(addr => this.tryPollAddress(addr, computer))
     );
@@ -644,9 +620,6 @@ export class ComputerManager {
     return false;
   }
 
-  /**
-   * 收集电脑的所有可用地址（去重，按优先级排序）
-   */
   private collectAddresses(computer: ComputerInfo): string[] {
     const addressSet = new Set<string>();
     if (computer.manualAddress) addressSet.add(computer.manualAddress);
@@ -657,9 +630,6 @@ export class ComputerManager {
     return Array.from(addressSet);
   }
 
-  /**
-   * 尝试通过单个地址轮询
-   */
   private async tryPollAddress(address: string, computer: ComputerInfo): Promise<PollResult> {
     try {
       const nvHttp = new NvHttp(address, computer.serverCert, this.context || undefined, computer.httpPort);
@@ -671,14 +641,7 @@ export class ComputerManager {
   }
 
   /**
-   * 从多个 Promise 中返回最佳成功结果，优先选择 LAN 地址
    *
-   * 策略（对齐 Android parallelPollPc 的 availableAddresses + COLLECTION_TIMEOUT_MS）：
-   *   - 第一个成功结果如果是 LAN 地址 → 立即返回（最优）
-   *   - 第一个成功结果是非 LAN（域名/公网IP）→ 继续等待最多 LAN_WAIT_MS，
-   *     期间如果有 LAN 地址也成功 → 返回 LAN 地址
-   *   - 等待超时或所有 Promise 完成 → 返回第一个成功结果
-   *   - 全部失败 → 返回 null
    */
   private raceForFirstSuccess(promises: Promise<PollResult>[]): Promise<PollResult | null> {
     const LAN_WAIT_MS = 300;
@@ -706,7 +669,7 @@ export class ComputerManager {
             clearTimeout(lanWaitTimerId);
             lanWaitTimerId = -1;
           }
-          resolve(firstSuccessResult); // 可能为 null（全部失败）
+          resolve(firstSuccessResult);
         }
       };
 
@@ -714,15 +677,12 @@ export class ComputerManager {
         p.then((result: PollResult) => {
           if (result.serverInfo !== null && !hasResolved) {
             if (isLanAddress(result.address)) {
-              // LAN 地址成功 → 最优，立即返回
               tryResolve(result);
               return;
             }
             if (!firstSuccessResult) {
-              // 第一个非 LAN 成功 → 暂存，等待 LAN 地址
               firstSuccessResult = result;
               lanWaitTimerId = setTimeout(() => {
-                // 等待超时，使用第一个非 LAN 结果
                 if (!hasResolved && firstSuccessResult) {
                   tryResolve(firstSuccessResult);
                 }
@@ -739,20 +699,14 @@ export class ComputerManager {
     });
   }
 
-  /**
-   * 根据轮询结果更新电脑信息
-   * 如果电脑的 UUID 是临时的 discovered-*，用服务器返回的真实 UUID 重新映射
-   */
   private updateComputerFromPoll(computer: ComputerInfo, result: PollResult): void {
     const info = result.serverInfo!;
 
-    // 处理 UUID 归一：discovered-* 临时条目获得真实 UUID
     let target = computer;
     if (info.uniqueId && computer.uuid !== info.uniqueId) {
       target = this.reconcileUuid(computer, info.uniqueId);
     }
 
-    // 更新名称
     if (info.hostname) {
       target.name = info.hostname;
     }
@@ -761,32 +715,24 @@ export class ComputerManager {
     target.address = result.address;
     target.runningGameId = info.currentGame;
     
-    // 更新 MAC 地址
     if (info.macAddress && info.macAddress !== '00:00:00:00:00:00') {
       target.macAddress = info.macAddress;
     }
     
-    // 更新本地/远程地址
     if (info.localAddress) target.localAddress = info.localAddress;
     if (info.externalAddress) target.remoteAddress = info.externalAddress;
 
-    // 如果连接地址是 IPv6，更新 ipv6Address
     if (isIPv6Address(result.address)) {
       target.ipv6Address = result.address;
     }
 
-    // 如果仍缺少 IPv6 全局地址，异步补充（不阻塞轮询流程）
     if (!target.ipv6Address && info.hostname) {
       this.lookupAndSetIpv6(target, info.hostname);
     }
     
-    // 更新配对状态：
-    // HTTP 请求总是返回 paired=false，只有 HTTPS + 客户端证书 才返回正确状态
-    // 如果本地有 serverCert，信任本地配对状态
     if (info.paired) {
       target.pairState = PairState.PAIRED;
     } else if (target.serverCert) {
-      // 可能是 HTTP 响应，保持已配对状态
       target.pairState = PairState.PAIRED;
     } else {
       target.pairState = PairState.NOT_PAIRED;
@@ -795,7 +741,6 @@ export class ComputerManager {
     console.info(`ComputerManager: ${target.name} 在线 (${result.address}), game=${info.currentGame}, paired=${target.pairState}`);
     this.saveComputers();
 
-    // 如果已配对且需要 boxArt，异步加载
     if (target.pairState === PairState.PAIRED && 
         (!target.boxArtUrl || target.boxArtUrl.startsWith('http'))) {
       this.loadFirstAppBoxArt(target, result.address);
@@ -803,10 +748,7 @@ export class ComputerManager {
   }
 
   /**
-   * 异步查询主机的 IPv6 全局地址并更新到 ComputerInfo
    *
-   * 通过 DNS 解析主机名获取 AAAA 记录，选出最佳 IPv6 全局地址。
-   * 作为 mDNS 发现的补充机制，确保外网可达的 IPv6 地址被持久化。
    */
   private lookupAndSetIpv6(computer: ComputerInfo, hostname: string): void {
     const tryLookup = async (host: string): Promise<string | undefined> => {
@@ -824,7 +766,6 @@ export class ComputerManager {
       }
     };
 
-    // 先尝试主机名，再尝试 hostname.local
     tryLookup(hostname).then((ipv6: string | undefined) => {
       if (ipv6) {
         computer.ipv6Address = ipv6;
@@ -840,25 +781,18 @@ export class ComputerManager {
         this.saveComputers();
       }
     }).catch(() => {
-      // 静默忽略
     });
   }
 
-  /**
-   * 加载第一个应用的 boxArt 作为主机头像（异步，不阻塞主流程）
-   */
   private async loadFirstAppBoxArt(computer: ComputerInfo, address: string): Promise<void> {
     try {
-      // 使用保存的自定义端口（如果有）
       const nvHttp = new NvHttp(address, computer.serverCert, this.context || undefined, computer.httpPort);
       const apps = await nvHttp.getAppList();
       if (apps.length > 0) {
-        // 下载并缓存第一个应用的 boxArt，使用本地文件路径
         const cachedPath = await nvHttp.getAppAssetCached(apps[0].id);
         if (cachedPath) {
           computer.boxArtUrl = cachedPath;
           console.info(`ComputerManager: ${computer.name} 已设置 boxArt 本地路径: ${cachedPath}`);
-          // 保存更新并通知 UI
           await this.saveComputers();
           this.notifyListChanged();
         } else {
@@ -871,12 +805,8 @@ export class ComputerManager {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 扫描 & 配对
   // ═══════════════════════════════════════════════════════════
 
-  /**
-   * 扫描网络发现电脑（mDNS 回调会自动处理发现的主机）
-   */
   async scanNetwork(): Promise<void> {
     if (!this.mdnsDiscovery) {
       console.error('ComputerManager: mDNS 发现服务未初始化');
@@ -891,9 +821,6 @@ export class ComputerManager {
     }
   }
 
-  /**
-   * 开始持续扫描（后台）
-   */
   startBackgroundScan(): void {
     if (!this.mdnsDiscovery) {
       return;
@@ -904,18 +831,12 @@ export class ComputerManager {
     });
   }
 
-  /**
-   * 停止后台扫描
-   */
   stopBackgroundScan(): void {
     if (this.mdnsDiscovery) {
       this.mdnsDiscovery.stopDiscovery();
     }
   }
 
-  /**
-   * 与电脑配对（使用完整的 PairingManager，匹配 Android 配对流程）
-   */
   async pairComputer(uuid: string): Promise<string> {
     const computer = this.computers.get(uuid);
     if (!computer) {
@@ -961,9 +882,6 @@ export class ComputerManager {
     }
   }
 
-  /**
-   * 取消配对
-   */
   async unpairComputer(uuid: string): Promise<void> {
     const computer = this.computers.get(uuid);
     if (!computer) {
@@ -978,9 +896,6 @@ export class ComputerManager {
     await this.saveComputers();
   }
 
-  /**
-   * 网络唤醒 (Wake-on-LAN)
-   */
   async wakeComputer(uuid: string): Promise<void> {
     const computer = this.computers.get(uuid);
     if (!computer || !computer.macAddress) {
@@ -994,11 +909,7 @@ export class ComputerManager {
     );
   }
 
-  /**
-   * 生成配对 PIN 码（使用加密安全的随机数）
-   */
   private generatePin(): string {
-    // 使用 CryptoUtil 生成安全随机数
     const randomBytes = CryptoUtil.generateRandomBytes(4);
     let pin = '';
     for (let i = 0; i < 4; i++) {
@@ -1008,12 +919,8 @@ export class ComputerManager {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 持久化（委托给 ComputerPersistence）
   // ═══════════════════════════════════════════════════════════
 
-  /**
-   * 保存电脑列表到持久化存储
-   */
   async saveComputers(): Promise<void> {
     await ComputerPersistence.saveComputers(this.computers);
   }

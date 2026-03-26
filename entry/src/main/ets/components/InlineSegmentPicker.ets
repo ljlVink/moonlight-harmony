@@ -12,20 +12,20 @@ import { SegmentButton, SegmentButtonOptions, SegmentButtonTextItem } from '@kit
 import { AppColors } from '../common/Theme';
 
 /**
- * 内联分段选择器 - 包装 HarmonyOS SegmentButton
- * 用于选项数量在 2-5 个之间的设置项，替代弹窗式选择器
+ * Inline Segment Picker - Wrapper for HarmonyOS SegmentButton
+ * For settings with 2-5 options, replaces popup-style pickers
  */
 @Component
 export struct InlineSegmentPicker {
-  /** 选项显示文字数组（初始化时设置，不可动态修改） */
+  /** Option display text array (set at initialization, not dynamically modifiable) */
   labels: string[] = []
-  /** 初始选中值（仅在 aboutToAppear 读取，之后由组件内部管理） */
+  /** Initial selected value (only read in aboutToAppear, then managed internally) */
   selectedValue: string = ''
-  /** 选项实际值数组（可选，默认与 labels 相同） */
+  /** Option actual values array (optional, defaults to same as labels) */
   values: string[] = []
-  /** 是否禁用 */
+  /** Whether disabled */
   @Prop disabled: boolean = false
-  /** 选择变化回调 */
+  /** Selection change callback */
   onValueChange?: (value: string) => void
 
   @State @Watch('onSelectedIndexesChange') selectedIndexes: number[] = [0]
@@ -39,20 +39,20 @@ export struct InlineSegmentPicker {
   }
 
   /**
-   * 构建 SegmentButtonOptions（仅在 aboutToAppear 调用一次）
+   * Build SegmentButtonOptions (only called once in aboutToAppear)
    */
   private buildOptions(): void {
     const len = this.labels.length
     if (len < 2 || len > 5) {
       return
     }
-    // 创建 SegmentButtonTextItem 数组
+    // Create SegmentButtonTextItem array
     const items: SegmentButtonTextItem[] = []
     for (let i = 0; i < len; i++) {
       const item: SegmentButtonTextItem = { text: this.labels[i] } as SegmentButtonTextItem
       items.push(item)
     }
-    // 按选项数量直接构建 SegmentButtonOptions，元组字面量传入 capsule()
+    // Build SegmentButtonOptions by option count, tuple literal passed to capsule()
     if (len === 2) {
       this.segmentOptions = SegmentButtonOptions.capsule({
         buttons: [items[0], items[1]],
@@ -107,9 +107,9 @@ export struct InlineSegmentPicker {
       const selectedIdx: number = this.selectedIndexes[0]
       if (selectedIdx >= 0 && selectedIdx < actualValues.length) {
         const newValue: string = actualValues[selectedIdx]
-        // 仅当值实际变化时才触发回调，避免 prop 更新引起的循环
+        // Only trigger callback when value actually changes, avoid loops from prop updates
         if (newValue !== this.selectedValue) {
-          // 延迟回调，避免父组件 re-render 中断 SegmentButton 的内部动画
+          // Delay callback to avoid SegmentButton internal animation being interrupted by parent re-render
           setTimeout(() => {
             callback(newValue)
           }, 0)
@@ -120,7 +120,7 @@ export struct InlineSegmentPicker {
 
   build() {
     if (this.segmentOptions) {
-      // SegmentButton 不支持通用属性，必须通过容器应用 width/enabled/opacity 等
+      // SegmentButton doesn't support common attributes, must apply width/enabled/opacity through container
       Column() {
         SegmentButton({
           options: this.segmentOptions,

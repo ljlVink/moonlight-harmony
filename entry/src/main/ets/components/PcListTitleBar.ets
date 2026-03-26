@@ -8,34 +8,25 @@
  * (at your option) any later version.
  */
 
-/**
- * PC 列表页面标题栏组件
- */
 import { router } from '@kit.ArkUI';
 import { AppColors, AppSizes, AppSpacing } from '../common/Theme';
 
-/**
- * 标题栏配置
- */
 export interface TitleBarConfig {
-  /** 在线设备数量 */
+  /**
   onlineCount: number;
-  /** 总设备数量 */
+  /**
   totalCount: number;
-  /** 关于按钮点击回调 */
+  /**
   onAboutClick: () => void;
-  /** 扫码导入按钮点击回调 */
+  /**
   onScanImport: () => void;
-  /** 设置按钮点击回调 */
+  /**
   onSettingsClick: () => void;
 }
 
-/**
- * PC 列表标题栏
- */
 @Component
 export struct PcListTitleBar {
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;  // 动态状态栏安全区高度
+  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
   @Prop config: TitleBarConfig = {
     onlineCount: 0,
     totalCount: 0,
@@ -48,7 +39,6 @@ export struct PcListTitleBar {
     Row() {
       Column() {
         Row() {
-          // 应用图标/Logo - 使用 V+ Logo
           Image($r('app.media.vplus'))
             .width(44)
             .height(44)
@@ -93,7 +83,6 @@ export struct PcListTitleBar {
       .layoutWeight(1)
       .margin({ right: AppSpacing.Small })
 
-      // 关于按钮
       Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_info'))
           .width(AppSizes.IconMedium)
@@ -111,7 +100,6 @@ export struct PcListTitleBar {
         this.config.onAboutClick();
       })
 
-      // 扫码导入按钮
       Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_scan'))
           .width(AppSizes.IconMedium)
@@ -129,7 +117,6 @@ export struct PcListTitleBar {
         this.config.onScanImport();
       })
 
-      // 设置按钮
       Button({ type: ButtonType.Circle }) {
         Image($r('app.media.ic_settings'))
           .width(AppSizes.IconMedium)

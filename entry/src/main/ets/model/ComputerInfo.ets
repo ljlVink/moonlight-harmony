@@ -10,9 +10,6 @@
 
 import { isLanIPv4Address, isLanAddress, isIPv6Address, isPublicAddress, detectAddressType, AddressType, getAddressTypeLabel } from '../utils/NetHelper';
 
-/**
- * 电脑信息模型
- */
 export enum ComputerState {
   UNKNOWN = 0,
   ONLINE = 1,
@@ -32,10 +29,6 @@ export interface Resolution {
   height: number;
 }
 
-/**
- * selectBestAddress 所需的最小地址字段集
- * ComputerInfo 和 ObservableComputer 均满足此接口
- */
 export interface AddressHolder {
   address: string;
   localAddress: string;
@@ -52,76 +45,42 @@ export interface ComputerInfo extends AddressHolder {
   pairState: PairState;
   runningGameId: number;
   serverCert: string;
-  pairName: string;  // 配对时服务器返回的名称
+  pairName: string;
   gpuType: string;
   maxSupportedResolution: Resolution;
   isNvidiaSoftware: boolean;
-  // 主机头像 - 第一个应用的 boxArt URL
   boxArtUrl?: string;
-  // 自定义 HTTP 端口（默认 47989）
   httpPort?: number;
 }
 
-/**
- * 选择最佳连接地址
- *
- * 核心原则：**已验证可达的地址 > 未验证的地址**
- *
- * `address` 字段由轮询竞速胜出者设置（raceForFirstSuccess），
- * 代表最近一次成功连接的地址，因此是已验证可达的。
- *
- * 旧逻辑无条件优先返回 localAddress（服务器自报的 LAN IP），即使用户
- * 在外网也会返回不可达的内网地址 → 导致 WAN 配对/连接失败。
- *
- * 修正后的优先级:
- *   1. 活跃地址（轮询胜出，已验证可达）
- *   2. 回退链（无活跃地址时，如首次添加/离线）
- */
 export function selectBestAddress(computer: AddressHolder): string {
-  // 1. 活跃地址存在 → 直接返回（已被最近一次轮询验证为可达）
-  //    - LAN IP 胜出：低延迟 + 可达 ✓
-  //    - 域名/WAN IP 胜出：可达 ✓（不假设 localAddress 也可达）
   if (computer.address) {
     return computer.address;
   }
 
-  // — 以下为无活跃地址时的回退（首次添加后未轮询、离线恢复等） —
-
-  // 2. 用户手动输入的地址（域名/IP，用户意图明确）
   if (computer.manualAddress) return computer.manualAddress;
 
-  // 3. LAN IPv4（服务器自报，可能可达可能不可达）
   if (computer.localAddress && isLanIPv4Address(computer.localAddress)) {
     return computer.localAddress;
   }
 
-  // 4. IPv6 LAN 地址
   if (computer.ipv6Address && isLanAddress(computer.ipv6Address)) {
     return computer.ipv6Address;
   }
 
-  // 5. localAddress（非 LAN 类型）
   if (computer.localAddress) return computer.localAddress;
 
-  // 6. IPv6 全局单播
   if (computer.ipv6Address) return computer.ipv6Address;
 
-  // 7. WAN 外网地址
   if (computer.remoteAddress) return computer.remoteAddress;
 
   return '';
 }
 
-/**
- * 获取地址的网络类型描述
- */
 export function getAddressNetworkLabel(address: string | undefined): string {
   return getAddressTypeLabel(address);
 }
 
-/**
- * 判断计算机是否有可用的 LAN 地址
- */
 export function hasLanAddress(computer: ComputerInfo): boolean {
   return isLanAddress(computer.localAddress) ||
     isLanAddress(computer.address) ||

@@ -9,23 +9,16 @@
  */
 
 /**
- * 串流菜单管理器
  * 
- * 负责管理串流页面的菜单配置和业务逻辑
- * 与 Android GameMenu 功能对齐
  */
 import { promptAction } from '@kit.ArkUI';
 import { StreamingSession } from '../service/StreamingSession';
 import { StreamViewModel, TouchMode } from '../viewmodel/StreamViewModel';
 import { OptionPickerDialogConfig, OptionItem } from './OptionPickerDialog';
 
-// VirtualKey 统一定义在 CustomKeyTypes 中，此处 re-export 保持向后兼容
 import { VirtualKey } from '../service/CustomKeyTypes';
 export { VirtualKey } from '../service/CustomKeyTypes';
 
-/**
- * 菜单操作回调
- */
 export interface StreamMenuCallbacks {
   onResume: () => void;
   onDisconnect: () => void;
@@ -34,9 +27,6 @@ export interface StreamMenuCallbacks {
   onShowTouchModeMenu: () => void;
 }
 
-/**
- * 串流菜单管理器
- */
 export class StreamMenuManager {
   private viewModel: StreamViewModel;
   private callbacks: StreamMenuCallbacks;
@@ -46,16 +36,10 @@ export class StreamMenuManager {
     this.callbacks = callbacks;
   }
 
-  /**
-   * 获取串流会话
-   */
   private getSession(): StreamingSession | null {
     return this.viewModel.getSession();
   }
 
-  /**
-   * 显示 Toast 提示
-   */
   private showToast(message: string): void {
     try {
       promptAction.showToast({
@@ -67,9 +51,6 @@ export class StreamMenuManager {
     }
   }
 
-  /**
-   * 获取触摸模式的中文名称
-   */
   getTouchModeName(): string {
     switch (this.viewModel.touchMode) {
       case 'trackpad':
@@ -83,9 +64,6 @@ export class StreamMenuManager {
     }
   }
 
-  /**
-   * 获取性能覆盖层状态描述
-   */
   getPerformanceOverlayStatus(): string {
     if (!this.viewModel.showOverlay) {
       return '当前: 关闭';
@@ -96,9 +74,6 @@ export class StreamMenuManager {
     }
   }
 
-  /**
-   * 获取主串流菜单配置
-   */
   getStreamMenuConfig(): OptionPickerDialogConfig {
     const options: OptionItem[] = [
       {
@@ -164,9 +139,6 @@ export class StreamMenuManager {
     };
   }
 
-  /**
-   * 处理主菜单选择
-   */
   private handleMainMenuSelect(option: OptionItem): void {
     const session = this.getSession();
 
@@ -208,9 +180,6 @@ export class StreamMenuManager {
     }
   }
 
-  /**
-   * 获取触摸模式子菜单配置
-   */
   getTouchModeMenuConfig(): OptionPickerDialogConfig {
     const currentMode = this.viewModel.touchMode;
 
@@ -248,9 +217,6 @@ export class StreamMenuManager {
     };
   }
 
-  /**
-   * 处理触摸模式选择
-   */
   private handleTouchModeSelect(option: OptionItem): void {
     if (option.value === 'toggle_remote_mouse') {
       const session = this.getSession();

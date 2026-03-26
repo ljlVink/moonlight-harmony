@@ -18,9 +18,6 @@ import { HttpClient } from '../utils/HttpClient';
 import { XmlUtil } from '../utils/XmlUtil';
 import { NvHttp } from './NvHttp';
 
-/**
- * 配对状态
- */
 export enum PairState {
   NOT_PAIRED = 'NOT_PAIRED',
   PAIRED = 'PAIRED',
@@ -29,9 +26,6 @@ export enum PairState {
   ALREADY_IN_PROGRESS = 'ALREADY_IN_PROGRESS'
 }
 
-/**
- * 配对结果
- */
 export interface PairResult {
   state: PairState;
   serverCert?: Uint8Array;
@@ -39,10 +33,7 @@ export interface PairResult {
 }
 
 /**
- * 配对管理器
  *
- * 实现与 NVIDIA GameStream / Sunshine 服务器的配对流程
- * 参考 Android PairingManager.java
  */
 export class PairingManager {
   private baseUrl: string;
@@ -51,33 +42,26 @@ export class PairingManager {
   private clientName: string;
   private formattedHost: string;
 
-  // 客户端密钥对和证书
   private keyPair: cryptoFramework.KeyPair | null = null;
   private clientCertDer: Uint8Array | null = null;
   private clientCertPem: Uint8Array | null = null;
 
-  // 服务器证书
   private serverCertDer: Uint8Array | null = null;
 
-  // 证书文件路径
   private certFilePath: string = '';
   private keyFilePath: string = '';
   private context: common.Context | null = null;
 
-  // 端口常量引用自 NvHttp（单一来源）
   static readonly DEFAULT_HTTP_PORT = NvHttp.DEFAULT_HTTP_PORT;
   static readonly DEFAULT_HTTPS_PORT = NvHttp.DEFAULT_HTTPS_PORT;
 
-  // 全局客户端名称缓存（使用设备名称）
   private static cachedClientName: string | null = null;
 
   constructor(address: string, uniqueId: string, context?: common.Context, httpPort?: number) {
-    // 解析地址中可能包含的端口号
     const parsedHost = this.parseAddressHost(address);
     const parsedPort = this.parseAddressPort(address);
     this.address = parsedHost;
     const port = httpPort || parsedPort || PairingManager.DEFAULT_HTTP_PORT;
-    // IPv6 地址在 URL 中需要方括号包裹，否则冒号会与端口分隔符冲突
     const formattedHost = this.formatAddressForUrl(this.address);
     this.formattedHost = formattedHost;
     this.baseUrl = `http://${formattedHost}:${port}`;
@@ -85,16 +69,12 @@ export class PairingManager {
     this.clientName = this.getClientName();
     if (context) {
       this.context = context;
-      // 设置证书文件路径（使用应用沙箱目录）
       const filesDir = context.filesDir;
       this.certFilePath = `${filesDir}/client_cert.pem`;
       this.keyFilePath = `${filesDir}/client_key.pem`;
     }
   }
 
-  /**
-   * 获取客户端名称（使用设备名称）
-   */
   private getClientName(): string {
     if (PairingManager.cachedClientName) {
       return PairingManager.cachedClientName;
@@ -111,24 +91,17 @@ export class PairingManager {
     }
   }
   
-  /**
-   * 从地址字符串中解析主机部分
-   */
   private parseAddressHost(addressInput: string): string {
     const trimmed = addressInput.trim();
     
-    // 检查是否为 IPv6 地址
     if (trimmed.startsWith('[')) {
-      // 格式: [::1] 或 [::1]:47989
       const closeBracket = trimmed.indexOf(']');
       if (closeBracket > 0) {
         return trimmed.substring(1, closeBracket);
       }
     }
     
-    // IPv4 或主机名
     const colonIndex = trimmed.indexOf(':');
-    // 只有一个冒号，说明是端口分隔符（IPv6 有多个冒号）
     if (colonIndex > 0 && trimmed.indexOf(':', colonIndex + 1) === -1) {
       return trimmed.substring(0, colonIndex);
     }
@@ -136,15 +109,10 @@ export class PairingManager {
     return trimmed;
   }
   
-  /**
-   * 从地址字符串中解析端口部分
-   */
   private parseAddressPort(addressInput: string): number | undefined {
     const trimmed = addressInput.trim();
     
-    // 检查是否为 IPv6 地址
     if (trimmed.startsWith('[')) {
-      // 格式: [::1]:47989
       const closeBracket = trimmed.indexOf(']');
       if (closeBracket > 0 && closeBracket < trimmed.length - 1 && trimmed.charAt(closeBracket + 1) === ':') {
         const portStr = trimmed.substring(closeBracket + 2);
@@ -156,9 +124,7 @@ export class PairingManager {
       return undefined;
     }
     
-    // IPv4 或主机名
     const colonIndex = trimmed.indexOf(':');
-    // 只有一个冒号，说明是端口分隔符（IPv6 有多个冒号）
     if (colonIndex > 0 && trimmed.indexOf(':', colonIndex + 1) === -1) {
       const portStr = trimmed.substring(colonIndex + 1);
       const port = parseInt(portStr);
@@ -171,7 +137,6 @@ export class PairingManager {
   }
 
   /**
-   * 格式化地址用于 URL：IPv6 地址需要加方括号
    * e.g. "fe80::1" → "[fe80::1]", "192.168.1.1" → "192.168.1.1"
    */
   private formatAddressForUrl(addr: string): string {
@@ -181,18 +146,11 @@ export class PairingManager {
     return addr;
   }
 
-  /**
-   * 初始化客户端密钥对
-   * 如果证书文件已存在，则从文件加载；否则生成新的密钥对和证书
-   * 重要：必须保持同一个客户端证书用于所有服务器，否则之前配对的服务器会失效
-   */
   async initialize(): Promise<void> {
     if (this.keyPair) {
-      // 已初始化
       return;
     }
 
-    // 尝试从文件加载已存在的密钥对和证书
     if (this.certFilePath && this.keyFilePath) {
       try {
         const certExists = fileIo.accessSync(this.certFilePath);
@@ -201,7 +159,6 @@ export class PairingManager {
         if (certExists && keyExists) {
           console.info('PairingManager: 发现已存在的证书文件，尝试加载...');
           
-          // 读取私钥文件
           const keyFile = await fileIo.open(this.keyFilePath, fileIo.OpenMode.READ_ONLY);
           const keyStats = await fileIo.stat(this.keyFilePath);
           const keyBuffer = new ArrayBuffer(keyStats.size);
@@ -212,12 +169,10 @@ export class PairingManager {
           const textDecoder = util.TextDecoder.create('utf-8');
           const keyPem = textDecoder.decodeToString(keyContent);
           
-          // 从 PEM 格式加载私钥
           const generator = cryptoFramework.createAsyKeyGenerator('RSA2048');
           const keyPairResult = await generator.convertPemKey(null, keyPem);
           this.keyPair = keyPairResult;
           
-          // 读取证书文件
           const certFile = await fileIo.open(this.certFilePath, fileIo.OpenMode.READ_ONLY);
           const certStats = await fileIo.stat(this.certFilePath);
           const certBuffer = new ArrayBuffer(certStats.size);
@@ -226,7 +181,6 @@ export class PairingManager {
           
           this.clientCertPem = new Uint8Array(certBuffer);
           
-          // 从 PEM 转换为 DER（去掉 header 和 footer，base64 解码）
           const certPemStr = textDecoder.decodeToString(this.clientCertPem);
           const certBase64 = certPemStr
             .replace('-----BEGIN CERTIFICATE-----', '')
@@ -241,11 +195,9 @@ export class PairingManager {
         }
       } catch (err) {
         console.warn(`PairingManager: 加载已存在证书失败: ${err}, 将生成新的密钥对`);
-        // 继续生成新的密钥对
       }
     }
 
-    // 生成新的密钥对和证书
     console.info('PairingManager: 生成新的 RSA 密钥对...');
     this.keyPair = await CryptoUtil.generateRsaKeyPair();
     console.info('PairingManager: RSA 密钥对生成完成');
@@ -256,15 +208,11 @@ export class PairingManager {
     this.clientCertPem = CryptoUtil.getPemCertBytes(this.clientCertDer);
     console.info(`PairingManager: 证书 PEM 生成完成，长度 = ${this.clientCertPem.length}`);
     
-    // 保存证书和私钥到文件（供 HTTPS 请求使用）
     await this.saveCertificatesToFile();
     
     console.info('PairingManager: 密钥对和证书生成完成');
   }
 
-  /**
-   * 保存证书和私钥到文件
-   */
   private async saveCertificatesToFile(): Promise<void> {
     if (!this.certFilePath || !this.keyFilePath || !this.keyPair || !this.clientCertPem) {
       console.warn('PairingManager: 无法保存证书（路径或数据不完整）');
@@ -272,7 +220,6 @@ export class PairingManager {
     }
 
     try {
-      // 保存证书（clientCertPem 已是 Uint8Array，直接转为字符串）
       const textDecoder = util.TextDecoder.create('utf-8');
       const certContent = textDecoder.decodeToString(this.clientCertPem);
       const certFile = await fileIo.open(this.certFilePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
@@ -280,7 +227,6 @@ export class PairingManager {
       await fileIo.close(certFile);
       console.info(`PairingManager: 证书已保存到 ${this.certFilePath}`);
 
-      // 保存私钥
       const priKeyBlob = this.keyPair.priKey.getEncodedPem('PKCS8');
       const keyFile = await fileIo.open(this.keyFilePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
       await fileIo.write(keyFile.fd, priKeyBlob);
@@ -291,10 +237,6 @@ export class PairingManager {
     }
   }
 
-  /**
-   * 获取客户端证书的十六进制表示（PEM 格式）
-   * Android 使用 PEM 格式的证书
-   */
   getClientCertHex(): string {
     if (!this.clientCertPem) {
       return '';
@@ -302,9 +244,6 @@ export class PairingManager {
     return CryptoUtil.bytesToHex(this.clientCertPem);
   }
 
-  /**
-   * 获取客户端证书签名
-   */
   getClientCertSignature(): Uint8Array {
     if (!this.clientCertDer) {
       return new Uint8Array(0);
@@ -312,19 +251,10 @@ export class PairingManager {
     return CryptoUtil.extractCertSignature(this.clientCertDer);
   }
 
-  /**
-   * 获取服务器证书
-   */
   getServerCert(): Uint8Array | null {
     return this.serverCertDer;
   }
 
-  /**
-   * 使用 HttpClient 执行 HTTP 请求
-   * @param url 请求 URL
-   * @param timeout 超时时间（毫秒）
-   * @param useClientCert 是否使用客户端证书（HTTPS 请求需要）
-   */
   private async doRequest(url: string, timeout: number = 7000, useClientCert: boolean = false): Promise<string> {
     console.info(`PairingManager: 请求 ${url}`);
     console.info(`PairingManager: 超时设置 = ${timeout > 0 ? timeout : '无限制'}, 使用客户端证书 = ${useClientCert}`);
@@ -342,27 +272,18 @@ export class PairingManager {
     }
   }
 
-  /**
-   * 构建配对请求 URL
-   */
   private buildPairUrl(params: string): string {
     return `${this.baseUrl}/pair?uniqueid=${this.uniqueId}&clientname=${encodeURIComponent(this.clientName)}&${params}`;
   }
 
-  /**
-   * 提取服务器证书
-   * 注意：服务器返回的是 PEM 格式证书的十六进制编码
-   */
   private extractServerCert(xml: string): Uint8Array | null {
     const certHex = XmlUtil.getValue(xml, 'plaincert');
     if (!certHex) {
       return null;
     }
     
-    // 十六进制解码得到 PEM 字符串的字节
     const pemBytes = CryptoUtil.hexToBytes(certHex);
     
-    // 将字节转换为字符串
     let pemString = '';
     for (let i = 0; i < pemBytes.length; i++) {
       pemString += String.fromCharCode(pemBytes[i]);
@@ -370,17 +291,12 @@ export class PairingManager {
     
     console.info(`PairingManager: 服务器证书 PEM 前80字符 = ${pemString.substring(0, 80)}`);
     
-    // 从 PEM 提取 DER
     const derBytes = CryptoUtil.pemToDer(pemString);
     console.info(`PairingManager: 服务器证书 DER 长度 = ${derBytes.length}`);
     
     return derBytes;
   }
 
-  /**
-   * 确定使用的哈希算法
-   * Gen 7+ 使用 SHA-256，之前使用 SHA-1
-   */
   private async hashData(data: Uint8Array, useSha256: boolean): Promise<Uint8Array> {
     if (useSha256) {
       return await CryptoUtil.sha256(data);
@@ -389,18 +305,10 @@ export class PairingManager {
     }
   }
 
-  /**
-   * 获取哈希长度
-   */
   private getHashLength(useSha256: boolean): number {
     return useSha256 ? 32 : 20;
   }
 
-  /**
-   * 获取服务器主版本号
-   * 通过 /serverinfo 接口获取 appversion 字段
-   * 同时缓存 HTTPS 端口用于后续 pairchallenge 步骤
-   */
   private serverInfoCache: string | null = null;
 
   private async fetchServerInfo(): Promise<string> {
@@ -432,10 +340,6 @@ export class PairingManager {
     return 7;
   }
 
-  /**
-   * 获取 HTTPS URL（匹配 Android getHttpsUrl 行为）
-   * 优先使用 serverinfo 返回的 HttpsPort，兜底用 httpPort - 5
-   */
   private async getHttpsUrl(): Promise<string> {
     try {
       const response = await this.fetchServerInfo();
@@ -450,28 +354,22 @@ export class PairingManager {
     } catch (err) {
       console.warn(`PairingManager: 获取 HTTPS 端口失败: ${err}`);
     }
-    // 兜底：httpPort - 5
     const fallbackPort = PairingManager.DEFAULT_HTTPS_PORT;
     console.info(`PairingManager: 使用默认 HTTPS 端口: ${fallbackPort}`);
     return `https://${this.formattedHost}:${fallbackPort}`;
   }
 
   /**
-   * 执行配对流程
    *
-   * @param pin 用户输入的 4 位 PIN 码
-   * @returns 配对结果
    */
   async pair(pin: string): Promise<PairResult> {
     await this.initialize();
 
-    // 自动检测服务器版本号（Gen 7+ 使用 SHA-256，之前使用 SHA-1）
     const serverMajorVersion = await this.fetchServerMajorVersion();
     const useSha256 = serverMajorVersion >= 7;
     console.info(`PairingManager: 服务器版本 ${serverMajorVersion}, 使用 ${useSha256 ? 'SHA-256' : 'SHA-1'} 哈希算法`);
 
     try {
-      // ============ 步骤 1: 发送 salt 和客户端证书，获取服务器证书 ============
       console.info('PairingManager: 步骤1 - 发送 salt 和客户端证书');
       console.info(`PairingManager: PIN = ${pin}`);
 
@@ -490,7 +388,6 @@ export class PairingManager {
 
       console.info('PairingManager: 等待服务器响应（用户需要在服务器上输入 PIN）...');
 
-      // 使用 rcp 发送请求，设置 5 分钟超时（等待用户在主机上输入 PIN）
       const step1Response = await this.doRequest(step1Url, 300000);
 
       console.info(`PairingManager: 步骤1响应 = ${step1Response.substring(0, 200)}...`);
@@ -504,12 +401,10 @@ export class PairingManager {
       this.serverCertDer = this.extractServerCert(step1Response);
 
       if (!this.serverCertDer) {
-        // 可能有其他设备正在配对
         await this.unpair();
         return { state: PairState.ALREADY_IN_PROGRESS, pairName };
       }
 
-      // ============ 步骤 2: 发送加密的客户端挑战 ============
       console.info('PairingManager: 步骤2 - 发送客户端挑战');
 
       const randomChallenge = CryptoUtil.generateRandomBytes(16);
@@ -527,7 +422,6 @@ export class PairingManager {
         return { state: PairState.FAILED, pairName };
       }
 
-      // 解密服务器响应
       const encServerChallengeResponse = CryptoUtil.hexToBytes(
         XmlUtil.getValue(step2Response, 'challengeresponse')
       );
@@ -537,13 +431,10 @@ export class PairingManager {
       const serverResponse = decServerChallengeResponse.slice(0, hashLength);
       const serverChallenge = decServerChallengeResponse.slice(hashLength, hashLength + 16);
 
-      // ============ 步骤 3: 发送服务器挑战响应 ============
       console.info('PairingManager: 步骤3 - 发送服务器挑战响应');
 
       const clientSecret = CryptoUtil.generateRandomBytes(16);
 
-      // 计算挑战响应哈希: hash(serverChallenge + clientCertSignature + clientSecret)
-      // 使用客户端证书的签名（参考 Android 实现：cert.getSignature()）
       const clientCertSignature = this.getClientCertSignature();
       const challengeRespData = CryptoUtil.concatBytes(
         CryptoUtil.concatBytes(serverChallenge, clientCertSignature),
@@ -564,14 +455,12 @@ export class PairingManager {
         return { state: PairState.FAILED, pairName };
       }
 
-      // 获取服务器签名的 secret
       const serverSecretResp = CryptoUtil.hexToBytes(
         XmlUtil.getValue(step3Response, 'pairingsecret')
       );
       const serverSecret = serverSecretResp.slice(0, 16);
       const serverSignature = serverSecretResp.slice(16);
 
-      // 验证服务器签名（防止 MITM 攻击）
       const serverSignatureValid = await CryptoUtil.verifyWithCert(serverSecret, serverSignature, this.serverCertDer!);
       if (!serverSignatureValid) {
         console.error('PairingManager: 服务器签名验证失败，可能存在中间人攻击');
@@ -580,8 +469,6 @@ export class PairingManager {
       }
       console.info('PairingManager: 服务器签名验证通过');
 
-      // 验证 PIN 是否正确
-      // 使用服务器证书签名（参考 Android 实现：serverCert.getSignature()）
       const serverCertSignature = CryptoUtil.extractCertSignature(this.serverCertDer!);
       const expectedServerResponse = await this.hashData(
         CryptoUtil.concatBytes(
@@ -596,10 +483,8 @@ export class PairingManager {
         return { state: PairState.PIN_WRONG, pairName };
       }
 
-      // ============ 步骤 4: 发送客户端签名的 secret ============
       console.info('PairingManager: 步骤4 - 发送客户端 secret');
 
-      // 签名 clientSecret
       console.info(`PairingManager: clientSecret 长度 = ${clientSecret.length}`);
       const clientSignature = await CryptoUtil.rsaSign(clientSecret, this.keyPair!.priKey);
       console.info(`PairingManager: clientSignature 长度 = ${clientSignature.length}`);
@@ -618,15 +503,12 @@ export class PairingManager {
         return { state: PairState.FAILED, pairName };
       }
 
-      // ============ 步骤 5: 执行配对挑战（完成配对） ============
       console.info('PairingManager: 步骤5 - 完成配对');
 
-      // 动态获取 HTTPS URL（匹配 Android executePairingChallenge → getHttpsUrl 行为）
       const httpsUrl = await this.getHttpsUrl();
       const step5Url = `${httpsUrl}/pair?` +
         `uniqueid=${this.uniqueId}&devicename=roth&updateState=1&phrase=pairchallenge`;
 
-      // 步骤5 需要使用客户端证书进行 HTTPS 请求
       const step5Response = await this.doRequest(step5Url, 7000, true);
 
       if (XmlUtil.getValue(step5Response, 'paired') !== '1') {
@@ -647,9 +529,6 @@ export class PairingManager {
     }
   }
 
-  /**
-   * 取消配对
-   */
   async unpair(): Promise<void> {
     try {
       const url = `${this.baseUrl}/unpair?uniqueid=${this.uniqueId}`;
@@ -659,9 +538,6 @@ export class PairingManager {
     }
   }
 
-  /**
-   * 比较两个字节数组是否相等
-   */
   private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
@@ -670,9 +546,6 @@ export class PairingManager {
     return true;
   }
 
-  /**
-   * 生成4位数字PIN码
-   */
   static generatePin(): string {
     return CryptoUtil.generatePin();
   }

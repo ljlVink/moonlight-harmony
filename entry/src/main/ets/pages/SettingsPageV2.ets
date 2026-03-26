@@ -27,18 +27,12 @@ import { loadChangelog, ChangelogEntry, ChangeItem, getChangeTypeConfig } from '
 import { InlineSegmentPicker } from '../components/InlineSegmentPicker';
 import { DevKeyVerifier } from '../utils/DevKeyVerifier';
 
-/**
- * 选择器选项接口
- */
 interface PickerOption {
   title: string;
   subtitle?: string;
   value: string | number;
 }
 
-/**
- * 性能覆盖层项目选项
- */
 class PerfOverlayItemOption {
   key: string;
   title: string;
@@ -60,9 +54,6 @@ class ResolutionPreset {
   }
 }
 
-/**
- * 选择器配置接口
- */
 interface PickerConfig {
   title: string;
   subtitle?: string;
@@ -71,9 +62,6 @@ interface PickerConfig {
   onSelect: (option: PickerOption) => void;
 }
 
-/**
- * 设置项数据
- */
 interface SettingItem {
   title: string;
   subtitle?: string;
@@ -83,44 +71,35 @@ interface SettingItem {
   value?: string | boolean | number;
   options?: string[];
   action?: () => void;
-  disabled?: boolean;  // 是否禁用
-  isPro?: boolean;     // 是否为 Pro 功能（需要开发者模式）
-  visible?: boolean;   // 是否可见（用于条件显示子选项，默认 true）
-  // Slider 专用属性
+  disabled?: boolean;
+  isPro?: boolean;
+  visible?: boolean;
   min?: number;
   max?: number;
   step?: number;
   unit?: string;
   onSliderChange?: (value: number) => void;
-  snapValues?: number[];  // 吸附的关键数值
-  snapThreshold?: number; // 吸附阈值，默认为 step 的一半
-  isLogarithmic?: boolean; // 是否使用对数刻度（适用于大范围值如码率）
-  formatValue?: (value: number) => string;  // 自定义值格式化函数
-  // Segment 分段按钮专用属性
-  segmentLabels?: string[];   // 分段按钮显示文字
-  segmentValues?: string[];   // 分段按钮对应的实际值（可选，默认与 labels 相同）
-  onSegmentChange?: (value: string) => void;  // 选择变化回调
-  // Grid 九宫格专用属性
-  gridLabels?: string[];       // 九宫格按钮标签（按行排列，如 3x3 = 9 个）
-  gridValues?: string[];       // 九宫格按钮对应值
-  gridColumns?: number;        // 列数（默认 3）
-  onGridSelect?: (value: string) => void;  // 选中回调
+  snapValues?: number[];
+  snapThreshold?: number;
+  isLogarithmic?: boolean;
+  formatValue?: (value: number) => string;
+  segmentLabels?: string[];
+  segmentValues?: string[];
+  onSegmentChange?: (value: string) => void;
+  gridLabels?: string[];
+  gridValues?: string[];
+  gridColumns?: number;
+  onGridSelect?: (value: string) => void;
 }
 
-/**
- * 设置分组
- */
 interface SettingGroup {
-  id: string;      // 分组唯一标识
-  icon: Resource;  // 分组图标
-  useSymbol?: boolean;  // 是否使用 HarmonyOS Symbol，默认 true
+  id: string;
+  icon: Resource;
+  useSymbol?: boolean;
   title: string;
   items: SettingItem[];
 }
 
-/**
- * 侧边栏分组元数据（用于宽屏侧边导航）
- */
 interface SidebarGroupMeta {
   id: string;
   icon: Resource;
@@ -128,18 +107,14 @@ interface SidebarGroupMeta {
   useSymbol: boolean;
 }
 
-/**
- * 设置页面 (现代化版本)
- */
 @Entry
 @Component
 struct SettingsPageV2 {
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;  // 动态状态栏安全区高度
-  // 视频设置
+  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
   @State resolution: string = '1080p';
-  @State customResolutions: string[] = [];  // 自定义分辨率列表，格式如 "1920x1080"
+  @State customResolutions: string[] = [];
   @State fps: string = '60 FPS';
-  @State customFps: number = 0;  // 自定义帧率值 (0 表示使用预设)
+  @State customFps: number = 0;
   @State bitrate: number = 20;
   @State hostScale: number = 100;
   @State enableHdr: boolean = false;
@@ -154,7 +129,6 @@ struct SettingsPageV2 {
   @State reverseResolution: boolean = false;
   @State rotableScreen: boolean = false;
   
-  // 音频设置
   @State audioConfig: string = '立体声';
   @State enableLocalAudio: boolean = false;
   @State enableSpatializer: boolean = false;
@@ -162,9 +136,8 @@ struct SettingsPageV2 {
   @State enableMic: boolean = false;
   @State micBitrate: number = 64;
   
-  // 输入 - 手柄设置
   @State enableVibration: boolean = true;
-  @State vibrationMode: string = '自动';  // 自动/仅手柄/仅设备/同时
+  @State vibrationMode: string = '自动';
   @State vibrateFallbackStrength: number = 100;
   @State enableAudioVibration: boolean = false;
   @State audioVibrationStrength: number = 60;
@@ -178,13 +151,12 @@ struct SettingsPageV2 {
   @State enableStartKeyMenu: boolean = true;
   @State ignoreDeviceDisconnect: boolean = false;
   @State enableKeyInterceptor: boolean = false;
-  @State keyInterceptorAvailable: boolean = false;  // 按键注入 API 是否可用（API 13+ 才支持反劫持）
-  @State gcButtonHomeMapping: string = 'guide';  // 2313键（Home键）动作映射
-  @State usbDriverEnabled: boolean = false;  // 默认关闭 USB 手柄驱动
-  @State forceUsbDriverOnly: boolean = false;  // 强制纯 USB 驱动模式
-  @State ddkHighSpeedPolling: boolean = false;  // USB 驱动高速轮询
+  @State keyInterceptorAvailable: boolean = false;
+  @State gcButtonHomeMapping: string = 'guide';
+  @State usbDriverEnabled: boolean = false;
+  @State forceUsbDriverOnly: boolean = false;
+  @State ddkHighSpeedPolling: boolean = false;
   
-  // 输入 - 屏幕控制器
   @State enableOnscreenControls: boolean = false;
   @State enableOnscreenKeyboard: boolean = false;
   @State onlyL3R3: boolean = false;
@@ -193,32 +165,28 @@ struct SettingsPageV2 {
   @State oscOpacity: number = 90;
   @State vibrateOsc: boolean = true;
   
-  // 输入 - 鼠标/触控
-  @State showLocalCursor: boolean = false;   // 显示本地指针（双光标模式）
+  @State showLocalCursor: boolean = false;
   @State touchscreenTrackpad: boolean = false;
   @State enableDoubleClickDrag: boolean = false;
   @State doubleTapTimeThreshold: number = 125;
   @State mouseNavButtons: boolean = false;
-  @State gameMouseMode: boolean = false;   // 游戏鼠标模式（相对模式+光标回弹）
+  @State gameMouseMode: boolean = false;
   
-  // 增强触控设置
   @State enableEnhancedTouch: boolean = true;
   @State enhancedTouchOnRight: boolean = false;
   @State enhancedTouchZoneDivider: number = 50;
   @State pointerVelocityFactor: number = 100;
   @State longPressFlatRegion: number = 0;
   
-  // 主机设置
   @State enableSops: boolean = true;
   @State screenCombinationMode: string = '主机默认';
   @State lockScreenAfterDisconnect: boolean = false;
   
-  // 高级设置
   @State decoderBufferCount: number = 0;
-  @State enableSyncDecode: boolean = false;  // 同步解码模式，默认禁用
-  @State enableVrr: boolean = false;  // VRR 可变刷新率，默认禁用
+  @State enableSyncDecode: boolean = false;
+  @State enableVrr: boolean = false;
   @State enableVsync: boolean = false;
-  @State performanceMode: boolean = false;  // 性能模式，默认禁用
+  @State performanceMode: boolean = false;
   @State enablePerfOverlay: boolean = false;
   @State perfOverlayOrientation: string = '垂直';
   @State perfOverlayPosition: string = '右上角';
@@ -229,30 +197,24 @@ struct SettingsPageV2 {
   @State enableStun: boolean = false;
   @State enableEscMenu: boolean = true;
   @State escMenuKey: string = 'ESC';
-  @State enableBackgroundTask: boolean = true;  // 后台保活，默认开启
+  @State enableBackgroundTask: boolean = true;
   
-  // UI 设置
   @State smallIconMode: boolean = false;
   @State backgroundImageType: string = 'default';
   @State backgroundImageUrl: string = '';
   @State resumeStream: boolean = false;
-  @State developerMode: boolean = false;  // 开发者模式
-  private devKeyActivated: boolean = false;  // 激活码已验证过
+  @State developerMode: boolean = false;
+  private devKeyActivated: boolean = false;
   
-  // 应用版本
   @State appVersion: string = '';
-  @State activePopupKey: string = '';  // 当前显示气泡提示的设置项 key
+  @State activePopupKey: string = '';
   
-  // 加载状态
   @State isLoading: boolean = true;
   
-  // 当前展开的分组（默认展开视频分组）
   @State expandedGroup: string = 'video';
   
-  // 宽屏模式（横屏时使用左导航+右内容布局）
   @State isWideScreen: boolean = false;
   
-  // 侧边栏分组元数据
   private sidebarGroups: SidebarGroupMeta[] = [
     { id: 'video', icon: $r('sys.symbol.video_fill'), title: '视频', useSymbol: true } as SidebarGroupMeta,
     { id: 'audio', icon: $r('sys.symbol.speaker_wave_2_fill'), title: '音频', useSymbol: true } as SidebarGroupMeta,
@@ -267,10 +229,8 @@ struct SettingsPageV2 {
     { id: 'about', icon: $r('sys.symbol.info_circle_fill'), title: '关于', useSymbol: true } as SidebarGroupMeta,
   ];
   
-  // 解码器能力
   @State decoderCapabilities: DecoderCapabilities | null = null;
   
-  // 文本输入弹窗状态
   @State showTextInputDialog: boolean = false;
   @State textInputTitle: string = '';
   @State textInputPlaceholder: string = '';
@@ -278,22 +238,18 @@ struct SettingsPageV2 {
   private textInputCallback: ((value: string) => void) | null = null;
   private textInputDismissCallback: (() => void) | null = null;
   
-  // 自定义分辨率输入弹窗状态
   @State customResWidth: string = '';
   @State customResHeight: string = '';
   @State customResAspectRatio: string = '';
   
-  // 底部弹窗类型: 'text' = 文本输入, 'resolution' = 自定义分辨率
   private bottomSheetType: string = 'text';
   
-  // OptionPickerDialog 配置
   private optionPickerDialogConfig: OptionPickerDialogConfig = {
     title: '',
     options: [],
     onSelect: () => {}
   };
   
-  // MultiOptionPickerDialog 配置
   private multiOptionPickerDialogConfig: MultiOptionPickerDialogConfig = {
     title: '',
     options: [],
@@ -309,7 +265,6 @@ struct SettingsPageV2 {
   private privacyDialogController: CustomDialogController | null = null;
   private changelogDialogController: CustomDialogController | null = null;
   
-  // 本地分辨率
   private nativeWidth: number = 0;
   private nativeHeight: number = 0;
 
@@ -334,18 +289,13 @@ struct SettingsPageV2 {
     }
   }
   
-  /**
-   * 获取设备本地分辨率（始终转换为横屏格式：宽 > 高）
-   */
   private loadNativeResolution(): void {
     try {
       const displayInfo = display.getDefaultDisplaySync();
-      // 确保始终是横屏格式（宽 > 高）
       if (displayInfo.width >= displayInfo.height) {
         this.nativeWidth = displayInfo.width;
         this.nativeHeight = displayInfo.height;
       } else {
-        // 竖屏状态下交换宽高
         this.nativeWidth = displayInfo.height;
         this.nativeHeight = displayInfo.width;
       }
@@ -357,11 +307,6 @@ struct SettingsPageV2 {
     }
   }
   
-  /**
-   * 显示 Toast 提示
-   * @param message 提示消息
-   * @param duration 持续时间（毫秒），默认 2000ms
-   */
   private showToast(message: string, duration: number = 2000): void {
     promptAction.showToast({
       message: message,
@@ -375,7 +320,6 @@ struct SettingsPageV2 {
       console.info(`解码器能力: H264=${this.decoderCapabilities.supportsH264}, HEVC=${this.decoderCapabilities.supportsHEVC}, AV1=${this.decoderCapabilities.supportsAV1}`);
     } catch (e) {
       console.error(`获取解码器能力失败: ${e}`);
-      // 默认假设只支持 H.264
       this.decoderCapabilities = {
         supportsH264: true,
         supportsHEVC: false,
@@ -392,11 +336,7 @@ struct SettingsPageV2 {
     }
   }
 
-  /**
-   * 获取当前设置的推荐码率（Mbps）
-   */
   private getRecommendedBitrateForCurrentSettings(): number {
-    // 解析当前分辨率
     let width = 1920;
     let height = 1080;
     switch (this.resolution) {
@@ -405,7 +345,6 @@ struct SettingsPageV2 {
       case '1440p': width = 2560; height = 1440; break;
       case '4K': width = 3840; height = 2160; break;
       default:
-        // 尝试解析自定义分辨率格式 WIDTHxHEIGHT
         const match = this.resolution.match(/^(\d+)x(\d+)$/);
         if (match) {
           width = parseInt(match[1]);
@@ -413,16 +352,13 @@ struct SettingsPageV2 {
         }
     }
     
-    // 应用缩放
     if (this.hostScale !== 100) {
       width = Math.round(width * this.hostScale / 100);
       height = Math.round(height * this.hostScale / 100);
     }
     
-    // 解析帧率
     let fps = 60;
     if (this.fps.startsWith('自定义:')) {
-      // 自定义帧率
       fps = parseInt(this.fps.split(':')[1]) || 60;
     } else {
       switch (this.fps) {
@@ -435,15 +371,12 @@ struct SettingsPageV2 {
       }
     }
     
-    // 计算推荐码率（返回 Mbps）
     return Math.round(getRecommendedBitrate(width, height, fps) / 1000);
   }
 
   private async loadSettings(): Promise<void> {
     try {
-      // 视频设置
       this.resolution = await PreferencesUtil.get<string>(SettingsKeys.RESOLUTION, '1080p');
-      // 加载自定义分辨率列表
       const customResStr = await PreferencesUtil.get<string>(SettingsKeys.CUSTOM_RESOLUTIONS, '');
       this.customResolutions = customResStr ? customResStr.split(',').filter(s => s.length > 0) : [];
       this.fps = await PreferencesUtil.get<string>(SettingsKeys.FPS, '60 FPS');
@@ -462,7 +395,6 @@ struct SettingsPageV2 {
       this.reverseResolution = await this.loadBoolean(SettingsKeys.REVERSE_RESOLUTION, false);
       this.rotableScreen = await this.loadBoolean(SettingsKeys.ROTABLE_SCREEN, false);
       
-      // 音频设置
       this.audioConfig = await PreferencesUtil.get<string>(SettingsKeys.AUDIO_CONFIG, '立体声');
       this.enableLocalAudio = await this.loadBoolean(SettingsKeys.ENABLE_LOCAL_AUDIO, false);
       this.enableSpatializer = await this.loadBoolean(SettingsKeys.ENABLE_SPATIALIZER, false);
@@ -470,7 +402,6 @@ struct SettingsPageV2 {
       this.enableMic = await this.loadBoolean(SettingsKeys.ENABLE_MIC, false);
       this.micBitrate = await PreferencesUtil.get<number>(SettingsKeys.MIC_BITRATE, 64);
       
-      // 输入 - 手柄设置
       this.enableVibration = await this.loadBoolean(SettingsKeys.ENABLE_VIBRATION, true);
       this.vibrationMode = await PreferencesUtil.get<string>(SettingsKeys.VIBRATION_MODE, '自动');
       this.vibrateFallbackStrength = await PreferencesUtil.get<number>(SettingsKeys.VIBRATE_FALLBACK_STRENGTH, 100);
@@ -486,7 +417,6 @@ struct SettingsPageV2 {
       this.enableStartKeyMenu = await this.loadBoolean(SettingsKeys.ENABLE_START_KEY_MENU, true);
       this.ignoreDeviceDisconnect = await this.loadBoolean(SettingsKeys.IGNORE_DEVICE_DISCONNECT, false);
       this.enableKeyInterceptor = await this.loadBoolean(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
-      // 检查按键注入 API 是否可用（API 13+），不可用则强制禁用反劫持
       this.keyInterceptorAvailable = InputInterceptorService.getInstance().isInjectApiAvailable();
       if (!this.keyInterceptorAvailable && this.enableKeyInterceptor) {
         this.enableKeyInterceptor = false;
@@ -497,7 +427,6 @@ struct SettingsPageV2 {
       this.forceUsbDriverOnly = await this.loadBoolean(SettingsKeys.FORCE_USB_DRIVER_ONLY, false);
       this.ddkHighSpeedPolling = await this.loadBoolean(SettingsKeys.DDK_HIGH_SPEED_POLLING, false);
       
-      // 输入 - 屏幕控制器
       this.enableOnscreenControls = await this.loadBoolean(SettingsKeys.ENABLE_ONSCREEN_CONTROLS, false);
       this.enableOnscreenKeyboard = await this.loadBoolean(SettingsKeys.ENABLE_ONSCREEN_KEYBOARD, false);
       this.onlyL3R3 = await this.loadBoolean(SettingsKeys.ONLY_L3_R3, false);
@@ -506,7 +435,6 @@ struct SettingsPageV2 {
       this.oscOpacity = await PreferencesUtil.get<number>(SettingsKeys.OSC_OPACITY, 90);
       this.vibrateOsc = await this.loadBoolean(SettingsKeys.VIBRATE_OSC, true);
       
-      // 输入 - 鼠标/触控
       this.showLocalCursor = await this.loadBoolean(SettingsKeys.SHOW_LOCAL_CURSOR, false);
       this.touchscreenTrackpad = await this.loadBoolean(SettingsKeys.TOUCHSCREEN_TRACKPAD, false);
       this.enableDoubleClickDrag = await this.loadBoolean(SettingsKeys.ENABLE_DOUBLE_CLICK_DRAG, false);
@@ -514,24 +442,21 @@ struct SettingsPageV2 {
       this.mouseNavButtons = await this.loadBoolean(SettingsKeys.MOUSE_NAV_BUTTONS, false);
       this.gameMouseMode = await this.loadBoolean(SettingsKeys.GAME_MOUSE_MODE, false);
       
-      // 增强触控设置
       this.enableEnhancedTouch = await this.loadBoolean(SettingsKeys.ENABLE_ENHANCED_TOUCH, true);
       this.enhancedTouchOnRight = await this.loadBoolean(SettingsKeys.ENHANCED_TOUCH_ON_RIGHT, false);
       this.enhancedTouchZoneDivider = await PreferencesUtil.get<number>(SettingsKeys.ENHANCED_TOUCH_ZONE_DIVIDER, 50);
       this.pointerVelocityFactor = await PreferencesUtil.get<number>(SettingsKeys.POINTER_VELOCITY_FACTOR, 100);
       this.longPressFlatRegion = await PreferencesUtil.get<number>(SettingsKeys.LONG_PRESS_FLAT_REGION, 0);
       
-      // 主机设置
       this.enableSops = await this.loadBoolean(SettingsKeys.ENABLE_SOPS, true);
       this.screenCombinationMode = await PreferencesUtil.get<string>(SettingsKeys.SCREEN_COMBINATION_MODE, '主机默认');
       this.lockScreenAfterDisconnect = await this.loadBoolean(SettingsKeys.LOCK_SCREEN_AFTER_DISCONNECT, false);
       
-      // 高级设置
       this.decoderBufferCount = await PreferencesUtil.get<number>(SettingsKeys.DECODER_BUFFER_COUNT, 0);
-      this.enableSyncDecode = await this.loadBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false);  // 默认禁用
-      this.enableVrr = await this.loadBoolean(SettingsKeys.ENABLE_VRR, false);  // VRR 默认禁用
+      this.enableSyncDecode = await this.loadBoolean(SettingsKeys.ENABLE_SYNC_DECODE, false);
+      this.enableVrr = await this.loadBoolean(SettingsKeys.ENABLE_VRR, false);
       this.enableVsync = await this.loadBoolean(SettingsKeys.ENABLE_VSYNC, false);
-      this.performanceMode = await this.loadBoolean(SettingsKeys.PERFORMANCE_MODE, false);  // 性能模式默认禁用
+      this.performanceMode = await this.loadBoolean(SettingsKeys.PERFORMANCE_MODE, false);
       this.enablePerfOverlay = await this.loadBoolean(SettingsKeys.ENABLE_PERF_OVERLAY, false);
       this.perfOverlayOrientation = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_ORIENTATION, '垂直');
       this.perfOverlayPosition = await PreferencesUtil.get<string>(SettingsKeys.PERF_OVERLAY_POSITION, '右上角');
@@ -545,7 +470,6 @@ struct SettingsPageV2 {
       this.escMenuKey = await PreferencesUtil.get<string>(SettingsKeys.ESC_MENU_KEY, 'ESC');
       this.enableBackgroundTask = await this.loadBoolean(SettingsKeys.ENABLE_BACKGROUND_TASK, true);
       
-      // UI 设置
       this.smallIconMode = await this.loadBoolean(SettingsKeys.SMALL_ICON_MODE, false);
       this.backgroundImageType = await PreferencesUtil.get<string>(SettingsKeys.BACKGROUND_IMAGE_TYPE, 'default');
       this.backgroundImageUrl = await PreferencesUtil.get<string>(SettingsKeys.BACKGROUND_IMAGE_URL, '');
@@ -559,9 +483,6 @@ struct SettingsPageV2 {
     }
   }
   
-  /**
-   * 获取 Home 键动作描述
-   */
   private getHomeButtonActionDescription(): string {
     switch (this.gcButtonHomeMapping) {
       case 'guide': return '发送 Guide 键';
@@ -589,14 +510,10 @@ struct SettingsPageV2 {
     }
   }
   
-  /**
-   * 显示自定义选择器弹窗 - 使用 CustomDialogController
-   */
   private showPicker(config: PickerConfig): void {
     console.info(`SettingsPageV2: showPicker 被调用, title=${config.title}`);
     console.info(`SettingsPageV2: options count = ${config.options?.length}`);
     
-    // 转换为 DialogOptionItem 格式
     const options: DialogOptionItem[] = config.options.map((option: PickerOption) => {
       return {
         title: option.title,
@@ -605,7 +522,6 @@ struct SettingsPageV2 {
       } as DialogOptionItem;
     });
     
-    // 配置弹窗
     this.optionPickerDialogConfig = {
       title: config.title,
       subtitle: config.subtitle,
@@ -622,7 +538,6 @@ struct SettingsPageV2 {
       }
     };
     
-    // 创建并打开弹窗
     this.optionPickerDialogController = new CustomDialogController({
       builder: OptionPickerDialog({
         config: this.optionPickerDialogConfig
@@ -635,9 +550,6 @@ struct SettingsPageV2 {
     this.optionPickerDialogController.open();
   }
   
-  /**
-   * 统一底部弹窗内容
-   */
   @Builder
   BottomSheetContent() {
     if (this.bottomSheetType === 'resolution') {
@@ -647,13 +559,9 @@ struct SettingsPageV2 {
     }
   }
 
-  /**
-   * 文本输入弹窗
-   */
   @Builder
   TextInputSheet() {
     Column({ space: AppSpacing.Large }) {
-      // 标题栏
       Row() {
         Text(this.textInputTitle)
           .fontSize(AppSizes.FontTitle)
@@ -663,7 +571,6 @@ struct SettingsPageV2 {
       .width('100%')
       .padding({ top: AppSpacing.Large, left: AppSpacing.Large, right: AppSpacing.Large })
       
-      // 输入框
       TextInput({ text: this.textInputValue, placeholder: this.textInputPlaceholder })
         .width('100%')
         .height(48)
@@ -677,7 +584,6 @@ struct SettingsPageV2 {
           this.textInputValue = value;
         })
       
-      // 按钮行
       Row({ space: AppSpacing.Medium }) {
         Button('清除')
           .fontSize(AppSizes.FontBody)
@@ -725,16 +631,12 @@ struct SettingsPageV2 {
     .borderRadius(24)
   }
 
-  /**
-   * 计算宽高比的友好描述
-   */
   private calcAspectRatio(w: number, h: number): string {
     if (w <= 0 || h <= 0) return '';
     const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
     const d = gcd(w, h);
     const rw = w / d;
     const rh = h / d;
-    // 常见宽高比映射
     const ratio = w / h;
     if (Math.abs(ratio - 16 / 9) < 0.02) return '16:9';
     if (Math.abs(ratio - 16 / 10) < 0.02) return '16:10';
@@ -746,13 +648,9 @@ struct SettingsPageV2 {
     return `${rw}:${rh}`;
   }
 
-  /**
-   * 自定义分辨率输入弹窗 — 分离宽高输入 + 快捷预设
-   */
   @Builder
   CustomResolutionSheet() {
     Column({ space: AppSpacing.Medium }) {
-      // 标题
       Text('添加自定义分辨率')
         .fontSize(AppSizes.FontTitle)
         .fontWeight(FontWeight.Bold)
@@ -760,7 +658,6 @@ struct SettingsPageV2 {
         .width('100%')
         .padding({ top: AppSpacing.Large, left: AppSpacing.Large, right: AppSpacing.Large })
 
-      // 宽度 × 高度 输入行
       Row({ space: AppSpacing.Small }) {
         TextInput({ text: this.customResWidth, placeholder: '宽度' })
           .type(InputType.Number)
@@ -804,7 +701,6 @@ struct SettingsPageV2 {
       .width('100%')
       .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
 
-      // 宽高比提示 + 验证提示
       if (this.customResAspectRatio.length > 0) {
         Text(`宽高比: ${this.customResAspectRatio}`)
           .fontSize(AppSizes.FontCaption)
@@ -813,7 +709,6 @@ struct SettingsPageV2 {
           .textAlign(TextAlign.Center)
       }
 
-      // 常用分辨率快捷按钮
       Text('快速选择')
         .fontSize(AppSizes.FontCaption)
         .fontColor(AppColors.TextSecondary)
@@ -850,7 +745,6 @@ struct SettingsPageV2 {
       .width('100%')
       .padding({ left: AppSpacing.Large, right: AppSpacing.Large })
 
-      // 按钮行
       Row({ space: AppSpacing.Medium }) {
         Button('取消')
           .fontSize(AppSizes.FontBody)
@@ -890,7 +784,6 @@ struct SettingsPageV2 {
 
   build() {
     Column() {
-      // 标题栏
       if (this.isWideScreen) {
         this.TitleBar()
       } else {
@@ -901,13 +794,11 @@ struct SettingsPageV2 {
         }
       }
       
-      // 宽屏：左导航 + 右内容 ；窄屏：垂直滚动列表
       Row() {
         if (this.isWideScreen) {
           this.SettingsSidebar()
         }
         
-        // 设置列表
         Scroll() {
           GridRow({ columns: 12 }) {
             GridCol({
@@ -915,7 +806,6 @@ struct SettingsPageV2 {
               offset: this.isWideScreen ? 0 : { sm: 0, md: 1, lg: 2 }
             }) {
               Column() {
-          // 视频设置
           this.SettingsGroup({
             id: 'video',
             icon: $r('sys.symbol.video_fill'),
@@ -944,14 +834,13 @@ struct SettingsPageV2 {
                   : '视频传输比特率',
                 type: 'slider',
                 value: this.bitrate,
-                min: 1,  // 对数滑块最小值为1（0单独处理为"自动"）
-                max: 800,  // 最高800 Mbps，对齐Android
+                min: 1,
+                max: 800,
                 step: 1,
                 unit: ' Mbps',
-                isLogarithmic: true,  // 使用对数刻度，低码率精细调整，高码率粗调
-                // 常用码率吸附值（会自动在对数转换后应用）
+                isLogarithmic: true,
                 snapValues: [5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 400, 500],
-                snapThreshold: 8,  // 比例阈值 8%（对数滑块自动按比例计算吸附范围）
+                snapThreshold: 8,
                 formatValue: (v: number) => v === 0 ? '自动' : `${Math.round(v)} Mbps`,
                 onSliderChange: (value: number) => {
                   this.bitrate = value;
@@ -967,7 +856,6 @@ struct SettingsPageV2 {
                 max: 400,
                 step: 10,
                 unit: '%',
-                // 常用缩放比例吸附值
                 snapValues: [50, 75, 100, 125, 150, 200, 300, 400],
                 snapThreshold: 5,
                 formatValue: (v: number) => `${v}%`,
@@ -1141,7 +1029,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 音频设置
           this.SettingsGroup({
             id: 'audio',
             icon: $r('sys.symbol.speaker_wave_2_fill'),
@@ -1250,7 +1137,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 手柄设置
           this.SettingsGroup({
             id: 'gamepad',
             icon: $r('sys.symbol.gamecontroller_fill'),
@@ -1400,7 +1286,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // USB 手柄驱动
           this.SettingsGroup({
             id: 'usb_driver',
             icon: $r('app.media.ic_controller'),
@@ -1415,7 +1300,6 @@ struct SettingsPageV2 {
                 action: () => {
                   this.usbDriverEnabled = !this.usbDriverEnabled;
                   this.saveSetting(SettingsKeys.USB_DRIVER_ENABLED, this.usbDriverEnabled);
-                  // 关闭 USB 驱动时，同步关闭强制模式
                   if (!this.usbDriverEnabled && this.forceUsbDriverOnly) {
                     this.forceUsbDriverOnly = false;
                     this.saveSetting(SettingsKeys.FORCE_USB_DRIVER_ONLY, false);
@@ -1467,7 +1351,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 屏幕控制器设置
           this.SettingsGroup({
             id: 'osc',
             icon: $r('sys.symbol.gamecontroller'),
@@ -1555,7 +1438,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 鼠标和触控设置
           this.SettingsGroup({
             id: 'mouse',
             icon: $r('app.media.ic_mouse'),
@@ -1630,7 +1512,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 增强触控设置 (实验性，设置值已保存但尚未接入 TouchInputHandler)
           this.SettingsGroup({
             id: 'enhanced_touch',
             icon: $r('sys.symbol.bolt_fill'),
@@ -1705,7 +1586,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 主机设置
           this.SettingsGroup({
             id: 'host',
             icon: $r('app.media.ic_host'),
@@ -1767,7 +1647,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 性能与调试
           this.SettingsGroup({
             id: 'performance',
             icon: $r('app.media.ic_advanced'),
@@ -1784,7 +1663,6 @@ struct SettingsPageV2 {
                 step: 1,
                 unit: this.decoderBufferCount === 0 ? '(默认)' : ' 个',
                 onSliderChange: (value: number) => {
-                  // 跳过 1，因为单缓冲不可用
                   if (value === 1) {
                     value = this.decoderBufferCount > 1 ? 0 : 2;
                   }
@@ -1914,11 +1792,9 @@ struct SettingsPageV2 {
                     this.developerMode = false;
                     this.saveSetting(SettingsKeys.DEVELOPER_MODE, false);
                   } else if (this.devKeyActivated) {
-                    // 已验证过激活码，直接开启
                     this.developerMode = true;
                     this.saveSetting(SettingsKeys.DEVELOPER_MODE, true);
                   } else {
-                    // 首次需要输入激活码
                     this.developerMode = true;
                     this.showDevKeyActivation();
                   }
@@ -1927,7 +1803,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // UI 设置
           this.SettingsGroup({
             id: 'ui',
             icon: $r('sys.symbol.display'),
@@ -1999,7 +1874,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 关于
           this.SettingsGroup({
             id: 'about',
             icon: $r('sys.symbol.info_circle_fill'),
@@ -2062,7 +1936,6 @@ struct SettingsPageV2 {
             ]
           })
           
-          // 底部间距
           Column()
             .height(AppSpacing.XXLarge)
               }
@@ -2147,7 +2020,6 @@ struct SettingsPageV2 {
       Column({ space: 4 }) {
         ForEach(this.sidebarGroups, (meta: SidebarGroupMeta) => {
           Row() {
-            // 分组图标
             Column() {
               if (meta.useSymbol) {
                 SymbolGlyph(meta.icon)
@@ -2198,11 +2070,9 @@ struct SettingsPageV2 {
 
   @Builder
   SettingsGroup(group: SettingGroup) {
-    // 宽屏模式：仅渲染当前选中的分组（侧边栏负责导航），不显示分组标题
     if (this.isWideScreen) {
       if (this.expandedGroup === group.id) {
         Column() {
-          // 设置项列表 - 直接展示
           Column() {
             ForEach(group.items.filter((item: SettingItem) => item.visible !== false), (item: SettingItem, index: number) => {
               this.SettingItemView(item)
@@ -2223,11 +2093,8 @@ struct SettingsPageV2 {
         .width('100%')
       }
     } else {
-      // 窄屏模式：分组标题 + 可折叠内容
       Column() {
-        // 分组标题 - 带图标的霍虹风格（可点击展开/折叠）
         Row() {
-          // 分组图标
           Column() {
             if (group.useSymbol !== false) {
               SymbolGlyph(group.icon)
@@ -2258,7 +2125,6 @@ struct SettingsPageV2 {
           
           Blank()
           
-          // 展开/折叠箭头
           Image($r('app.media.ic_arrow_right'))
             .width(16)
             .height(16)
@@ -2298,7 +2164,6 @@ struct SettingsPageV2 {
           }
         })
 
-        // 设置项容器 - 深色卡片（可折叠）
         if (this.expandedGroup === group.id) {
           Column() {
             ForEach(group.items.filter((item: SettingItem) => item.visible !== false), (item: SettingItem, index: number) => {
@@ -2328,9 +2193,7 @@ struct SettingsPageV2 {
   @Builder
   SettingItemView(item: SettingItem) {
     if (item.type === 'segment') {
-      // 分段按钮布局 - 参考系统设置风格：标题 + 居中分段按钮 + 辅助说明
       Column() {
-        // 标题行
         Row() {
           Text(item.title)
             .fontSize(AppSizes.FontBody)
@@ -2358,7 +2221,6 @@ struct SettingsPageV2 {
               })
           }
 
-          // Pro 标记
           if (item.isPro) {
             Text('Pro')
               .fontSize(10)
@@ -2372,7 +2234,6 @@ struct SettingsPageV2 {
         .alignItems(VerticalAlign.Center)
         .width('100%')
 
-        // 分段选择器 - 居中显示，宽屏下受 maxWidth 448vp 约束
         Column() {
           InlineSegmentPicker({
             labels: item.segmentLabels ?? [],
@@ -2388,7 +2249,6 @@ struct SettingsPageV2 {
         }
           .margin({ top: AppSpacing.Medium })
 
-        // 辅助说明文字（置于分段按钮下方，作为脚注）
         if (item.subtitle) {
           Text(item.subtitle)
             .fontSize(AppSizes.FontCaption)
@@ -2401,22 +2261,18 @@ struct SettingsPageV2 {
       .alignItems(HorizontalAlign.Center)
       .padding({ left: AppSpacing.Medium, right: AppSpacing.Medium, top: AppSpacing.Medium, bottom: AppSpacing.Medium })
     } else if (item.type === 'grid') {
-      // 九宫格位置选择器 — 独占一行，模拟屏幕 + 位置圆点
       Column({ space: AppSpacing.Small }) {
-        // 标题行
         Row() {
           Text(item.title)
             .fontSize(AppSizes.FontBody)
             .fontColor(item.disabled ? AppColors.TextSecondary : AppColors.TextPrimary)
           Blank()
-          // 显示当前选中值
           Text(item.value as string)
             .fontSize(AppSizes.FontCaption)
             .fontColor(AppColors.Primary)
         }
         .width('100%')
 
-        // 模拟屏幕 — 深色矩形内 3×3 圆点
         Grid() {
           ForEach(item.gridLabels ?? [], (label: string, idx: number) => {
             GridItem() {
@@ -2457,7 +2313,6 @@ struct SettingsPageV2 {
         .borderColor(AppColors.CardBorder)
         .padding(12)
 
-        // 辅助说明
         if (item.subtitle) {
           Text(item.subtitle)
             .fontSize(AppSizes.FontCaption)
@@ -2469,9 +2324,7 @@ struct SettingsPageV2 {
       .alignItems(HorizontalAlign.Center)
       .padding({ left: AppSpacing.Medium, right: AppSpacing.Medium, top: AppSpacing.Medium, bottom: AppSpacing.Medium })
     } else {
-      // 原有布局：标题左侧 + 控件右侧
       Row() {
-        // 文字内容
         Column() {
           Row() {
             Text(item.title)
@@ -2500,7 +2353,6 @@ struct SettingsPageV2 {
                 })
             }
             
-            // Pro 标记
             if (item.isPro) {
               Text('Pro')
                 .fontSize(10)
@@ -2523,7 +2375,6 @@ struct SettingsPageV2 {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        // 右侧控件
         if (item.type === 'toggle') {
           Toggle({ type: ToggleType.Switch, isOn: item.value as boolean })
             .selectedColor(AppColors.Primary)
@@ -2534,7 +2385,6 @@ struct SettingsPageV2 {
               }
             })
         } else if (item.type === 'slider') {
-          // 使用公共滑块组件
           Column() {
             SettingSlider({
               config: {
@@ -2576,7 +2426,6 @@ struct SettingsPageV2 {
       })
       .onKeyEvent((event: KeyEvent) => {
         if (event.type === KeyType.Down && !item.disabled) {
-          // A键/回车 → 触发操作
           if (event.keyCode === 2054 || event.keyCode === 2050) {
             if (item.type === 'toggle' && item.action) {
               item.action();
@@ -2600,7 +2449,6 @@ struct SettingsPageV2 {
   }
 
   private showResolutionPicker(): void {
-    // 预设分辨率（对齐Android）
     const presetOptions: PickerOption[] = [
       { title: '720p', subtitle: '1280×720', value: '720p' } as PickerOption,
       { title: '1080p', subtitle: '1920×1080', value: '1080p' } as PickerOption,
@@ -2608,10 +2456,8 @@ struct SettingsPageV2 {
       { title: '4K', subtitle: '3840×2160', value: '4K' } as PickerOption
     ];
     
-    // 添加本地分辨率选项（如果有效且不与预设重复）
     const nativeOptions: PickerOption[] = [];
     if (this.nativeWidth > 0 && this.nativeHeight > 0) {
-      // 检查是否与预设分辨率重复
       const isPreset = presetOptions.some(opt => {
         const val = opt.value as string;
         switch (val) {
@@ -2632,10 +2478,8 @@ struct SettingsPageV2 {
       }
     }
     
-    // 添加自定义分辨率
     const customOptions: PickerOption[] = this.customResolutions
       .filter(res => {
-        // 排除与本地分辨率重复的自定义分辨率
         const nativeValue = `${this.nativeWidth}x${this.nativeHeight}`;
         return res !== nativeValue;
       })
@@ -2648,14 +2492,12 @@ struct SettingsPageV2 {
         } as PickerOption;
       });
     
-    // 添加"自定义..."选项
     const customActionOption: PickerOption = {
       title: '自定义...',
       subtitle: '输入任意分辨率',
       value: 'custom_input'
     } as PickerOption;
     
-    // 添加"管理自定义"选项（仅已有自定义分辨率时显示）
     const manageOptions: PickerOption[] = [];
     if (this.customResolutions.length > 0) {
       manageOptions.push(
@@ -2673,7 +2515,6 @@ struct SettingsPageV2 {
       onSelect: (option: PickerOption) => {
         const value = option.value as string;
         if (value === 'custom_input') {
-          // 延迟打开输入框，等待 picker dialog 关闭动画完成
           setTimeout(() => this.showAddResolutionInput(), 200);
         } else if (value === 'manage_custom') {
           setTimeout(() => this.showCustomResolutionDialog(), 200);
@@ -2686,11 +2527,7 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
 
-  /**
-   * 显示自定义分辨率管理对话框 — 支持逐个删除和添加
-   */
   private showCustomResolutionDialog(): void {
-    // 将已有的自定义分辨率显示为可删除的选项
     const existingOptions: PickerOption[] = this.customResolutions.map(res => {
       const parts = res.split('x');
       const w = parseInt(parts[0]) || 0;
@@ -2703,7 +2540,6 @@ struct SettingsPageV2 {
       } as PickerOption;
     });
 
-    // 添加操作选项
     const actionOptions: PickerOption[] = [
       { title: '➕ 添加新分辨率', subtitle: '输入宽度和高度', value: 'action:add' } as PickerOption,
     ];
@@ -2723,7 +2559,6 @@ struct SettingsPageV2 {
       onSelect: (option: PickerOption) => {
         const value = option.value as string;
         if (value === 'action:add') {
-          // 延迟打开输入框，等待 picker dialog 关闭动画完成
           setTimeout(() => this.showAddResolutionInput(), 200);
         } else if (value === 'action:clear') {
           this.clearAllCustomResolutions();
@@ -2736,9 +2571,6 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
 
-  /**
-   * 显示添加分辨率输入框 - 使用文本输入弹窗
-   */
   private showAddResolutionInput(): void {
     this.customResWidth = '';
     this.customResHeight = '';
@@ -2747,9 +2579,6 @@ struct SettingsPageV2 {
     this.showTextInputDialog = true;
   }
 
-  /**
-   * 显示预定义的常用自定义分辨率供选择（备用）
-   */
   private showPredefinedCustomResolutions(): void {
     const predefinedResolutions: PickerOption[] = [
       { title: '21:9 超宽 2K', subtitle: '2560×1080', value: '2560x1080' } as PickerOption,
@@ -2782,11 +2611,7 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
 
-  /**
-   * 添加自定义分辨率
-   */
   private addCustomResolution(resolution: string): void {
-    // 验证格式
     const match = resolution.match(/^(\d+)x(\d+)$/);
     if (!match) {
       this.showToast('分辨率格式无效，应为: 宽度x高度');
@@ -2796,7 +2621,6 @@ struct SettingsPageV2 {
     const width = parseInt(match[1]);
     const height = parseInt(match[2]);
 
-    // 验证范围
     if (width < 320 || width > 7680) {
       this.showToast('宽度必须在 320-7680 之间');
       return;
@@ -2806,7 +2630,6 @@ struct SettingsPageV2 {
       return;
     }
     
-    // 验证偶数并提供修正建议
     if (width % 2 !== 0 || height % 2 !== 0) {
       const correctedWidth = width % 2 !== 0 ? width + 1 : width;
       const correctedHeight = height % 2 !== 0 ? height + 1 : height;
@@ -2814,21 +2637,16 @@ struct SettingsPageV2 {
       return;
     }
 
-    // 检查是否已存在
     if (this.customResolutions.includes(resolution)) {
       this.showToast('该分辨率已存在');
       return;
     }
 
-    // 添加并保存
     this.customResolutions = [...this.customResolutions, resolution];
     this.saveCustomResolutions();
     this.showToast(`已添加: ${resolution}`);
   }
 
-  /**
-   * 删除单个自定义分辨率
-   */
   private removeCustomResolution(resolution: string): void {
     const idx = this.customResolutions.indexOf(resolution);
     if (idx === -1) {
@@ -2837,7 +2655,6 @@ struct SettingsPageV2 {
     }
     this.customResolutions = this.customResolutions.filter(r => r !== resolution);
     this.saveCustomResolutions();
-    // 如果当前正在使用被删除的分辨率，回退到 1080p
     if (this.resolution === resolution) {
       this.resolution = '1080p';
       this.saveSetting(SettingsKeys.RESOLUTION, '1080p');
@@ -2847,9 +2664,6 @@ struct SettingsPageV2 {
     }
   }
 
-  /**
-   * 清空所有自定义分辨率
-   */
   private clearAllCustomResolutions(): void {
     if (this.customResolutions.length === 0) {
       this.showToast('没有自定义分辨率需要清空');
@@ -2872,31 +2686,24 @@ struct SettingsPageV2 {
     });
   }
 
-  /**
-   * 保存自定义分辨率到存储
-   */
   private saveCustomResolutions(): void {
     const resStr = this.customResolutions.join(',');
     this.saveSetting(SettingsKeys.CUSTOM_RESOLUTIONS, resStr);
   }
 
   private showFpsPicker(): void {
-    // 检测设备屏幕刷新率
     let deviceRefreshRate = 60;
     try {
       const displayInfo = display.getDefaultDisplaySync();
       deviceRefreshRate = Math.round(displayInfo.refreshRate || 60);
     } catch (e) {
-      // 检测失败，使用默认值
     }
 
-    // 基础帧率选项（所有设备通用）
     const presetOptions: PickerOption[] = [
       { title: '30 FPS', subtitle: '流畅，低带宽', value: '30 FPS' } as PickerOption,
       { title: '60 FPS', subtitle: '推荐，平衡', value: '60 FPS' } as PickerOption,
     ];
 
-    // 根据设备刷新率动态添加高帧率选项
     if (deviceRefreshRate >= 90) {
       presetOptions.push({ title: '90 FPS', subtitle: '高刷新率', value: '90 FPS' } as PickerOption);
     }
@@ -2909,7 +2716,6 @@ struct SettingsPageV2 {
     if (deviceRefreshRate >= 144) {
       presetOptions.push({ title: '144 FPS', subtitle: '高刷屏专属', value: '144 FPS' } as PickerOption);
     }
-    // 如果设备刷新率不在预设中（如 165Hz, 240Hz 等），动态添加
     const knownRates = [30, 60, 90, 120, 144];
     if (deviceRefreshRate > 60 && !knownRates.includes(deviceRefreshRate)) {
       presetOptions.push({
@@ -2919,7 +2725,6 @@ struct SettingsPageV2 {
       } as PickerOption);
     }
     
-    // 如果有自定义帧率，添加到选项中
     const customOptions: PickerOption[] = [];
     if (this.customFps > 0) {
       customOptions.push({
@@ -2929,7 +2734,6 @@ struct SettingsPageV2 {
       } as PickerOption);
     }
     
-    // 添加"自定义..."选项
     const customActionOption: PickerOption = {
       title: '自定义...',
       subtitle: '输入任意帧率值',
@@ -2946,14 +2750,11 @@ struct SettingsPageV2 {
       onSelect: (option: PickerOption) => {
         const value = option.value as string;
         if (value === 'custom_input') {
-          // 延迟打开输入框，等待 picker dialog 关闭动画完成
           setTimeout(() => this.showCustomFpsInput(), 200);
         } else if (value.startsWith('自定义:')) {
-          // 选择了已保存的自定义帧率
           this.fps = value;
           this.saveSetting(SettingsKeys.FPS, value);
         } else {
-          // 选择了预设帧率
           this.fps = value;
           this.saveSetting(SettingsKeys.FPS, value);
         }
@@ -2962,9 +2763,6 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
 
-  /**
-   * 显示 Home 键动作选择器
-   */
   private showHomeButtonActionPicker(): void {
     const options: PickerOption[] = [
       { title: '发送 Guide 键', subtitle: 'Xbox Guide / PS Home', value: 'guide' } as PickerOption,
@@ -2984,7 +2782,6 @@ struct SettingsPageV2 {
         const value = option.value as string;
         this.gcButtonHomeMapping = value;
         this.saveSetting(SettingsKeys.GC_BUTTON_HOME_MAPPING, value);
-        // 通知 GamepadManager 更新映射
         import('../service/GamepadManager').then(module => {
           module.GamepadManager.getInstance().updateGCButton2313Action(value as 'guide' | 'select' | 'toggle_mouse' | 'toggle_perf' | 'show_menu' | 'none');
         });
@@ -2993,9 +2790,6 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
 
-  /**
-   * 显示自定义帧率输入框
-   */
   private showCustomFpsInput(): void {
     this.textInputTitle = '自定义帧率';
     this.textInputPlaceholder = '输入帧率值 (如: 144)';
@@ -3009,13 +2803,9 @@ struct SettingsPageV2 {
     this.showTextInputDialog = true;
   }
 
-  /**
-   * 设置自定义帧率
-   */
   private setCustomFps(value: string): void {
     const fps = parseInt(value);
     
-    // 验证帧率值
     if (isNaN(fps)) {
       this.showToast('请输入有效的数字');
       return;
@@ -3026,7 +2816,6 @@ struct SettingsPageV2 {
       return;
     }
     
-    // 保存自定义帧率
     this.customFps = fps;
     this.fps = `自定义:${fps}`;
     this.saveSetting(SettingsKeys.CUSTOM_FPS, fps);
@@ -3035,7 +2824,6 @@ struct SettingsPageV2 {
     this.showToast(`已设置帧率为 ${fps} FPS`);
   }
 
-  // 已转换为 Slider，保留空方法以防未来需要
   private showBitratePicker(): void { }
 
   private showAudioConfigPicker(): void {
@@ -3082,7 +2870,6 @@ struct SettingsPageV2 {
       } as PickerOption
     ];
     
-    // 生成能力信息提示
     let supportInfo = '设备支持: ';
     const supportedCodecs: string[] = [];
     if (h264Supported) supportedCodecs.push('H.264');
@@ -3097,7 +2884,6 @@ struct SettingsPageV2 {
       options: options,
       onSelect: (option: PickerOption) => {
         const value = option.value as string;
-        // 警告用户选择了不支持的编码
         if ((value === 'HEVC' && !hevcSupported) || 
             (value === 'AV1' && !av1Supported) ||
             (value === 'H.264' && !h264Supported)) {
@@ -3105,7 +2891,6 @@ struct SettingsPageV2 {
         }
         this.videoFormat = value;
         this.saveSetting(SettingsKeys.VIDEO_FORMAT, value);
-        // H.264 不支持 HDR，自动禁用
         if (value === 'H.264' && this.enableHdr) {
           this.enableHdr = false;
           this.saveSetting(SettingsKeys.ENABLE_HDR, false);
@@ -3147,9 +2932,6 @@ struct SettingsPageV2 {
     this.showPicker(config);
   }
 
-  /**
-   * 显示开源库说明对话框
-   */
   private showOpenSourceLicenses(): void {
     this.licensesDialogController = new CustomDialogController({
       builder: OpenSourceLicensesDialog(),
@@ -3160,9 +2942,6 @@ struct SettingsPageV2 {
     this.licensesDialogController.open();
   }
 
-  /**
-   * 显示更新日志对话框
-   */
   private async showChangelog(): Promise<void> {
     const context = getContext(this) as common.Context;
     const entries = await loadChangelog(context);
@@ -3175,9 +2954,6 @@ struct SettingsPageV2 {
     this.changelogDialogController.open();
   }
 
-  /**
-   * 显示隐私政策对话框
-   */
   private showPrivacyPolicy(): void {
     this.privacyDialogController = new CustomDialogController({
       builder: PrivacyPolicyDialog(),
@@ -3188,9 +2964,6 @@ struct SettingsPageV2 {
     this.privacyDialogController.open();
   }
 
-  /**
-   * 使用系统浏览器打开 URL
-   */
   private openUrl(url: string): void {
     try {
       const context = getContext(this) as common.UIAbilityContext;
@@ -3205,11 +2978,9 @@ struct SettingsPageV2 {
     }
   }
 
-  // 已转换为 Slider
   private showDeadzonePicker(): void { }
   private showOscOpacityPicker(): void { }
   
-  // 已转换为 Slider
   private showHostScalePicker(): void { }
   private showMicBitratePicker(): void { }
   private showVibrateFallbackStrengthPicker(): void { }
@@ -3217,9 +2988,6 @@ struct SettingsPageV2 {
   private showEnhancedTouchZoneDividerPicker(): void { }
   private showPointerVelocityFactorPicker(): void { }
   
-  /**
-   * 显示震动模式选择器
-   */
   private showVibrationModePicker(): void {
     const options: PickerOption[] = [
       { title: '自动', subtitle: '有手柄用手柄震动，无手柄用设备震动', value: '自动' } as PickerOption,
@@ -3299,7 +3067,6 @@ struct SettingsPageV2 {
   }
   
   private showPerfOverlayItemsPicker(): void {
-    // 所有可用项目 - 使用常量
     const allItems: PerfOverlayItemOption[] = [
       new PerfOverlayItemOption('resolution', `${PerfIcons.RESOLUTION} ${PerfLabels.RESOLUTION}`),
       new PerfOverlayItemOption('decoder', `${PerfIcons.DECODER} ${PerfLabels.DECODER}`),
@@ -3312,7 +3079,6 @@ struct SettingsPageV2 {
       new PerfOverlayItemOption('battery', `${PerfIcons.BATTERY} ${PerfLabels.BATTERY}`)
     ];
     
-    // 转换为 DialogMultiOptionItem 格式
     const options: DialogMultiOptionItem[] = allItems.map((item: PerfOverlayItemOption): DialogMultiOptionItem => {
       return {
         key: item.key,
@@ -3332,7 +3098,6 @@ struct SettingsPageV2 {
       }
     };
     
-    // 创建并打开弹窗
     this.multiOptionPickerDialogController = new CustomDialogController({
       builder: MultiOptionPickerDialog({
         config: this.multiOptionPickerDialogConfig
@@ -3395,9 +3160,7 @@ struct SettingsPageV2 {
       onSelect: async (option: PickerOption) => {
         this.backgroundImageType = option.value as string;
         const bgUtil = BackgroundImageUtil.getInstance();
-        // 通过 BackgroundImageUtil 设置类型（会自动清除缓存、重置状态）
         await bgUtil.setBackgroundImageType(option.value as BackgroundImageType);
-        // 选择关闭时，额外清除本地缓存文件
         if (option.value === 'none') {
           bgUtil.disableBackgroundImage();
         }
@@ -3427,9 +3190,6 @@ struct SettingsPageV2 {
     this.showTextInputDialog = true;
   }
 
-  /**
-   * 显示开发者模式激活码输入
-   */
   private showDevKeyActivation(): void {
     const context = getContext(this) as common.Context;
     const deviceId = DevKeyVerifier.getDeviceId(context);
@@ -3439,14 +3199,12 @@ struct SettingsPageV2 {
       return;
     }
     const displayId = deviceId.toUpperCase();
-    // 自动复制设备 ID 到剪贴板
     const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, displayId);
     pasteboard.getSystemPasteboard().setDataSync(pasteData);
     this.textInputTitle = `激活开发者模式\n设备 ID: ${displayId}（已复制）`;
     this.textInputPlaceholder = '请输入 8 位激活码';
     this.textInputValue = '';
     this.textInputCallback = (value: string) => {
-      // 确定按钮点击，清除 dismiss 回调以免重复触发
       this.textInputDismissCallback = null;
       if (!value) {
         this.developerMode = false;
@@ -3463,7 +3221,6 @@ struct SettingsPageV2 {
         promptAction.showToast({ message: '激活码无效', duration: 2000 });
       }
     };
-    // 弹窗被取消/滑动关闭时回退 Toggle
     this.textInputDismissCallback = () => {
       this.developerMode = false;
     };
@@ -3471,9 +3228,6 @@ struct SettingsPageV2 {
   }
 }
 
-/**
- * 开源库信息接口
- */
 interface OpenSourceLibrary {
   name: string;
   license: string;
@@ -3481,22 +3235,15 @@ interface OpenSourceLibrary {
   url: string;
 }
 
-/**
- * 隐私政策章节接口
- */
 interface PrivacySection {
   title: string;
   content: string;
 }
 
-/**
- * 开源库说明对话框
- */
 @CustomDialog
 struct OpenSourceLicensesDialog {
   controller: CustomDialogController;
 
-  // 开源库数据
   private libraries: OpenSourceLibrary[] = [
     { name: 'Moonlight', license: 'GPLv3', desc: '游戏串流客户端核心项目', url: 'github.com/moonlight-stream' } as OpenSourceLibrary,
     { name: 'moonlight-common-c', license: 'GPLv3', desc: 'GameStream 协议实现', url: 'github.com/moonlight-stream/moonlight-common-c' } as OpenSourceLibrary,
@@ -3509,7 +3256,6 @@ struct OpenSourceLicensesDialog {
 
   build() {
     Column() {
-      // 标题栏
       Row() {
         Text('开源库说明')
           .fontSize(20)
@@ -3526,14 +3272,12 @@ struct OpenSourceLicensesDialog {
       .width('100%')
       .padding({ left: 20, right: 20, top: 20, bottom: 12 })
 
-      // 说明文字
       Text('本应用基于 Moonlight 开源项目开发，遵循 GPLv3 协议。以下是使用的开源库：')
         .fontSize(14)
         .fontColor(AppColors.TextSecondary)
         .padding({ left: 20, right: 20, bottom: 12 })
         .width('100%')
 
-      // 库列表
       List({ space: 8 }) {
         ForEach(this.libraries, (lib: OpenSourceLibrary) => {
           ListItem() {
@@ -3577,7 +3321,6 @@ struct OpenSourceLicensesDialog {
       .padding({ left: 20, right: 20 })
       .scrollBar(BarState.Off)
 
-      // 底部说明
       Text('完整的开源库说明请查看项目仓库中的 OPEN_SOURCE_LICENSES.md')
         .fontSize(12)
         .fontColor(AppColors.TextTertiary)
@@ -3594,14 +3337,10 @@ struct OpenSourceLicensesDialog {
   }
 }
 
-/**
- * 隐私政策对话框
- */
 @CustomDialog
 struct PrivacyPolicyDialog {
   controller: CustomDialogController;
 
-  // 隐私政策章节
   private sections: PrivacySection[] = [
     { 
       title: '数据收集', 
@@ -3627,7 +3366,6 @@ struct PrivacyPolicyDialog {
 
   build() {
     Column() {
-      // 标题栏
       Row() {
         Text('隐私政策')
           .fontSize(20)
@@ -3644,14 +3382,12 @@ struct PrivacyPolicyDialog {
       .width('100%')
       .padding({ left: 20, right: 20, top: 20, bottom: 12 })
 
-      // 概述
       Text('Moonlight V+ 尊重并保护您的隐私。以下是我们的隐私政策摘要：')
         .fontSize(14)
         .fontColor(AppColors.TextSecondary)
         .padding({ left: 20, right: 20, bottom: 12 })
         .width('100%')
 
-      // 政策章节列表
       List({ space: 12 }) {
         ForEach(this.sections, (section: PrivacySection) => {
           ListItem() {
@@ -3680,7 +3416,6 @@ struct PrivacyPolicyDialog {
       .padding({ left: 20, right: 20 })
       .scrollBar(BarState.Off)
 
-      // 底部说明
       Text('完整隐私政策请查看项目仓库中的 PRIVACY_POLICY.md\n最后更新：2025年1月')
         .fontSize(12)
         .fontColor(AppColors.TextTertiary)
@@ -3697,9 +3432,6 @@ struct PrivacyPolicyDialog {
   }
 }
 
-/**
- * 更新日志对话框
- */
 @CustomDialog
 struct ChangelogDialog {
   controller: CustomDialogController;
@@ -3707,7 +3439,6 @@ struct ChangelogDialog {
 
   build() {
     Column() {
-      // 标题栏
       Row() {
         Text('更新日志')
           .fontSize(20)
@@ -3724,12 +3455,10 @@ struct ChangelogDialog {
       .width('100%')
       .padding({ left: 20, right: 20, top: 20, bottom: 12 })
 
-      // 版本列表
       List({ space: 16 }) {
         ForEach(this.entries, (entry: ChangelogEntry, index: number) => {
           ListItem() {
             Column({ space: 8 }) {
-              // 版本号 + 日期 + 标记
               Row() {
                 Text(`v${entry.version}`)
                   .fontSize(18)
@@ -3751,7 +3480,6 @@ struct ChangelogDialog {
               }
               .width('100%')
 
-              // 版本摘要
               if (entry.summary !== undefined && entry.summary!.length > 0) {
                 Text(entry.summary!)
                   .fontSize(14)
@@ -3759,7 +3487,6 @@ struct ChangelogDialog {
                   .width('100%')
               }
 
-              // 变更列表
               Column({ space: 6 }) {
                 ForEach(entry.changes, (change: ChangeItem) => {
                   Row({ space: 8 }) {
@@ -3793,7 +3520,6 @@ struct ChangelogDialog {
       .padding({ left: 20, right: 20 })
       .scrollBar(BarState.Off)
 
-      // 底部提示
       Text('在 GitHub 发布页查看完整更新历史')
         .fontSize(12)
         .fontColor(AppColors.TextTertiary)

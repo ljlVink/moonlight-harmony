@@ -9,32 +9,29 @@
  */
 
 /**
- * 自定义按键配色主题工具
  *
- * 包含配色主题定义、预设主题、颜色解析与生成函数。
  */
 
 // =============================================================================
-// 配色主题定义
 // =============================================================================
 
-/** 配色主题定义 */
+/**
 export interface ColorTheme {
-  /** 主题名称 */
+  /**
   name: string;
-  /** 预览色环颜色（用于主题选择 UI） */
+  /**
   preview: string;
-  /** 按键背景色 */
+  /**
   bgColor: string;
-  /** 文字颜色 */
+  /**
   textColor: string;
-  /** 按压时颜色 */
+  /**
   pressedColor: string;
-  /** 常态边框色 */
+  /**
   normalColor: string;
 }
 
-/** 预设配色主题 */
+/**
 export const COLOR_THEMES: ColorTheme[] = [
   { name: '冰蓝', preview: '#A8D8EA', bgColor: '#301A3050', textColor: '#E0A8D8EA', pressedColor: '#80A8D8EA', normalColor: '#60A8D8EA' },
   { name: '暗夜', preview: '#808080', bgColor: '#301A1A2E', textColor: '#C0FFFFFF', pressedColor: '#60808090', normalColor: '#40FFFFFF' },
@@ -51,15 +48,10 @@ export const COLOR_THEMES: ColorTheme[] = [
 ];
 
 // =============================================================================
-// 颜色工具函数
 // =============================================================================
 
-/**
- * 从 ARGB 十六进制色值中提取 RGB 分量 (0-255)
- */
 export function parseHexRGB(hex: string): [number, number, number] {
   const clean = hex.replace('#', '');
-  // 支持 AARRGGBB (8位) 和 RRGGBB (6位)
   let r: number, g: number, b: number;
   if (clean.length === 8) {
     r = parseInt(clean.substring(2, 4), 16);
@@ -73,27 +65,17 @@ export function parseHexRGB(hex: string): [number, number, number] {
   return [r || 0, g || 0, b || 0];
 }
 
-/**
- * 从 RGB 值生成带 alpha 的十六进制颜色字符串 (#AARRGGBB)
- */
 export function toHexARGB(a: number, r: number, g: number, b: number): string {
   const clamp = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
   const toHex = (v: number): string => clamp(v).toString(16).padStart(2, '0').toUpperCase();
   return `#${toHex(a)}${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/**
- * 从主色调 RGB 自动生成完整配色方案
- * 背景: 低透明度主色 | 文字: 高亮度主色 | 按压: 中透明度主色 | 边框: 中透明度主色
- */
 export function generateThemeFromAccent(r: number, g: number, b: number): ColorTheme {
-  // 计算感知亮度 (0~1)
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-  // 文字色：如果主色太暗，提亮；如果太亮，直接用
   let textR = r, textG = g, textB = b;
   if (luminance < 0.4) {
-    // 提亮 40%
     const boost = 1.4;
     textR = Math.min(255, r * boost + 40);
     textG = Math.min(255, g * boost + 40);
@@ -111,43 +93,34 @@ export function generateThemeFromAccent(r: number, g: number, b: number): ColorT
 }
 
 // =============================================================================
-// K-means++ 主色调提取
 // =============================================================================
 
-/** RGB 像素点 */
+/**
 export interface RGBPixel {
   r: number;
   g: number;
   b: number;
 }
 
-/** 聚类结果 */
+/**
 export interface KMeansCluster {
   center: RGBPixel;
   count: number;
 }
 
 /**
- * 使用 K-means++ 从像素样本中提取主导颜色聚类
  *
- * @param samples - RGB 像素样本数组
- * @param k - 聚类数量（推荐 5）
- * @param maxIter - 最大迭代次数（推荐 20）
- * @returns 按像素数量降序排列的聚类结果
  */
 export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number = 20): KMeansCluster[] {
   if (samples.length === 0) return [];
   const n = samples.length;
   const actualK = Math.min(k, n);
 
-  // ── K-means++ 初始化 ──
   const centers: RGBPixel[] = [];
-  // 第一个中心随机选取
   centers.push(samples[Math.floor(Math.random() * n)]);
 
   const distSq = new Float64Array(n);
   for (let c = 1; c < actualK; c++) {
-    // 计算每个样本到最近中心的距离平方
     let totalDist = 0;
     for (let i = 0; i < n; i++) {
       let minD = Number.MAX_VALUE;
@@ -161,7 +134,6 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
       distSq[i] = minD;
       totalDist += minD;
     }
-    // 按距离加权随机选下一个中心
     let r = Math.random() * totalDist;
     for (let i = 0; i < n; i++) {
       r -= distSq[i];
@@ -171,7 +143,6 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
       }
     }
     if (centers.length === c) {
-      // 容错：未选中则取最远点
       let maxIdx = 0;
       for (let i = 1; i < n; i++) {
         if (distSq[i] > distSq[maxIdx]) maxIdx = i;
@@ -180,10 +151,8 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
     }
   }
 
-  // ── 迭代聚类 ──
   const assignments = new Int32Array(n);
   for (let iter = 0; iter < maxIter; iter++) {
-    // 分配
     for (let i = 0; i < n; i++) {
       let minD = Number.MAX_VALUE;
       let bestC = 0;
@@ -197,7 +166,6 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
       assignments[i] = bestC;
     }
 
-    // 更新中心
     let changed = false;
     for (let c = 0; c < actualK; c++) {
       let sumR = 0, sumG = 0, sumB = 0, cnt = 0;
@@ -220,13 +188,11 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
     if (!changed) break;
   }
 
-  // 统计每个簇的像素数
   const counts = new Array<number>(actualK).fill(0);
   for (let i = 0; i < n; i++) {
     counts[assignments[i]]++;
   }
 
-  // 构建结果并按数量降序排列
   const result: KMeansCluster[] = [];
   for (let c = 0; c < actualK; c++) {
     result.push({ center: centers[c], count: counts[c] });
@@ -236,12 +202,9 @@ export function kMeansPlusPlus(samples: RGBPixel[], k: number, maxIter: number =
 }
 
 /**
- * 从 K-means 聚类结果中选择最佳主题色
  *
- * 策略：在数量占比 >= 5% 的簇中，选饱和度最高的作为主题色
  */
 export function pickAccentFromClusters(clusters: KMeansCluster[], totalSamples: number): RGBPixel {
-  // 过滤掉太小的簇和接近纯黑的簇
   const viable = clusters.filter(c => {
     const ratio = c.count / totalSamples;
     const brightness = c.center.r + c.center.g + c.center.b;
@@ -249,18 +212,15 @@ export function pickAccentFromClusters(clusters: KMeansCluster[], totalSamples: 
   });
 
   if (viable.length === 0) {
-    // 退回最大簇
     return clusters[0]?.center ?? { r: 128, g: 128, b: 128 };
   }
 
-  // 选饱和度最高的簇
   let best = viable[0];
   let bestSaturation = 0;
   for (const c of viable) {
     const max = Math.max(c.center.r, c.center.g, c.center.b);
     const min = Math.min(c.center.r, c.center.g, c.center.b);
     const saturation = max > 0 ? (max - min) / max : 0;
-    // 加权：饱和度 × 数量占比^0.3（优先大簇，但饱和度更重要）
     const score = saturation * Math.pow(c.count / totalSamples, 0.3);
     if (score > bestSaturation) {
       bestSaturation = score;

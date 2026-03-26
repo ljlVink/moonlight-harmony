@@ -10,10 +10,7 @@
 
 /**
  * @file mic_capturer.cpp
- * @brief HarmonyOS OHAudio 低时延麦克风采集器实现
- *
- * 使用 OHAudio native API + AUDIOSTREAM_LATENCY_MODE_FAST，在音频回调线程中
- * 直接完成 PCM → Opus 编码 → 网络发送，消除 ArkTS 层跨线程和 GC 开销。
+ * @brief HarmonyOS OHAudio low-latency microphone capturer implementation
  */
 
 #include "mic_capturer.h"
@@ -24,10 +21,7 @@
 #define LOG_TAG "MicCapturer"
 
 // =============================================================================
-// OHAudio Capturer 新式回调 API 动态加载（兼容旧设备缺失符号）
-// 与 audio_renderer.cpp 同理：部分 API 12 设备的 libohaudio.so 缺少
-// SetCapturerReadDataCallback / SetCapturerErrorCallback / SetCapturerInterruptCallback，
-// 直接链接会导致整个 .so 加载失败。
+// OHAudio Capturer callback API dynamic loading (for compatibility with older devices)
 // =============================================================================
 
 typedef OH_AudioStream_Result (*PFN_SetCapturerReadDataCb)(
@@ -63,16 +57,16 @@ static void LoadCapturerApis() {
                 g_pfnSetCapturerReadDataCb ? "Y" : "N",
                 g_pfnSetCapturerErrorCb ? "Y" : "N",
                 g_pfnSetCapturerInterruptCb ? "Y" : "N");
-    // 不 dlclose
+
 }
 
-// moonlight-common-c 的麦克风发送函数
+// moonlight-common-c microphone send function
 extern "C" {
     int sendMicrophoneOpusData(const unsigned char* data, int length);
 }
 
 // =============================================================================
-// 构造 / 析构
+// Constructor / Destructor
 // =============================================================================
 
 MicCapturer::MicCapturer() = default;
@@ -93,7 +87,7 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
 
     config_ = config;
 
-    // 计算目标帧字节数：samplesPerFrame * channels * sizeof(int16_t)
+    // Calculate target frame byte size: samplesPerFrame * channels * sizeof(int16_t)
     int samplesPerFrame = config_.sampleRate * config_.frameSizeMs / 1000;
     frameSizeBytes_ = samplesPerFrame * config_.channels * 2; // 16-bit
     frameBufferPos_ = 0;
@@ -102,14 +96,14 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
                 config_.sampleRate, config_.channels, config_.opusBitrate,
                 config_.frameSizeMs, frameSizeBytes_);
 
-    // --- 初始化 Opus 编码器 ---
+    // --- Initialize Opus encoder ---
     int ret = encoder_.Init(config_.sampleRate, config_.channels, config_.opusBitrate);
     if (ret != 0) {
         OH_LOG_ERROR(LOG_APP, "Failed to init Opus encoder: %{public}d", ret);
         return -1;
     }
 
-    // --- 创建 OHAudio Capturer ---
+    // --- Create OHAudio Capturer ---
     OH_AudioStream_Result result = OH_AudioStreamBuilder_Create(&builder_, AUDIOSTREAM_TYPE_CAPTURER);
     if (result != AUDIOSTREAM_SUCCESS || builder_ == nullptr) {
         OH_LOG_ERROR(LOG_APP, "Failed to create AudioStreamBuilder: %{public}d", result);
@@ -117,19 +111,18 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
         return -2;
     }
 
-    // 采样率
+    // Sample rate
     OH_AudioStreamBuilder_SetSamplingRate(builder_, config_.sampleRate);
-    // 声道
+    // Channels
     OH_AudioStreamBuilder_SetChannelCount(builder_, config_.channels);
-    // 格式 16-bit PCM
+    // Format: 16-bit PCM
     OH_AudioStreamBuilder_SetSampleFormat(builder_, AUDIOSTREAM_SAMPLE_S16LE);
-    // 编码类型 RAW
     OH_AudioStreamBuilder_SetEncodingType(builder_, AUDIOSTREAM_ENCODING_TYPE_RAW);
 
-    // 录制场景：语音通信（自动带 AEC / AGC）
+    // Capture scenario: voice communication (with AEC / AGC)
     OH_AudioStreamBuilder_SetCapturerInfo(builder_, AUDIOSTREAM_SOURCE_TYPE_VOICE_COMMUNICATION);
 
-    // ★ 低时延模式 ★
+    // Low-latency mode
     result = OH_AudioStreamBuilder_SetLatencyMode(builder_, AUDIOSTREAM_LATENCY_MODE_FAST);
     if (result != AUDIOSTREAM_SUCCESS) {
         OH_LOG_WARN(LOG_APP, "SetLatencyMode FAST failed: %{public}d (will fallback to NORMAL)", result);
@@ -137,7 +130,7 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
         OH_LOG_INFO(LOG_APP, "Mic latency mode set to FAST");
     }
 
-    // 回调帧大小（尽量匹配 Opus 帧）
+    // Callback frame size (try to match Opus frame)
     result = OH_AudioStreamBuilder_SetFrameSizeInCallback(builder_, samplesPerFrame);
     if (result == AUDIOSTREAM_SUCCESS) {
         OH_LOG_INFO(LOG_APP, "Mic callback frame size: %{public}d samples", samplesPerFrame);
@@ -145,7 +138,7 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
         OH_LOG_WARN(LOG_APP, "SetFrameSizeInCallback failed: %{public}d (using system default)", result);
     }
 
-    // 数据读入回调（通过 dlsym 动态加载，兼容旧设备）
+    // Data read callback (loaded via dlsym for compatibility)
     LoadCapturerApis();
     if (g_pfnSetCapturerReadDataCb) {
         result = g_pfnSetCapturerReadDataCb(builder_,
@@ -165,7 +158,7 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
         return -3;
     }
 
-    // 错误回调（可选 — 部分 API 12 设备不存在此符号）
+    // Error callback (optional - not available on some API 12 devices)
     if (g_pfnSetCapturerErrorCb) {
         g_pfnSetCapturerErrorCb(builder_,
             reinterpret_cast<OH_AudioCapturer_OnErrorCallback>(OnError), this);
@@ -173,7 +166,7 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
         OH_LOG_INFO(LOG_APP, "SetCapturerErrorCallback not available, skipping");
     }
 
-    // 中断回调（可选）
+    // Interrupt callback (optional)
     if (g_pfnSetCapturerInterruptCb) {
         g_pfnSetCapturerInterruptCb(builder_,
             reinterpret_cast<OH_AudioCapturer_OnInterruptCallback>(OnInterruptEvent), this);
@@ -181,7 +174,7 @@ int MicCapturer::Init(const MicCapturerConfig& config) {
         OH_LOG_INFO(LOG_APP, "SetCapturerInterruptCallback not available, skipping");
     }
 
-    // 生成 capturer
+    // Generate capturer
     result = OH_AudioStreamBuilder_GenerateCapturer(builder_, &capturer_);
     if (result != AUDIOSTREAM_SUCCESS || capturer_ == nullptr) {
         OH_LOG_ERROR(LOG_APP, "Failed to generate capturer: %{public}d", result);
@@ -205,7 +198,7 @@ int MicCapturer::Start() {
         return -1;
     }
 
-    // 重置统计
+    // Reset statistics
     framesCaptured_.store(0);
     framesEncoded_.store(0);
     framesSent_.store(0);
@@ -281,7 +274,7 @@ MicCapturerStats MicCapturer::GetStats() const {
 }
 
 // =============================================================================
-// OHAudio 回调
+// OHAudio Callbacks
 // =============================================================================
 
 OH_AudioData_Callback_Result MicCapturer::OnReadData(
@@ -294,7 +287,7 @@ OH_AudioData_Callback_Result MicCapturer::OnReadData(
     }
 
     if (self->paused_.load(std::memory_order_acquire)) {
-        // 暂停时丢弃数据但返回 VALID 以保持流活跃
+        // When paused, discard data but return VALID to keep stream active
         return AUDIO_DATA_CALLBACK_RESULT_VALID;
     }
 
@@ -327,7 +320,7 @@ void MicCapturer::OnInterruptEvent(
 }
 
 // =============================================================================
-// PCM 帧处理（在音频回调线程中执行）
+// PCM Frame Processing (executed in audio callback thread)
 // =============================================================================
 
 void MicCapturer::ProcessPcmFrame(const uint8_t* data, int32_t length) {
@@ -335,7 +328,7 @@ void MicCapturer::ProcessPcmFrame(const uint8_t* data, int32_t length) {
 
     int offset = 0;
     while (offset < length) {
-        // 填充帧累积缓冲区
+        // Fill frame accumulation buffer
         int needed = frameSizeBytes_ - frameBufferPos_;
         int available = length - offset;
         int toCopy = (available < needed) ? available : needed;
@@ -344,7 +337,7 @@ void MicCapturer::ProcessPcmFrame(const uint8_t* data, int32_t length) {
         frameBufferPos_ += toCopy;
         offset += toCopy;
 
-        // 帧累积满了，编码 + 发送
+        // Frame buffer full, encode + send
         if (frameBufferPos_ >= frameSizeBytes_) {
             int opusLen = encoder_.Encode(
                 frameBuffer_, frameSizeBytes_,
@@ -362,7 +355,7 @@ void MicCapturer::ProcessPcmFrame(const uint8_t* data, int32_t length) {
             } else if (opusLen < 0) {
                 framesDropped_.fetch_add(1, std::memory_order_relaxed);
             }
-            // opusLen == 0: 编码器暂无输出（异步模式下正常）
+            // opusLen == 0: encoder has no output (normal in async mode)
 
             frameBufferPos_ = 0;
         }

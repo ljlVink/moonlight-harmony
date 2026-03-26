@@ -9,12 +9,9 @@
  */
 
 /**
- * USB 控制器常量定义
  * 
- * 参考 Android moonlight-android ControllerPacket
  */
 
-// 按钮标志位定义（完整定义见 CustomKeyTypes.GamepadButton）
 export class ButtonFlags {
   static readonly UP_FLAG: number = 0x0001;
   static readonly DOWN_FLAG: number = 0x0002;
@@ -22,25 +19,23 @@ export class ButtonFlags {
   static readonly RIGHT_FLAG: number = 0x0008;
   static readonly PLAY_FLAG: number = 0x0010;     // Start
   static readonly BACK_FLAG: number = 0x0020;     // Select/Back
-  static readonly LS_CLK_FLAG: number = 0x0040;   // 左摇杆按下
-  static readonly RS_CLK_FLAG: number = 0x0080;   // 右摇杆按下
-  static readonly LB_FLAG: number = 0x0100;       // 左肩键
-  static readonly RB_FLAG: number = 0x0200;       // 右肩键
-  static readonly SPECIAL_BUTTON_FLAG: number = 0x0400;  // Xbox/PS/Home 按钮
+  static readonly LS_CLK_FLAG: number = 0x0040;
+  static readonly RS_CLK_FLAG: number = 0x0080;
+  static readonly LB_FLAG: number = 0x0100;
+  static readonly RB_FLAG: number = 0x0200;
+  static readonly SPECIAL_BUTTON_FLAG: number = 0x0400;
   static readonly A_FLAG: number = 0x1000;
   static readonly B_FLAG: number = 0x2000;
   static readonly X_FLAG: number = 0x4000;
   static readonly Y_FLAG: number = 0x8000;
-  // 扩展按钮（值必须与 moonlight-common-c/Limelight.h 一致）
   static readonly PADDLE1_FLAG: number = 0x010000;
   static readonly PADDLE2_FLAG: number = 0x020000;
   static readonly PADDLE3_FLAG: number = 0x040000;
   static readonly PADDLE4_FLAG: number = 0x080000;
-  static readonly TOUCHPAD_FLAG: number = 0x100000;  // 触摸板按钮 (DualShock4/DualSense)
-  static readonly MISC_FLAG: number = 0x200000;      // 杂项按钮 (Capture/Mute 等)
+  static readonly TOUCHPAD_FLAG: number = 0x100000;
+  static readonly MISC_FLAG: number = 0x200000;
 }
 
-// 控制器类型
 export class ControllerType {
   static readonly UNKNOWN: number = 0;
   static readonly XBOX: number = 1;
@@ -48,25 +43,22 @@ export class ControllerType {
   static readonly NINTENDO: number = 3;
 }
 
-// 控制器能力标志
 export class ControllerCapabilities {
-  static readonly ANALOG_TRIGGERS: number = 0x01;   // 模拟扳机
-  static readonly RUMBLE: number = 0x02;            // 震动反馈
-  static readonly TRIGGER_RUMBLE: number = 0x04;    // 扳机震动
-  static readonly TOUCHPAD: number = 0x08;          // 触摸板
-  static readonly ACCEL: number = 0x10;             // 加速度计
-  static readonly GYRO: number = 0x20;              // 陀螺仪
-  static readonly BATTERY: number = 0x40;           // 电池状态
+  static readonly ANALOG_TRIGGERS: number = 0x01;
+  static readonly RUMBLE: number = 0x02;
+  static readonly TRIGGER_RUMBLE: number = 0x04;
+  static readonly TOUCHPAD: number = 0x08;
+  static readonly ACCEL: number = 0x10;
+  static readonly GYRO: number = 0x20;
+  static readonly BATTERY: number = 0x40;
   static readonly RGB_LED: number = 0x80;           // RGB LED
 }
 
-// 运动数据类型
 export class MotionType {
   static readonly GYRO: number = 1;
   static readonly ACCEL: number = 2;
 }
 
-// D-Pad 方向值（用于 DualShock 风格的 D-Pad）
 export class DPadDirection {
   static readonly UP: number = 0;
   static readonly UP_RIGHT: number = 1;
@@ -79,19 +71,16 @@ export class DPadDirection {
   static readonly NEUTRAL: number = 8;
 }
 
-// USB 设备类常量
 export class UsbClass {
   static readonly USB_CLASS_HID: number = 3;
   static readonly USB_CLASS_VENDOR_SPEC: number = 255;
 }
 
-// USB 传输方向
 export class UsbDirection {
   static readonly USB_DIR_IN: number = 0x80;
   static readonly USB_DIR_OUT: number = 0x00;
 }
 
-// Xbox 360 常量
 export class Xbox360 {
   static readonly IFACE_SUBCLASS: number = 93;
   static readonly IFACE_PROTOCOL: number = 1;  // Wired only
@@ -126,7 +115,6 @@ export class Xbox360 {
   ];
 }
 
-// Xbox One 常量
 export class XboxOne {
   static readonly IFACE_SUBCLASS: number = 71;
   static readonly IFACE_PROTOCOL: number = 208;
@@ -145,7 +133,6 @@ export class XboxOne {
   ];
 }
 
-// DualShock 4 常量
 export class DualShock4 {
   static readonly VID: number = 0x054C;  // Sony
   static readonly PIDS: number[] = [
@@ -154,7 +141,6 @@ export class DualShock4 {
   ];
 }
 
-// DualSense 常量
 export class DualSense {
   static readonly VID: number = 0x054C;  // Sony
   static readonly PIDS: number[] = [
@@ -163,7 +149,6 @@ export class DualSense {
   ];
 }
 
-// Nintendo Switch 常量
 export class SwitchPro {
   static readonly VID: number = 0x057e;  // Nintendo
   static readonly PRO_PID: number = 0x2009;

@@ -9,10 +9,7 @@
  */
 
 /**
- * 使用原生层解析的通用 HID 手柄控制器
  * 
- * 这个版本使用 C++ 原生层来解析 HID 报告
- * 支持更多手柄类型，解析更准确
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -25,9 +22,6 @@ import { isHardwareError, createUsbError, UsbError } from './UsbErrorCodes';
 
 const TAG = '[USB-NativeHID]';
 
-/**
- * 使用原生解析器的通用 HID 手柄控制器
- */
 export class NativeHidController extends AbstractController {
   private device: usbManager.USBDevice;
   private pipe: usbManager.USBDevicePipe;
@@ -37,17 +31,12 @@ export class NativeHidController extends AbstractController {
   private inputMaxPacketSize: number = 64;
   private interfaceId: number = 0;
   private nativeParser: NativeHidParserService;
-  private forceProtocolType: number = 0;  // 0=自动, 1=Xbox, 2=DS4, 3=Switch, 5=DualSense
+  private forceProtocolType: number = 0;
   
-  // 最后活动时间跟踪（用于检测雷蛇等静默断开的设备）
   private lastActivityTime: number = 0;
   private consecutiveTimeouts: number = 0;
-  // 连续超时阈值：如果连续超过这个次数超时且没有数据，可能已断开
-  private static readonly SILENT_DISCONNECT_TIMEOUT_COUNT = 10;  // 10次超时 = 30秒（每次3秒）
+  private static readonly SILENT_DISCONNECT_TIMEOUT_COUNT = 10;
 
-  /**
-   * 协议类型常量
-   */
   static readonly PROTOCOL_AUTO = 0;
   static readonly PROTOCOL_XBOX = 1;
   static readonly PROTOCOL_DS4 = 2;
@@ -66,14 +55,11 @@ export class NativeHidController extends AbstractController {
     this.pipe = pipe;
     this.nativeParser = NativeHidParserService.getInstance();
 
-    // 初始化原生解析器
     this.nativeParser.init();
 
-    // 获取手柄类型和名称
     const nativeType = this.nativeParser.getGamepadType(device.vendorId, device.productId);
     this.deviceName = this.nativeParser.getGamepadName(device.vendorId, device.productId);
 
-    // 转换类型
     switch (nativeType) {
       case NativeGamepadType.XBOX:
         this.type = ControllerType.XBOX;
@@ -85,12 +71,11 @@ export class NativeHidController extends AbstractController {
         this.type = ControllerType.NINTENDO;
         break;
       default:
-        this.type = ControllerType.XBOX; // 默认模拟 Xbox
+        this.type = ControllerType.XBOX;
     }
 
     this.capabilities = ControllerCapabilities.ANALOG_TRIGGERS | ControllerCapabilities.RUMBLE;
 
-    // 支持的按钮
     this.supportedButtonFlags =
       ButtonFlags.A_FLAG | ButtonFlags.B_FLAG | ButtonFlags.X_FLAG | ButtonFlags.Y_FLAG |
       ButtonFlags.UP_FLAG | ButtonFlags.DOWN_FLAG | ButtonFlags.LEFT_FLAG | ButtonFlags.RIGHT_FLAG |
@@ -98,54 +83,33 @@ export class NativeHidController extends AbstractController {
       ButtonFlags.LS_CLK_FLAG | ButtonFlags.RS_CLK_FLAG |
       ButtonFlags.BACK_FLAG | ButtonFlags.PLAY_FLAG | ButtonFlags.SPECIAL_BUTTON_FLAG;
 
-    // 查找端点
     this.findEndpoints();
 
     console.info(`${TAG} 创建控制器: ${this.deviceName} (type=${nativeType})`);
   }
 
-  /**
-   * 设置强制协议类型
-   * 用于手柄有多种模式（如 DS4 模拟模式）时强制使用特定协议
-   * @param protocolType 协议类型 (0=自动, 1=Xbox, 2=DS4, 3=Switch, 4=Generic, 5=DualSense)
-   */
   setForceProtocolType(protocolType: number): void {
     this.forceProtocolType = protocolType;
     console.info(`${TAG} 设置强制协议类型: ${protocolType}`);
   }
 
-  /**
-   * 获取当前强制协议类型
-   */
   getForceProtocolType(): number {
     return this.forceProtocolType;
   }
 
-  /**
-   * HID 子类常量
-   * HID 协议定义：
-   * - 子类 1: Boot Interface
-   * - 协议 1: 键盘
-   * - 协议 2: 鼠标
-   */
   private static readonly HID_SUBCLASS_BOOT = 1;
   private static readonly HID_PROTOCOL_KEYBOARD = 1;
   private static readonly HID_PROTOCOL_MOUSE = 2;
 
-  /**
-   * 检查是否可以驱动该设备
-   */
   static canClaimDevice(device: usbManager.USBDevice): boolean {
     const parser = NativeHidParserService.getInstance();
     parser.init();
 
-    // 检查原生层是否支持
     if (parser.isSupportedGamepad(device.vendorId, device.productId)) {
       console.info(`${TAG} 原生支持的手柄: VID=0x${device.vendorId.toString(16)}, PID=0x${device.productId.toString(16)}`);
       return true;
     }
 
-    // 检查是否有 HID 接口（作为后备）
     if (!device.configs || device.configs.length === 0) {
       return false;
     }
@@ -158,9 +122,6 @@ export class NativeHidController extends AbstractController {
     for (let i = 0; i < config.interfaces.length; i++) {
       const iface = config.interfaces[i];
       if (iface.clazz === UsbClass.USB_CLASS_HID) {
-        // 检查是否是键盘或鼠标 (Boot Interface 子类)
-        // HID Boot Interface 使用 subClass=1, protocol 指示设备类型
-        // protocol=1 表示键盘，protocol=2 表示鼠标
         if (iface.subClass === NativeHidController.HID_SUBCLASS_BOOT) {
           if (iface.protocol === NativeHidController.HID_PROTOCOL_KEYBOARD) {
             console.info(`${TAG} 跳过键盘设备: VID=0x${device.vendorId.toString(16)}, PID=0x${device.productId.toString(16)}`);
@@ -172,7 +133,6 @@ export class NativeHidController extends AbstractController {
           }
         }
         
-        // 额外检查设备名称排除键盘/鼠标
         const nameLower = device.name.toLowerCase();
         if (nameLower.includes('keyboard') || nameLower.includes('键盘')) {
           console.info(`${TAG} 通过名称跳过键盘: ${device.name}`);
@@ -206,7 +166,6 @@ export class NativeHidController extends AbstractController {
       if (iface.clazz === UsbClass.USB_CLASS_HID && iface.endpoints) {
         for (let j = 0; j < iface.endpoints.length; j++) {
           const ep = iface.endpoints[j];
-          // 记录端点详情，包括 interval
           console.info(`${TAG} 端点[${j}]: addr=0x${ep.address.toString(16)}, dir=${(ep.direction & 0x80) ? 'IN' : 'OUT'}, type=${ep.attributes}, maxPkt=${ep.maxPacketSize}, interval=${ep.interval}ms`);
           
           if ((ep.direction & 0x80) !== 0) {
@@ -250,7 +209,6 @@ export class NativeHidController extends AbstractController {
     this.lastActivityTime = Date.now();
     this.notifyDeviceAdded();
 
-    // ArkTS async 轮询
     this.inputLoop();
 
     console.info(`${TAG} 控制器已启动 (ArkTS 轮询): ${this.deviceName}`);
@@ -267,7 +225,6 @@ export class NativeHidController extends AbstractController {
 
     this.notifyDeviceRemoved();
 
-    // 释放 USB 接口，确保系统 HID 驱动能重新接管设备
     if (this.pipe && this.device) {
       try {
         const config = this.device.configs[0];
@@ -301,26 +258,14 @@ export class NativeHidController extends AbstractController {
     console.info(`${TAG} 控制器已停止: ${this.deviceName}`);
   }
   
-  /**
-   * 检查控制器是否已连接
-   */
   isConnected(): boolean {
     return this.running;
   }
 
-  /**
-   * 获取最后活动时间
-   * 用于检测静默断开
-   */
   getLastActivityTime(): number {
     return this.lastActivityTime;
   }
 
-  /**
-   * 检查控制器是否可能已静默断开
-   * @param inactivityThresholdMs 不活动阈值（毫秒）
-   * @returns true 表示可能已断开
-   */
   mayBeSilentlyDisconnected(inactivityThresholdMs: number = 30000): boolean {
     if (!this.running) {
       return true;
@@ -329,12 +274,8 @@ export class NativeHidController extends AbstractController {
     return (now - this.lastActivityTime) > inactivityThresholdMs;
   }
 
-  /**
-   * 处理 Native Poller 错误回调
-   */
   private handlePollerError(errorCode: number): void {
     if (errorCode === -4) {
-      // USB_ERROR_NO_DEVICE - 设备断开
       if (this.ignoreDisconnect) {
         console.warn(`${TAG} Native 轮询: 设备不可达但忽略断开信号已启用`);
         return;
@@ -357,44 +298,33 @@ export class NativeHidController extends AbstractController {
     }
   }
 
-  /**
-   * ArkTS 后备轮询循环（当 Native Poller 不可用时使用）
-   */
   private async inputLoop(): Promise<void> {
     const buffer = new Uint8Array(this.inputMaxPacketSize);
     let isSleepMode = false;
     let hardwareError = false;
     
-    // USB 读取超时时间（与 Android 一致为 3000ms）
-    // 用于判断错误是超时还是真正的 I/O 错误
     const BULK_READ_TIMEOUT = 3000;
-    // 快速失败阈值：如果读取在超时之前就失败（耗时 < 1秒），认为是 I/O 错误
     const QUICK_FAIL_THRESHOLD = 1000;
     
-    // 轮询率统计
     let pollCount = 0;
     let lastStatTime = Date.now();
-    const STAT_INTERVAL_MS = 5000;  // 每 5 秒输出一次统计
+    const STAT_INTERVAL_MS = 5000;
     
-    // 初始化最后活动时间
     this.lastActivityTime = Date.now();
     this.consecutiveTimeouts = 0;
 
     while (this.running) {
-      // 记录读取开始时间（用于检测真正的 I/O 错误 vs 超时）
       const startTime = Date.now();
       
       try {
         const result = await this.bulkRead(buffer);
         if (result > 0) {
           pollCount++;
-          // 重置超时计数器
           this.consecutiveTimeouts = 0;
           this.lastActivityTime = Date.now();
           
           this.processInputReport(buffer.slice(0, result));
           
-          // 统计轮询率
           const now = Date.now();
           if (now - lastStatTime >= STAT_INTERVAL_MS) {
             const pollRate = (pollCount * 1000) / (now - lastStatTime);
@@ -407,21 +337,13 @@ export class NativeHidController extends AbstractController {
         if (this.running) {
           const elapsedTime = Date.now() - startTime;
           
-          // 检查错误类型
           const usbErr = err instanceof UsbError ? err : null;
           const errorCode = usbErr ? usbErr.code : 0;
-          const retryable = usbErr ? usbErr.retryable : true;  // 默认可重试
-          
-          // 采用 Android 的策略：通过读取耗时来判断是超时还是真正的 I/O 错误
-          // 参考: Android AbstractXboxController.java
-          // - 如果 bulkTransfer 返回错误，且耗时 < 1秒，说明是真正的设备 I/O 错误
-          // - 如果耗时接近超时时间（3秒），说明只是正常超时，设备仍然连接
+          const retryable = usbErr ? usbErr.retryable : true;
           
           if (errorCode === -8) {  // USB_ERROR_TIMEOUT
-            // 检查是否是快速失败（真正的 I/O 错误伪装成超时）
             if (elapsedTime < QUICK_FAIL_THRESHOLD) {
               console.warn(`${TAG} 检测到设备 I/O 错误（快速失败：${elapsedTime}ms < ${QUICK_FAIL_THRESHOLD}ms）`);
-              // 检查是否应该忽略断开信号
               if (this.ignoreDisconnect) {
                 console.info(`${TAG} 忽略快速失败错误（用户已启用忽略断开设置）`);
                 await this.sleep(50);
@@ -431,25 +353,21 @@ export class NativeHidController extends AbstractController {
               break;
             }
             
-            // 正常超时 - 累计连续超时次数（用于检测雷蛇等静默断开的设备）
             this.consecutiveTimeouts++;
             if (this.consecutiveTimeouts >= NativeHidController.SILENT_DISCONNECT_TIMEOUT_COUNT) {
               console.warn(`${TAG} 检测到可能的静默断开: 连续 ${this.consecutiveTimeouts} 次超时无数据`);
-              // 检查是否应该忽略断开信号
               if (this.ignoreDisconnect) {
                 console.info(`${TAG} 忽略静默断开检测（用户已启用忽略断开设置）`);
-                this.consecutiveTimeouts = 0;  // 重置计数器
+                this.consecutiveTimeouts = 0;
                 continue;
               }
               isSleepMode = true;
               break;
             }
             
-            // 继续轮询（手柄可能暂时没有输入变化）
             continue;
           } else if (errorCode === -4) {  // USB_ERROR_NO_DEVICE
             console.warn(`${TAG} 设备不可达: ${err}`);
-            // 检查是否应该忽略断开信号
             if (this.ignoreDisconnect) {
               console.info(`${TAG} 忽略设备不可达错误（用户已启用忽略断开设置）`);
               await this.sleep(50);
@@ -459,20 +377,16 @@ export class NativeHidController extends AbstractController {
             break;
           } else if (isHardwareError(errorCode)) {
             console.error(`${TAG} 检测到硬件错误: ${err}`);
-            // 检查是否应该忽略断开信号
             if (this.ignoreDisconnect) {
               console.info(`${TAG} 忽略硬件错误（用户已启用忽略断开设置）`);
               await this.sleep(50);
               continue;
             }
             hardwareError = true;
-            // 硬件错误 - 立即停止
             break;
           } else {
-            // 其他错误 - 也检查是否快速失败
             if (elapsedTime < QUICK_FAIL_THRESHOLD) {
               console.warn(`${TAG} 检测到设备 I/O 错误（错误码: ${errorCode}, 耗时: ${elapsedTime}ms）`);
-              // 检查是否应该忽略断开信号
               if (this.ignoreDisconnect) {
                 console.info(`${TAG} 忽略快速失败错误（用户已启用忽略断开设置）`);
                 await this.sleep(50);
@@ -482,9 +396,7 @@ export class NativeHidController extends AbstractController {
               break;
             }
             console.error(`${TAG} 输入读取错误: ${err}`);
-            // 其他错误 - 如果标记为可重试则继续，否则停止
             if (!retryable) {
-              // 检查是否应该忽略断开信号
               if (this.ignoreDisconnect) {
                 console.info(`${TAG} 忽略不可重试错误（用户已启用忽略断开设置）`);
                 await this.sleep(50);
@@ -492,23 +404,20 @@ export class NativeHidController extends AbstractController {
               }
               break;
             }
-            await this.sleep(50);  // 增加延迟到 50ms
+            await this.sleep(50);
           }
         }
       }
     }
     
-    // 根据错误类型决定是否通知设备移除
     if (this.running) {
       if (hardwareError) {
         console.error(`${TAG} 由于硬件错误，自动停止控制器`);
         this.stop();
       } else if (isSleepMode) {
         console.info(`${TAG} 设备进入省电模式，等待自动重连...`);
-        // 省电模式：只停止 I/O 循环但不立即移除，让 UsbDriverService 定时器处理重连
         this.notifyDeviceRemoved();
       } else {
-        // 其他错误
         console.warn(`${TAG} 由于 IO 错误，自动停止控制器`);
         this.stop();
       }
@@ -516,10 +425,6 @@ export class NativeHidController extends AbstractController {
   }
 
   private async bulkRead(buffer: Uint8Array): Promise<number> {
-    // 使用较长的超时（与 Android AbstractXboxController 一致为 3000ms）
-    // 这不会影响轮询率，因为有数据时会立即返回
-    // 较长超时可以减少无数据时的空循环开销
-    // 同时用于判断是超时还是真正的 I/O 错误（参见 inputLoop 中的 QUICK_FAIL_THRESHOLD）
     const timeout: number = 3000;
 
     try {
@@ -536,7 +441,6 @@ export class NativeHidController extends AbstractController {
 
       const ret: number = await usbManager.bulkTransfer(this.pipe, endpoint, buffer, timeout);
       
-      // 负数表示错误
       if (ret < 0) {
         throw createUsbError(ret);
       }
@@ -547,11 +451,7 @@ export class NativeHidController extends AbstractController {
     }
   }
 
-  /**
-   * 使用原生层处理 HID 报告
-   */
   private processInputReport(data: Uint8Array): void {
-    // 调用原生解析器，传入强制协议类型
     const state = this.nativeParser.parseHidReport(
       this.vendorId,
       this.productId,
@@ -560,36 +460,27 @@ export class NativeHidController extends AbstractController {
     );
 
     if (!state) {
-      // 原生解析失败，使用 TypeScript 后备解析器
       const hexStr = Array.from(data.slice(0, Math.min(data.length, 16)))
         .map(b => b.toString(16).padStart(2, '0')).join(' ');
       this.fallbackParseHidReport(data, hexStr);
       return;
     }
 
-    // 转换原生按钮标志到 Moonlight 格式
     this.buttonFlags = this.convertNativeButtons(state.buttons);
 
-    // 转换摇杆值（原生层返回 -32768 到 32767，需要转换为 -1.0 到 1.0）
     this.leftStickX = state.leftStickX / AXIS_MAX;
     this.leftStickY = state.leftStickY / AXIS_MAX;
     this.rightStickX = state.rightStickX / AXIS_MAX;
     this.rightStickY = state.rightStickY / AXIS_MAX;
 
-    // 转换扣机值（原生层返回 0-255，需要转换为 0.0 到 1.0）
     this.leftTrigger = state.leftTrigger / TRIGGER_MAX;
     this.rightTrigger = state.rightTrigger / TRIGGER_MAX;
 
-    // 报告输入
     this.reportInput();
   }
 
   /**
-   * TypeScript 后备 HID 解析器
-   * 用于原生解析器不可用时的通用 HID 手柄解析
    *
-   * 通用手柄格式 (10字节):
-   * [0] = Report ID (通常是 0x01)
    * [1] = Left Stick X (0x00-0xFF, 0x80 = center)
    * [2] = Left Stick Y (0x00-0xFF, 0x80 = center)
    * [3] = Right Stick X (0x00-0xFF, 0x80 = center)
@@ -606,21 +497,16 @@ export class NativeHidController extends AbstractController {
       return;
     }
 
-    // 解析摇杆 (字节 1-4, 0x00-0xFF, 0x80=中心)
-    // 转换为 -1.0 到 1.0
     this.leftStickX = (data[1] - 128) / 127.0;
     this.leftStickY = (data[2] - 128) / 127.0;
     this.rightStickX = (data[3] - 128) / 127.0;
     this.rightStickY = (data[4] - 128) / 127.0;
 
-    // 限制范围
     this.leftStickX = Math.max(-1.0, Math.min(1.0, this.leftStickX));
     this.leftStickY = Math.max(-1.0, Math.min(1.0, this.leftStickY));
     this.rightStickX = Math.max(-1.0, Math.min(1.0, this.rightStickX));
     this.rightStickY = Math.max(-1.0, Math.min(1.0, this.rightStickY));
 
-    // 解析 HAT/D-Pad (字节 6)
-    // HAT 值: 0=Up, 1=UpRight, 2=Right, 3=DownRight, 4=Down, 5=DownLeft, 6=Left, 7=UpLeft, 0x0F=Center
     let flags = 0;
     const hat = data[6] & 0x0F;
     switch (hat) {
@@ -652,12 +538,9 @@ export class NativeHidController extends AbstractController {
         break;
     }
 
-    // 解析按钮字节
-    const btn1 = data[7]; // 功能按钮
-    const btn2 = data[8]; // 面板按钮
+    const btn1 = data[7];
+    const btn2 = data[8];
 
-    // VID 0x413D 手柄的按钮映射 (通用 HID 手柄格式):
-    // 字节 7 (功能按钮):
     //   bit 0 = Select/Back
     //   bit 1 = Start
     //   bit 2 = Home/Guide
@@ -667,13 +550,11 @@ export class NativeHidController extends AbstractController {
     //   bit 6 = RB
     //   bit 7 = LT (digital)
     //
-    // 字节 8 (面板按钮):
     //   bit 0 = A
     //   bit 1 = B
     //   bit 2 = X
     //   bit 3 = Y
 
-    // 功能按钮 (字节 7)
     if (btn1 & 0x01) flags |= ButtonFlags.BACK_FLAG;      // Select/Back
     if (btn1 & 0x02) flags |= ButtonFlags.PLAY_FLAG;      // Start
     if (btn1 & 0x04) flags |= ButtonFlags.SPECIAL_BUTTON_FLAG; // Home/Guide
@@ -682,48 +563,37 @@ export class NativeHidController extends AbstractController {
     if (btn1 & 0x20) flags |= ButtonFlags.LB_FLAG;        // LB
     if (btn1 & 0x40) flags |= ButtonFlags.RB_FLAG;        // RB
 
-    // 面板按钮 (字节 8)
     if (btn2 & 0x01) flags |= ButtonFlags.A_FLAG;   // A
     if (btn2 & 0x02) flags |= ButtonFlags.B_FLAG;   // B
     if (btn2 & 0x04) flags |= ButtonFlags.X_FLAG;   // X
     if (btn2 & 0x08) flags |= ButtonFlags.Y_FLAG;   // Y
 
-    // 更新按钮标志
     this.buttonFlags = flags;
 
-    // 报告输入
     this.reportInput();
   }
 
-  /**
-   * 转换原生按钮标志到 Moonlight 格式
-   */
   private convertNativeButtons(nativeButtons: number): number {
     let flags = 0;
 
-    // 方向键
     if (nativeButtons & NativeButtonFlags.UP) flags |= ButtonFlags.UP_FLAG;
     if (nativeButtons & NativeButtonFlags.DOWN) flags |= ButtonFlags.DOWN_FLAG;
     if (nativeButtons & NativeButtonFlags.LEFT) flags |= ButtonFlags.LEFT_FLAG;
     if (nativeButtons & NativeButtonFlags.RIGHT) flags |= ButtonFlags.RIGHT_FLAG;
 
-    // 功能键
     if (nativeButtons & NativeButtonFlags.START) flags |= ButtonFlags.PLAY_FLAG;
     if (nativeButtons & NativeButtonFlags.BACK) flags |= ButtonFlags.BACK_FLAG;
     if (nativeButtons & NativeButtonFlags.LS_CLK) flags |= ButtonFlags.LS_CLK_FLAG;
     if (nativeButtons & NativeButtonFlags.RS_CLK) flags |= ButtonFlags.RS_CLK_FLAG;
 
-    // 肩键
     if (nativeButtons & NativeButtonFlags.LB) flags |= ButtonFlags.LB_FLAG;
     if (nativeButtons & NativeButtonFlags.RB) flags |= ButtonFlags.RB_FLAG;
 
-    // 面板按钮
     if (nativeButtons & NativeButtonFlags.A) flags |= ButtonFlags.A_FLAG;
     if (nativeButtons & NativeButtonFlags.B) flags |= ButtonFlags.B_FLAG;
     if (nativeButtons & NativeButtonFlags.X) flags |= ButtonFlags.X_FLAG;
     if (nativeButtons & NativeButtonFlags.Y) flags |= ButtonFlags.Y_FLAG;
 
-    // 特殊按钮
     if (nativeButtons & NativeButtonFlags.HOME) flags |= ButtonFlags.SPECIAL_BUTTON_FLAG;
 
     return flags;
@@ -740,7 +610,6 @@ export class NativeHidController extends AbstractController {
       return;
     }
 
-    // 获取震动命令
     const cmd = this.nativeParser.createRumbleCommand(
       this.vendorId,
       this.productId,
@@ -777,6 +646,5 @@ export class NativeHidController extends AbstractController {
   }
 
   rumbleTriggers(leftTrigger: number, rightTrigger: number): void {
-    // 大多数手柄不支持扳机震动
   }
 }

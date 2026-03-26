@@ -9,7 +9,7 @@
  */
 
 /**
- * 串流游戏菜单弹窗 - 奶油风格 + 透明玻璃效果
+ * Streaming game menu dialog - Cream style + transparent glass effect
  */
 import { display, promptAction } from '@kit.ArkUI';
 import { ConfigurationConstant } from '@kit.AbilityKit';
@@ -35,7 +35,7 @@ import {
   OV_CARD_WIDTH, OV_CARD_RADIUS, OV_CARD_BLUR,
 } from '../common/OverlayConstants';
 
-/** 菜单回调接口 */
+/** Menu callbacks interface */
 export interface GameMenuCallbacks {
   onDismiss: () => void;
   onDisconnect: () => void;
@@ -63,7 +63,7 @@ export interface GameMenuCallbacks {
   onSwitchCustomKeyProfile?: (name: string) => void;
 }
 
-/** 菜单项配置 */
+/** Menu item config */
 interface MenuItem {
   icon: string;
   label: string;
@@ -71,14 +71,14 @@ interface MenuItem {
   borderColor: string;
 }
 
-/** 触摸模式选项 */
+/** Touch mode option */
 interface TouchModeOption {
   key: string;
   text: string;
   subtitle: string;
 }
 
-/** 动作项配置 */
+/** Action item config */
 interface ActionItem {
   text: string;
   subtitle: string;
@@ -87,7 +87,6 @@ interface ActionItem {
   onClick: () => void;
 }
 
-// 常量定义
 const BUTTON_CARD_SIZE = 70;
 const ANIMATION_STAGGER_DELAY = 50;
 const ANIMATION_DURATION_IN = 200;
@@ -95,7 +94,7 @@ const ANIMATION_DURATION_OUT = 200;
 const BITRATE_DEBOUNCE_MS = 500;
 const MENU_ITEM_COUNT = 7;
 
-// 卡片 ID（用于使用频率排序）
+// Card IDs (for usage frequency sorting)
 const CARD_SHORTCUT = 'shortcut';
 const CARD_SUPERCMD = 'supercmd';
 const CARD_BITRATE = 'bitrate';
@@ -104,10 +103,10 @@ const CARD_UNLOCK = 'unlock';
 const CARD_MIC = 'mic';
 const CARD_USAGE_KEY = 'game_menu_card_usage';
 
-// 马卡龙色系菜单配置
+// Macaroon color menu config
 const MENU_ITEMS: MenuItem[] = [
   { icon: '✦', label: 'HDR', bgColor: '#F7EBC7', borderColor: '#D0A850' },
-  { icon: '◎', label: 'USB驱动', bgColor: '#F7D1D1', borderColor: '#D87070' },
+  { icon: '◎', label: 'USB Driver', bgColor: '#F7D1D1', borderColor: '#D87070' },
   { icon: '⌨', label: '键盘', bgColor: '#C7F7E0', borderColor: '#50C080' },
   { icon: '☝', label: '触控', bgColor: '#E0D4F7', borderColor: '#9080C0' },
   { icon: '🎮', label: '手柄', bgColor: '#D4E8F7', borderColor: '#6098C0' },
@@ -117,7 +116,7 @@ const MENU_ITEMS: MenuItem[] = [
 
 const MENU_OFFSETS: number[] = [25, 55, 70, 35, 45, 30, 50];
 
-// 激活色
+// Activation colors
 const ACTIVE_BG_COLOR = '#C7F7D4';
 const ACTIVE_BORDER_COLOR = '#50A860';
 
@@ -143,27 +142,27 @@ export struct GameMenuDialog {
   showCustomKeys: boolean = false;
   isPanZoomActive: boolean = false;
 
-  // 动画状态
+  // Animation state
   @State private positions: number[] = Array(MENU_ITEM_COUNT).fill(200);
   @State private scales: number[] = Array(MENU_ITEM_COUNT).fill(1.0);
 
-  // 快捷键
+  // Shortcuts
   @State private shortcuts: Shortcut[] = [];
   @State private dragFromIndex: number = -1;
   @State private dragOverIndex: number = -1;
   @State private isEditMode: boolean = false;
 
-  // 更多卡片折叠
+  // More cards collapse
   @State private showMoreCards: boolean = false;
   private shortcutManager = ShortcutManager.getInstance();
 
-  // 码率调整状态
+  // Bitrate adjustment state
   @State private currentBitrate: number = 0;
   @State private bitrateSliderValue: number = 0;
   @State private isAdjustingBitrate: boolean = false;
   private bitrateDebounceTimer: number = -1;
 
-  // 体感助手状态
+  // Gyro assist state
   @State private gyroEnabled: boolean = false;
   @State private gyroSensitivity: number = 1.0;
   @State private gyroInvertX: boolean = false;
@@ -171,33 +170,33 @@ export struct GameMenuDialog {
   @State private gyroActivationKey: number = GYRO_ACTIVATION_ALWAYS;
   private hasGyroscope: boolean = false;
 
-  // 关闭动画状态
+  // Close animation state
   private isClosing: boolean = false;
 
-  // 布局判断：屏幕 2/3 宽度能否放下两列卡片
+  // Layout decision: whether screen 2/3 width can fit two columns of cards
   @State private useTwoColumns: boolean = true;
-  // 深浅主题（自动跟随系统切换）
+  // Light/Dark theme (automatically follows system switching)
   @StorageProp('colorMode') currentColorMode: number = ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
 
-  // 卡片使用频率排序
+  // Card usage frequency sorting
   @State private sortedMainCards: string[] = [];
   private cardUsageCounts: Map<string, number> = new Map();
   @State private micActive: boolean = false;
-  // 自定义按键配置档案
+  // Custom key config profiles
   @State private customKeyProfileNames: string[] = [];
   @State private customKeyActiveProfile: string = '';
 
-  // 虚拟手柄设置本地状态（拖动 Slider 时实时回调）
+  // Virtual controller settings local state (real-time callback when dragging Slider)
   @State private controllerOpacityLocal: number = 0.75;
   @State private controllerScaleLocal: number = 1.0;
   @State private touchPassthroughLocal: boolean = false;
 
-  // 弹窗控制器
+  // Dialog controllers
   private exitDialogController?: CustomDialogController;
   private touchModeDialogController?: CustomDialogController;
   private usbDriverDialogController?: CustomDialogController;
 
-  // 通用卡片样式
+  // Common card style
   @Styles cardStyle() {
     .backgroundColor(this.isCurrentDark() ? OV_BG_CARD_DARK : OV_BG_CARD_LIGHT)
     .backdropBlur(OV_CARD_BLUR)
@@ -222,20 +221,20 @@ export struct GameMenuDialog {
   }
 
   /**
-   * 根据屏幕宽度的 2/3 是否能容纳两列卡片来决定布局
-   * 两列所需宽度 = OV_CARD_WIDTH * 2 + 间距 + 内边距
+   * Decide layout based on whether 2/3 screen width can fit two columns of cards
+   * Two columns required width = OV_CARD_WIDTH * 2 + gap + padding
    */
   private detectLayoutMode(): void {
     try {
       const displayInfo = display.getDefaultDisplaySync();
       const vpWidth = displayInfo.width / displayInfo.densityPixels;
-      const twoColumnMinWidth = (OV_CARD_WIDTH * 2 + 12 + 32); // 两列卡片 + 间距 + 左右内边距
+      const twoColumnMinWidth = (OV_CARD_WIDTH * 2 + 12 + 32); // Two columns + gap + left/right padding
       this.useTwoColumns = (vpWidth * 2 / 3) >= twoColumnMinWidth;
     } catch (_) {}
   }
 
-  /** 当前是否深色主题，直接在布局中使用以确保 ArkTS 响应式更新 */
-  // COLOR_MODE_LIGHT = 1; 深色时黑透卡片，浅色时白透卡片
+  /** Whether current is dark theme, used directly in layout to ensure ArkTS reactive updates */
+  // COLOR_MODE_LIGHT = 1; Dark theme uses black-transparent cards, Light theme uses white-transparent cards
   isCurrentDark(): boolean {
     return this.currentColorMode !== 1;
   }
@@ -292,13 +291,13 @@ export struct GameMenuDialog {
       return;
     }
     const buttons: promptAction.Button[] = [
-      { text: '新建快捷键', color: '#10B981' },
-      { text: '恢复预置快捷键', color: '#5BA3D0' },
-      { text: '取消', color: '#6B7280' }
+      { text: 'New Shortcut', color: '#10B981' },
+      { text: 'Restore Preset', color: '#5BA3D0' },
+      { text: 'Cancel', color: '#6B7280' }
     ];
     promptAction.showDialog({
-      title: '添加快捷键',
-      message: `有 ${deletedBuiltins.length} 个预置快捷键可恢复`,
+      title: 'Add Shortcut',
+      message: `${deletedBuiltins.length} preset shortcuts can be restored`,
       buttons: buttons
     }).then((result) => {
       if (result.index === 0) {
@@ -314,18 +313,18 @@ export struct GameMenuDialog {
       const btn: promptAction.Button = { text: `${s.icon || ''} ${s.name}`, color: s.color || '#5BA3D0' };
       return btn;
     });
-    buttons.push({ text: '全部恢复', color: '#10B981' });
+    buttons.push({ text: 'Restore All', color: '#10B981' });
     buttons.push({ text: '取消', color: '#6B7280' });
     promptAction.showDialog({
-      title: '恢复预置快捷键',
-      message: '选择要恢复的快捷键',
+      title: 'Restore Preset Shortcuts',
+      message: 'Select shortcut to restore',
       buttons: buttons
     }).then(async (result) => {
       if (result.index < deletedBuiltins.length) {
         await this.shortcutManager.restoreBuiltinShortcut(deletedBuiltins[result.index].id);
         this.shortcuts = this.shortcutManager.getShortcuts();
       } else if (result.index === deletedBuiltins.length) {
-        // 全部恢复
+        // Restore all
         for (const s of deletedBuiltins) {
           await this.shortcutManager.restoreBuiltinShortcut(s.id);
         }
@@ -334,7 +333,7 @@ export struct GameMenuDialog {
     });
   }
 
-  // 码率辅助方法
+  // Bitrate helper methods
   private bitrateToSliderValue(bitrate: number): number {
     return Math.max(0, Math.min(1995, Math.round((bitrate - 500) / 100)));
   }
@@ -361,14 +360,14 @@ export struct GameMenuDialog {
         const success = await this.viewModel.setBitrate(newBitrate);
         if (success) {
           this.currentBitrate = newBitrate;
-          promptAction.showToast({ message: `码率已调整为 ${this.formatBitrate(newBitrate)}`, duration: 2000 });
+          promptAction.showToast({ message: `Bitrate adjusted to ${this.formatBitrate(newBitrate)}`, duration: 2000 });
         } else {
           this.bitrateSliderValue = this.bitrateToSliderValue(this.currentBitrate);
-          promptAction.showToast({ message: '码率调整失败', duration: 2000 });
+          promptAction.showToast({ message: 'Bitrate adjustment failed', duration: 2000 });
         }
       } catch (err) {
         this.bitrateSliderValue = this.bitrateToSliderValue(this.currentBitrate);
-        promptAction.showToast({ message: `码率调整失败: ${(err as Error).message}`, duration: 2000 });
+        promptAction.showToast({ message: `Bitrate adjustment failed: ${(err as Error).message}`, duration: 2000 });
       } finally {
         this.isAdjustingBitrate = false;
         this.bitrateDebounceTimer = -1;
@@ -380,11 +379,11 @@ export struct GameMenuDialog {
     const callbacks = this.callbacks;
     const actions: ActionItem[] = [];
 
-    // 窗口/全屏切换 - 仅在 2in1 设备（支持自由窗口模式）上显示
+    // Window/Fullscreen toggle - only show on 2in1 devices (support free window mode)
     if (deviceInfo.deviceType === '2in1') {
       actions.push({
-        text: this.isFullscreen ? '窗口模式' : '全屏模式',
-        subtitle: this.isFullscreen ? '切换到悬浮窗口，方便多任务' : '切换到沉浸式全屏',
+        text: this.isFullscreen ? 'Windowed Mode' : 'Fullscreen Mode',
+        subtitle: this.isFullscreen ? 'Switch to floating window for multitasking' : 'Switch to immersive fullscreen',
         color: '#8B5CF6',
         backgroundColor: '#F5F3FF',
         onClick: () => {
@@ -396,8 +395,8 @@ export struct GameMenuDialog {
 
     actions.push(
       {
-        text: '断开连接',
-        subtitle: '游戏继续在主机上运行',
+        text: 'Disconnect',
+        subtitle: 'Game continues on host',
         color: '#3B82F6',
         backgroundColor: '#EFF6FF',
         onClick: () => {
@@ -406,8 +405,8 @@ export struct GameMenuDialog {
         }
       },
       {
-        text: '退出游戏',
-        subtitle: '关闭主机上的游戏',
+        text: 'Quit Game',
+        subtitle: 'Close game on host',
         color: '#EF4444',
         backgroundColor: '#FEF2F2',
         onClick: () => {
@@ -417,9 +416,9 @@ export struct GameMenuDialog {
       }
     );
     const config: ActionDialogConfig = {
-      title: '离开串流',
+      title: 'Leave Stream',
       actions: actions,
-      cancelText: '继续游戏',
+      cancelText: 'Continue Playing',
       onCancel: () => {}
     };
 
@@ -435,15 +434,15 @@ export struct GameMenuDialog {
   private showTouchModeDialog(): void {
     const currentMode = this.viewModel.touchMode;
     const modes: TouchModeOption[] = [
-      { key: 'trackpad', text: '触控板', subtitle: '像笔记本触控板一样操作' },
-      { key: 'direct', text: '多点触控', subtitle: '直接点击屏幕位置' },
-      { key: 'mouse', text: '鼠标模式', subtitle: '模拟鼠标移动和点击' }
+      { key: 'trackpad', text: 'Trackpad', subtitle: 'Operate like laptop trackpad' },
+      { key: 'direct', text: 'Multi-touch', subtitle: 'Direct touch on screen' },
+      { key: 'mouse', text: 'Mouse Mode', subtitle: 'Simulate mouse movement and clicks' }
     ];
 
     const actions: ActionItem[] = modes.map((mode: TouchModeOption): ActionItem => {
       const item: ActionItem = {
         text: mode.text,
-        subtitle: currentMode === mode.key ? '✓ 当前模式' : mode.subtitle,
+        subtitle: currentMode === mode.key ? '✓ Current Mode' : mode.subtitle,
         color: currentMode === mode.key ? '#10B981' : undefined,
         backgroundColor: currentMode === mode.key ? '#D1FAE5' : undefined,
         onClick: () => this.callbacks.onTouchModeChanged(mode.key)
@@ -452,9 +451,9 @@ export struct GameMenuDialog {
     });
 
     const config: ActionDialogConfig = {
-      title: '选择触摸模式',
+      title: 'Select Touch Mode',
       actions: actions,
-      cancelText: '取消',
+      cancelText: 'Cancel',
       onCancel: () => {}
     };
 
@@ -469,11 +468,11 @@ export struct GameMenuDialog {
 
   private showUsbDriverDialog(): void {
     const config: ConfirmDialogConfig = {
-      title: '强制 USB 驱动接管',
-      message: '放弃系统手柄接口 (GCK)，改由 USB 驱动直接处理手柄输入。\n\n仅在手柄输入异常或需要 USB 低延迟时使用。蓝牙手柄不受此选项影响。\n\n当前连接的 USB 手柄会短暂断开并重新连接。',
-      cancelButton: { text: '取消', onClick: () => {} },
+      title: 'Force USB Driver Takeover',
+      message: 'Abandon system gamepad interface (GCK), use USB driver to directly handle gamepad input.\n\nOnly use when gamepad input is abnormal or USB low latency is needed. Bluetooth gamepads are not affected.\n\nCurrently connected USB gamepads will briefly disconnect and reconnect.',
+      cancelButton: { text: 'Cancel', onClick: () => {} },
       confirmButton: {
-        text: '接管',
+        text: 'Take Over',
         color: '#3B82F6',
         onClick: () => {
           this.callbacks.onForceUsbDriver?.();
@@ -499,7 +498,7 @@ export struct GameMenuDialog {
         break;
       case 1:
         if (this.isUsbDriverMode) {
-          promptAction.showToast({ message: '当前已是 USB 驱动模式', duration: 2000 });
+          promptAction.showToast({ message: 'Already in USB driver mode', duration: 2000 });
         } else {
           this.showUsbDriverDialog();
         }
@@ -555,9 +554,6 @@ export struct GameMenuDialog {
     this.gyroActivationKey = gyroAssist.activationKey;
   }
 
-  /**
-   * 加载卡片使用频率并构建排序列表
-   */
   private async loadCardUsageCounts(): Promise<void> {
     try {
       const json = await PreferencesUtil.get<string>(CARD_USAGE_KEY, '{}');
@@ -570,16 +566,12 @@ export struct GameMenuDialog {
     this.rebuildSortedCards();
   }
 
-  /**
-   * 根据当前可见性和使用频率重建排序卡片列表
-   */
   private rebuildSortedCards(): void {
     const visible: string[] = [];
     if (this.shortcuts.length > 0) visible.push(CARD_SHORTCUT);
     if (this.superCmds.length > 0) visible.push(CARD_SUPERCMD);
     visible.push(CARD_BITRATE);
     visible.push(CARD_CUSTOMKEY);
-    // 按使用次数降序排列，次数相同保持原始顺序
     visible.sort((a: string, b: string): number => {
       const ca = this.cardUsageCounts.get(a) || 0;
       const cb = this.cardUsageCounts.get(b) || 0;
@@ -588,19 +580,15 @@ export struct GameMenuDialog {
     this.sortedMainCards = visible;
   }
 
-  /** 是否有快捷按钮卡片（解锁、麦克风等 1x1 小按钮） */
+  /**
   private hasButtonCards(): boolean {
     return this.viewModel.overlayState.config.isLocked ||
       (this.viewModel.getSession()?.isMicrophoneEnabled() ?? false);
   }
 
-  /**
-   * 记录卡片使用并持久化
-   */
   private recordCardUsage(cardId: string): void {
     const count = (this.cardUsageCounts.get(cardId) || 0) + 1;
     this.cardUsageCounts.set(cardId, count);
-    // 异步持久化
     const obj: Record<string, number> = {};
     this.cardUsageCounts.forEach((v: number, k: string) => { obj[k] = v; });
     PreferencesUtil.put(CARD_USAGE_KEY, JSON.stringify(obj)).catch(() => {});
@@ -618,13 +606,13 @@ export struct GameMenuDialog {
     try {
       await PreferencesUtil.put(key, value);
     } catch (error) {
-      console.error('[GyroAssist] 保存设置失败:', error);
+      console.error('[GyroAssist] Failed to save setting:', error);
     }
   }
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      // 背景可点击关闭
+      // Background clickable to close
       Column()
         .width('100%')
         .height('100%')
@@ -632,7 +620,7 @@ export struct GameMenuDialog {
           this.animateOut();
         })
 
-      // 右侧菜单按钮
+      // Right side menu buttons
       Column() {
         this.SockButton(0)
         if (this.hasUsbGamepad) this.SockButton(1)
@@ -648,7 +636,7 @@ export struct GameMenuDialog {
       .position({ x: '100%', y: '50%' })
       .translate({ x: '-100%', y: '-50%' })
 
-      // 左侧面板
+      // Left side panel
       if (this.useTwoColumns) {
         this.TwoColumnLayout()
       } else {
@@ -666,15 +654,15 @@ export struct GameMenuDialog {
     Scroll() {
       Row({ space: 12 }) {
         Column({ space: 12 }) {
-          // 左列：排序后奇数位卡片（索引 0, 2, 4...）
+          // Left column: odd-positioned cards (index 0, 2, 4...)
           ForEach(this.sortedMainCards.filter((_: string, i: number) => i % 2 === 0),
             (cardId: string) => { this.RenderCardById(cardId) },
             (cardId: string) => cardId)
-          // 快捷按钮行（解锁、麦克风等小卡片）
+          // Quick button row (unlock, mic, etc. small cards)
           if (this.hasButtonCards()) {
             this.ButtonCardsRow()
           }
-          // "更多设置"折叠区（左列下方）
+          // "More Settings" collapse area (below left column)
           if (this.hasMoreCards()) {
             this.MoreCardsToggle()
             if (this.showMoreCards) {
@@ -686,7 +674,7 @@ export struct GameMenuDialog {
         .alignItems(HorizontalAlign.Start)
 
         Column({ space: 12 }) {
-          // 右列：排序后偶数位卡片（索引 1, 3, 5...）
+          // Right column: even-positioned cards (index 1, 3, 5...)
           ForEach(this.sortedMainCards.filter((_: string, i: number) => i % 2 === 1),
             (cardId: string) => { this.RenderCardById(cardId) },
             (cardId: string) => cardId)
@@ -708,15 +696,15 @@ export struct GameMenuDialog {
   SingleColumnLayout() {
     Scroll() {
       Column({ space: 12 }) {
-        // 按使用频率排列的主卡片
+        // By usage frequency sorted main cards
         ForEach(this.sortedMainCards,
           (cardId: string) => { this.RenderCardById(cardId) },
           (cardId: string) => cardId)
-        // 快捷按钮行（解锁、麦克风等小卡片）
+        // Quick button row (unlock, mic, etc. small cards)
         if (this.hasButtonCards()) {
           this.ButtonCardsRow()
         }
-        // "更多设置"折叠区
+        // "More Settings" collapse area
         if (this.hasMoreCards()) {
           this.MoreCardsToggle()
           if (this.showMoreCards) {
@@ -768,7 +756,7 @@ export struct GameMenuDialog {
       SymbolGlyph($r('sys.symbol.lock_open'))
         .fontSize(22)
         .fontColor([OV_TEXT_BRIGHT])
-      Text('解锁')
+      Text('Unlock')
         .fontSize(OV_FONT_MD)
         .fontWeight(FontWeight.Medium)
         .fontColor(OV_TEXT_BRIGHT)
@@ -791,7 +779,7 @@ export struct GameMenuDialog {
       SymbolGlyph(this.micActive ? $r('sys.symbol.mic') : $r('sys.symbol.mic_slash'))
         .fontSize(22)
         .fontColor([this.micActive ? OV_TEXT_BRIGHT : OV_TEXT_DIM])
-      Text(this.micActive ? '麦克风' : '已静音')
+      Text(this.micActive ? 'Microphone' : 'Muted')
         .fontSize(OV_FONT_MD)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.micActive ? OV_TEXT_BRIGHT : OV_TEXT_DIM)
@@ -805,20 +793,20 @@ export struct GameMenuDialog {
       this.recordCardUsage(CARD_MIC);
       const session = this.viewModel.getSession();
       if (!session?.hasMicrophoneStream()) {
-        promptAction.showToast({ message: '主机未请求麦克风', duration: 1500 });
+        promptAction.showToast({ message: 'Host did not request microphone', duration: 1500 });
         return;
       }
       session.toggleMicrophone().then((active: boolean) => {
         this.micActive = active;
         promptAction.showToast({
-          message: active ? '麦克风已开启' : '麦克风已关闭',
+          message: active ? 'Microphone on' : 'Microphone off',
           duration: 1500
         });
       });
     })
   }
 
-  /** 是否有可折叠的低频卡片 */
+  /** Whether has collapsible low-frequency cards */
   private hasMoreCards(): boolean {
     return !!(this.viewModel.inputSettings?.enableOnscreenControls) || this.hasGyroscope;
   }
@@ -830,10 +818,10 @@ export struct GameMenuDialog {
         .fontSize(12)
         .fontColor(OV_TEXT_DIM)
         .margin({ right: 6 })
-      Text('更多设置')
+      Text('More Settings'))
         .fontSize(OV_FONT_MD)
         .fontColor(OV_TEXT_DIM)
-      Text(` · 虚拟手柄${this.hasGyroscope ? '、体感助手' : ''}`)
+      Text(` · Virtual Controller${this.hasGyroscope ? ', Gyro Assist' : ''}`)
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
     }
@@ -856,7 +844,7 @@ export struct GameMenuDialog {
       Row() {
         SymbolGlyph($r('sys.symbol.crown'))
           .fontSize(14).fontColor([Color.Orange])
-        Text(' 自定义按键')
+        Text(' Custom Keys'))
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -877,13 +865,13 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text('自由放置的屏幕虚拟按键')
+      Text('Freely placed on-screen virtual keys'))
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
         .padding({ left: 16, right: 16, bottom: 6 })
 
-      // 配置档案选择器
+      // Config profile selector
       if (this.customKeyProfileNames.length > 1) {
         Scroll() {
           Row({ space: 6 }) {
@@ -916,7 +904,7 @@ export struct GameMenuDialog {
       }
 
       Row({ space: 8 }) {
-        Text('编辑布局')
+        Text('Edit Layout'))
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_PINK)
@@ -928,7 +916,7 @@ export struct GameMenuDialog {
             this.callbacks.onEditCustomKeys?.();
             this.animateOut();
           })
-        Text('导出')
+        Text('Export'))
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_BLUE)
@@ -940,7 +928,7 @@ export struct GameMenuDialog {
             this.callbacks.onExportCustomKeys?.();
             this.animateOut();
           })
-        Text('导入')
+        Text('Import'))
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_ACCENT_BLUE)
@@ -957,18 +945,18 @@ export struct GameMenuDialog {
       .justifyContent(FlexAlign.Center)
       .padding({ bottom: 10 })
 
-      // ── 画面缩放（合并在自定义按键卡片内） ──
+      // ── Pan/Zoom (merged in custom key card) ──
       Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
 
       Row() {
         Text('🔎').fontSize(OV_FONT_LG)
-        Text(' 画面缩放')
+        Text(' Pan/Zoom'))
           .fontSize(OV_FONT_MD)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_MEDIUM)
         Blank()
         if (this.isPanZoomActive) {
-          Text('重置')
+          Text('Reset')
             .fontSize(11)
             .fontColor(OV_ACCENT_BLUE)
             .fontWeight(FontWeight.Medium)
@@ -997,7 +985,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 10, bottom: 4 })
 
-      Text('双指缩放操控画面，最大 10x')
+      Text('Pinch to zoom, max 10x'))
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1012,7 +1000,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('🎮').fontSize(OV_FONT_LG)
-        Text(' 虚拟手柄')
+        Text(' Virtual Controller'))
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1031,7 +1019,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text('屏幕虚拟手柄叠加层')
+      Text('On-screen virtual controller overlay'))
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1040,9 +1028,9 @@ export struct GameMenuDialog {
       if (this.viewModel.showController) {
         Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
 
-        // 触摸穿透开关
+        // Touch passthrough toggle
         Row() {
-          Text('触摸穿透').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+          Text('Touch Passthrough').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
           Blank()
           Toggle({ type: ToggleType.Switch, isOn: this.touchPassthroughLocal })
             .selectedColor(OV_ACCENT_BLUE)
@@ -1057,7 +1045,7 @@ export struct GameMenuDialog {
         .width('100%')
         .padding({ left: 16, right: 12, top: 10, bottom: 4 })
 
-        Text('允许触摸穿透手柄操控画面')
+        Text('Allow touch through controller to control screen'))
           .fontSize(OV_FONT_XS)
           .fontColor('#50FFFFFF')
           .width('100%')
@@ -1065,10 +1053,10 @@ export struct GameMenuDialog {
 
         Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
 
-        // 透明度
+        // Opacity
         Column() {
           Row() {
-            Text('透明度').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+            Text('Opacity').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
             Blank()
             Text(`${Math.round(this.controllerOpacityLocal * 100)}%`)
               .fontSize(OV_FONT_MD)
@@ -1110,10 +1098,10 @@ export struct GameMenuDialog {
 
         Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
 
-        // 大小调整
+        // Size adjustment
         Column() {
           Row() {
-            Text('大小').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+            Text('Size').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
             Blank()
             Text(`${Math.round(this.controllerScaleLocal * 100)}%`)
               .fontSize(OV_FONT_MD)
@@ -1163,7 +1151,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('📊').fontSize(OV_FONT_LG)
-        Text(' 码率调整')
+        Text(' Bitrate Adjust'))
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1176,7 +1164,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 16, top: 14, bottom: 4 })
 
-      Text('实时调整串流画质，需 Foundation Sunshine 支持')
+      Text('Real-time stream quality adjustment, requires Foundation Sunshine support'))
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1207,7 +1195,7 @@ export struct GameMenuDialog {
         Row() {
           Text('0.5').fontSize(OV_FONT_SM).fontColor(OV_TEXT_DIM)
           Blank()
-          Text(this.isAdjustingBitrate ? '调整中...' : this.formatBitrate(this.sliderValueToBitrate(this.bitrateSliderValue)))
+          Text(this.isAdjustingBitrate ? 'Adjusting...' : this.formatBitrate(this.sliderValueToBitrate(this.bitrateSliderValue)))
             .fontSize(OV_FONT_MD)
             .fontColor(this.isAdjustingBitrate ? OV_TEXT_DIM : OV_ACCENT_PINK)
             .fontWeight(FontWeight.Bold)
@@ -1228,7 +1216,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('🎮').fontSize(OV_FONT_LG)
-        Text(' 体感助手')
+        Text(' Gyro Assist'))
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1247,7 +1235,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text(this.hasGyroscope ? '陀螺仪 → 右摇杆映射' : '⚠ 设备无陀螺仪')
+      Text(this.hasGyroscope ? 'Gyroscope → Right Stick mapping' : '⚠ Device has no gyroscope'))
         .fontSize(OV_FONT_SM)
         .fontColor(this.hasGyroscope ? OV_TEXT_FAINT : OV_ACCENT_PINK)
         .width('100%')
@@ -1258,7 +1246,7 @@ export struct GameMenuDialog {
 
         Column() {
           Row() {
-            Text('灵敏度').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
+            Text('Sensitivity').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM)
             Blank()
             Text(`${this.gyroSensitivity.toFixed(1)}x`)
               .fontSize(OV_FONT_MD)
@@ -1300,13 +1288,13 @@ export struct GameMenuDialog {
         .width('100%')
         .padding({ left: 14, right: 14, top: 10, bottom: 4 })
 
-        this.GyroToggleRow('X轴反转', this.gyroInvertX, (isOn: boolean) => {
+        this.GyroToggleRow('Invert X Axis', this.gyroInvertX, (isOn: boolean) => {
           this.gyroInvertX = isOn;
           GyroAssistService.getInstance().setInvertX(isOn);
           this.saveGyroSetting(SettingsKeys.GYRO_INVERT_X, isOn);
         })
 
-        this.GyroToggleRow('Y轴反转', this.gyroInvertY, (isOn: boolean) => {
+        this.GyroToggleRow('Invert Y Axis', this.gyroInvertY, (isOn: boolean) => {
           this.gyroInvertY = isOn;
           GyroAssistService.getInstance().setInvertY(isOn);
           this.saveGyroSetting(SettingsKeys.GYRO_INVERT_Y, isOn);
@@ -1315,9 +1303,9 @@ export struct GameMenuDialog {
         Row().width('85%').height(1).backgroundColor(OV_BG_DIVIDER)
 
         Column() {
-          Text('激活方式').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM).width('100%').padding({ bottom: 6 })
+          Text('Activation').fontSize(OV_FONT_MD).fontColor(OV_TEXT_MEDIUM).width('100%').padding({ bottom: 6 })
           Row({ space: 8 }) {
-            this.ActivationButton('始终', GYRO_ACTIVATION_ALWAYS)
+            this.ActivationButton('Always', GYRO_ACTIVATION_ALWAYS)
             this.ActivationButton('LT', GYRO_ACTIVATION_LT)
             this.ActivationButton('RT', GYRO_ACTIVATION_RT)
           }
@@ -1370,7 +1358,7 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('🎯').fontSize(OV_FONT_LG)
-        Text(' 服务端指令')
+        Text(' Server Commands'))
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
@@ -1378,7 +1366,7 @@ export struct GameMenuDialog {
       .width('100%')
       .padding({ left: 16, right: 12, top: 14, bottom: 4 })
 
-      Text('执行 Sunshine 预设脚本')
+      Text('Execute Sunshine preset scripts'))
         .fontSize(OV_FONT_SM)
         .fontColor(OV_TEXT_FAINT)
         .width('100%')
@@ -1406,12 +1394,12 @@ export struct GameMenuDialog {
     Column() {
       Row() {
         Text('⚡').fontSize(OV_FONT_LG)
-        Text(' 快捷键')
+        Text(' Shortcuts'))
           .fontSize(OV_FONT_LG)
           .fontWeight(FontWeight.Medium)
           .fontColor(OV_TEXT_BRIGHT)
         Blank()
-        // 编辑模式切换按钮
+        // Edit mode toggle button
         Text(this.isEditMode ? '✓' : '✎')
           .fontSize(this.isEditMode ? 14 : 12)
           .fontColor(this.isEditMode ? '#4ADE80' : OV_TEXT_WHITE)
@@ -1423,7 +1411,7 @@ export struct GameMenuDialog {
           .backgroundColor(this.isEditMode ? '#404ADE80' : '#40A8E8B0')
           .margin({ right: 6 })
           .onClick(() => { this.isEditMode = !this.isEditMode; })
-        // 添加按钮
+        // Add button
         Text('＋')
           .fontSize(14)
           .fontColor(OV_TEXT_WHITE)
@@ -1540,7 +1528,7 @@ export struct GameMenuDialog {
       .borderRadius(14)
       .opacity(this.isEditMode && this.dragFromIndex === this.shortcuts.indexOf(shortcut) ? 0.4 : 1.0)
 
-      // 编辑模式下的删除 badge
+      // Edit mode delete badge
       if (this.isEditMode) {
         Text('×')
           .fontSize(10)
@@ -1589,7 +1577,7 @@ export struct GameMenuDialog {
       LongPressGesture({ duration: 500 })
         .onAction(() => {
           if (this.isEditMode || this.dragFromIndex >= 0) return;
-          // 长按打开编辑器
+          // Long press opens editor
           this.callbacks.onEditShortcut?.(shortcut);
         })
     )

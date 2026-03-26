@@ -8,61 +8,41 @@
  * (at your option) any later version.
  */
 
-/**
- * 模拟摇杆组件
- * 支持 360 度方向输入和 L3/R3 点击
- */
 import { ControllerAxis, ControllerAxisEvent, InputType, ControllerButton, ControllerButtonEvent, InputEvent } from '../model/InputEvent';
 
-/**
- * 摇杆配置
- */
 export interface AnalogStickConfig {
-  /** 摇杆类型：左摇杆或右摇杆 */
   isLeftStick: boolean;
-  /** 外圈半径 */
   outerRadius?: number;
-  /** 内圈（摇杆头）半径 */
   innerRadius?: number;
-  /** 死区比例 (0-1) */
   deadzone?: number;
-  /** 透明度 */
   opacity?: number;
-  /** 启用 L3/R3 点击 */
   enableClick?: boolean;
 }
 
 @Component
 export struct AnalogStick {
-  // 配置
   @Prop config: AnalogStickConfig = { isLeftStick: true };
-  
-  // 回调
+
   onAxisChange: (xAxis: ControllerAxis, xValue: number, yAxis: ControllerAxis, yValue: number) => void = () => {};
   onStickClick: (button: ControllerButton) => void = () => {};
   onInput: (event: InputEvent) => void = () => {};
-  
-  // 状态
-  @State stickX: number = 0;  // -1 到 1
-  @State stickY: number = 0;  // -1 到 1
+
+  @State stickX: number = 0;
+  @State stickY: number = 0;
   @State isPressed: boolean = false;
   @State showClickFeedback: boolean = false;
-  
-  // 配置值
+
   private stickOuterRadius: number = 60;
   private stickInnerRadius: number = 28;
   private stickDeadzone: number = 0.15;
   private stickOpacity: number = 0.8;
-  
-  // 双击检测
-  private lastTapTime: number = 0;
-  private doubleTapThreshold: number = 300; // ms
 
-  // 触摸跟踪：记录落在本组件上的手指 ID，避免多指触控时取错手指
+  private lastTapTime: number = 0;
+  private doubleTapThreshold: number = 300;
+
   private trackingTouchId: number = -1;
-  
+
   aboutToAppear(): void {
-    // 应用配置
     if (this.config.outerRadius) {
       this.stickOuterRadius = this.config.outerRadius;
     }
@@ -79,7 +59,6 @@ export struct AnalogStick {
 
   build() {
     Stack() {
-      // 外圈（全透明 + 细边框）
       Circle()
         .width(this.stickOuterRadius * 2)
         .height(this.stickOuterRadius * 2)
@@ -87,8 +66,7 @@ export struct AnalogStick {
         .stroke('#FFFFFF')
         .strokeWidth(1)
         .strokeOpacity(0.15)
-      
-      // 摇杆头（全透明 + 轮廓）
+
       Circle()
         .width(this.stickInnerRadius * 2)
         .height(this.stickInnerRadius * 2)
@@ -104,8 +82,7 @@ export struct AnalogStick {
           duration: this.isPressed ? 0 : 100,
           curve: Curve.EaseOut
         })
-      
-      // 点击反馈
+
       if (this.showClickFeedback) {
         Circle()
           .width(this.stickInnerRadius * 2 + 16)
@@ -119,8 +96,7 @@ export struct AnalogStick {
             y: this.stickY * (this.stickOuterRadius - this.stickInnerRadius)
           })
       }
-      
-      // L/R 标签
+
       Text(this.config.isLeftStick ? 'L' : 'R')
         .fontSize(11)
         .fontColor('#FFFFFF')
@@ -144,7 +120,6 @@ export struct AnalogStick {
 
     switch (event.type) {
       case TouchType.Down: {
-        // 从 changedTouches 获取刚按下的手指，记录其 ID
         const changed = event.changedTouches;
         if (changed.length === 0) return;
         const touch = changed[0];
@@ -157,7 +132,6 @@ export struct AnalogStick {
 
       case TouchType.Move: {
         if (!this.isPressed) break;
-        // 在 touches 中查找我们跟踪的手指
         const touch = this.findTrackedTouch(event.touches);
         if (touch) {
           this.updateStickPosition(touch.x - centerX, touch.y - centerY);
@@ -167,7 +141,6 @@ export struct AnalogStick {
 
       case TouchType.Up:
       case TouchType.Cancel: {
-        // 检查抬起的是否是我们跟踪的手指
         const changed = event.changedTouches;
         const isOurFinger = changed.some(t => t.id === this.trackingTouchId);
         if (isOurFinger) {
@@ -180,9 +153,6 @@ export struct AnalogStick {
     }
   }
 
-  /**
-   * 在触摸列表中查找我们正在跟踪的手指
-   */
   private findTrackedTouch(touches: TouchObject[]): TouchObject | null {
     for (const t of touches) {
       if (t.id === this.trackingTouchId) {
@@ -191,52 +161,42 @@ export struct AnalogStick {
     }
     return null;
   }
-  
+
   private updateStickPosition(dx: number, dy: number): void {
     const maxDistance = this.stickOuterRadius - this.stickInnerRadius;
-    
-    // 计算距离和角度
+
     let distance = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx);
-    
-    // 限制在圆内
+
     if (distance > maxDistance) {
       distance = maxDistance;
     }
-    
-    // 归一化到 -1 到 1
+
     let normalizedX = (distance / maxDistance) * Math.cos(angle);
     let normalizedY = (distance / maxDistance) * Math.sin(angle);
-    
-    // 应用死区
+
     const magnitude = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
     if (magnitude < this.stickDeadzone) {
       normalizedX = 0;
       normalizedY = 0;
     } else {
-      // 重新映射死区外的值
       const remapScale = (magnitude - this.stickDeadzone) / (1 - this.stickDeadzone);
       const normalizedMagnitude = magnitude > 0 ? remapScale / magnitude : 0;
       normalizedX *= normalizedMagnitude;
       normalizedY *= normalizedMagnitude;
     }
-    
-    // 更新状态（用于显示，不应用死区）
+
     this.stickX = (distance / maxDistance) * Math.cos(angle);
     this.stickY = (distance / maxDistance) * Math.sin(angle);
-    
-    // 发送轴事件
+
     const xAxis = this.config.isLeftStick ? ControllerAxis.LEFT_X : ControllerAxis.RIGHT_X;
     const yAxis = this.config.isLeftStick ? ControllerAxis.LEFT_Y : ControllerAxis.RIGHT_Y;
-    
-    // 转换为 -32768 到 32767
+
     const xValue = Math.round(normalizedX * 32767);
-    // Y 轴取反：屏幕坐标系 Y 向下为正，游戏协议 Y 向上为正
     const yValue = Math.round(-normalizedY * 32767);
-    
+
     this.onAxisChange(xAxis, xValue, yAxis, yValue);
-    
-    // 发送 InputEvent
+
     const xEvent: ControllerAxisEvent = {
       type: InputType.CONTROLLER_AXIS,
       timestamp: Date.now(),
@@ -254,18 +214,16 @@ export struct AnalogStick {
     this.onInput(xEvent);
     this.onInput(yEvent);
   }
-  
+
   private resetStick(): void {
     this.stickX = 0;
     this.stickY = 0;
-    
-    // 发送归零事件
+
     const xAxis = this.config.isLeftStick ? ControllerAxis.LEFT_X : ControllerAxis.RIGHT_X;
     const yAxis = this.config.isLeftStick ? ControllerAxis.LEFT_Y : ControllerAxis.RIGHT_Y;
-    
+
     this.onAxisChange(xAxis, 0, yAxis, 0);
-    
-    // 发送 InputEvent
+
     const xEvent: ControllerAxisEvent = {
       type: InputType.CONTROLLER_AXIS,
       timestamp: Date.now(),
@@ -283,17 +241,15 @@ export struct AnalogStick {
     this.onInput(xEvent);
     this.onInput(yEvent);
   }
-  
+
   private checkDoubleTap(): void {
     if (!this.config.enableClick) return;
-    
+
     const now = Date.now();
     if (now - this.lastTapTime < this.doubleTapThreshold) {
-      // 双击触发 L3/R3
       const button = this.config.isLeftStick ? ControllerButton.LS : ControllerButton.RS;
       this.onStickClick(button);
-      
-      // 发送按下和释放事件
+
       const pressEvent: ControllerButtonEvent = {
         type: InputType.CONTROLLER_BUTTON,
         timestamp: Date.now(),
@@ -302,8 +258,7 @@ export struct AnalogStick {
         isPressed: true
       };
       this.onInput(pressEvent);
-      
-      // 短暂延迟后释放
+
       setTimeout(() => {
         const releaseEvent: ControllerButtonEvent = {
           type: InputType.CONTROLLER_BUTTON,
@@ -314,13 +269,12 @@ export struct AnalogStick {
         };
         this.onInput(releaseEvent);
       }, 50);
-      
-      // 显示点击反馈
+
       this.showClickFeedback = true;
       setTimeout(() => {
         this.showClickFeedback = false;
       }, 200);
-      
+
       this.lastTapTime = 0;
     } else {
       this.lastTapTime = now;

@@ -9,14 +9,9 @@
  */
 
 /**
- * 自定义按键配置存储
  *
- * 使用 Preferences (JSON) 持久化自定义按键配置。
- * 替代 Android 的 SQLite 方案，更轻量且适配 ArkUI 声明式架构。
  *
- * 存储结构:
  *   custom_key_profiles: JSON string of CustomKeyProfile[]
- *   custom_key_active_profile: string (当前活跃配置名称)
  */
 
 import { PreferencesUtil } from '../utils/PreferencesUtil';
@@ -30,33 +25,27 @@ import {
   KeyAction,
 } from './CustomKeyTypes';
 
-/** 导出数据格式 */
+/**
 interface ExportData {
   version: number;
   profile: CustomKeyProfile;
 }
 
-/** 存储键 */
+/**
 const STORAGE_KEY_PROFILES = 'custom_key_profiles';
 const STORAGE_KEY_ACTIVE = 'custom_key_active_profile';
 const STORAGE_KEY_GAME_PROFILES = 'custom_key_game_profiles';
 
 /**
- * 自定义按键配置存储管理
  *
- * 负责配置的 CRUD 和持久化。所有方法都是 async 的。
  */
 export class CustomKeyStore {
 
-  // ── 缓存 ──
   private static profiles: CustomKeyProfile[] | null = null;
   private static activeProfileName: string = '';
-  /** 游戏→配置映射缓存: { "appId": "profileName" } */
+  /**
   private static gameProfiles: Record<string, string> | null = null;
 
-  /**
-   * 初始化：从持久化加载数据
-   */
   static async init(): Promise<void> {
     try {
       const json = await PreferencesUtil.get<string>(STORAGE_KEY_PROFILES, '');
@@ -67,7 +56,6 @@ export class CustomKeyStore {
       }
       CustomKeyStore.activeProfileName = await PreferencesUtil.get<string>(STORAGE_KEY_ACTIVE, '');
 
-      // 如果没有任何配置，创建一个默认的
       if (CustomKeyStore.profiles.length === 0) {
         const defaultProfile = createDefaultProfile('默认');
         CustomKeyStore.profiles.push(defaultProfile);
@@ -75,19 +63,16 @@ export class CustomKeyStore {
         await CustomKeyStore.save();
       }
 
-      // 校验活跃配置名是否有效
       if (!CustomKeyStore.profiles.find(p => p.name === CustomKeyStore.activeProfileName)) {
         CustomKeyStore.activeProfileName = CustomKeyStore.profiles[0].name;
         await PreferencesUtil.put(STORAGE_KEY_ACTIVE, CustomKeyStore.activeProfileName);
       }
 
-      // 数据迁移：旧的绝对坐标 (x,y vp) → 百分比坐标 (xPercent,yPercent)
       if (CustomKeyStore.migrateAbsoluteToPercent()) {
         await CustomKeyStore.save();
         console.info('[CustomKeyStore] 坐标迁移完成: absolute vp → percent');
       }
 
-      // 加载游戏→配置映射
       const gameJson = await PreferencesUtil.get<string>(STORAGE_KEY_GAME_PROFILES, '');
       if (gameJson) {
         CustomKeyStore.gameProfiles = JSON.parse(gameJson) as Record<string, string>;
@@ -101,30 +86,23 @@ export class CustomKeyStore {
     }
   }
 
-  /** 确保已初始化 */
+  /**
   private static async ensureInit(): Promise<void> {
     if (CustomKeyStore.profiles === null) {
       await CustomKeyStore.init();
     }
   }
 
-  /** 持久化到 Preferences */
+  /**
   private static async save(): Promise<void> {
     const json = JSON.stringify(CustomKeyStore.profiles);
     await PreferencesUtil.put(STORAGE_KEY_PROFILES, json);
     await PreferencesUtil.put(STORAGE_KEY_ACTIVE, CustomKeyStore.activeProfileName);
   }
 
-  /**
-   * 数据迁移：旧的绝对坐标 (x,y vp) → 百分比坐标 (xPercent,yPercent)
-   * 检测逻辑：如果 key 有 x/y 字段但没有 xPercent/yPercent（或 xPercent 为 0 且 x > 1），
-   *           则认为是旧数据，需要迁移。
-   * @returns true 如果发生了迁移
-   */
   private static migrateAbsoluteToPercent(): boolean {
     if (!CustomKeyStore.profiles) return false;
 
-    // 获取当前屏幕尺寸作为参考（假设旧数据是在当前设备上保存的）
     const displayInfo = display.getDefaultDisplaySync();
     const screenWVp = px2vp(displayInfo.width);
     const screenHVp = px2vp(displayInfo.height);
@@ -139,10 +117,6 @@ export class CustomKeyStore {
     return migrated;
   }
 
-  /**
-   * 对单个配置档案中的按键做旧坐标迁移
-   * @returns true 如果有按键被迁移
-   */
   private static migrateProfileKeys(profile: CustomKeyProfile): boolean {
     const displayInfo = display.getDefaultDisplaySync();
     const screenWVp = px2vp(displayInfo.width);
@@ -164,28 +138,26 @@ export class CustomKeyStore {
     return migrated;
   }
 
-  // ── 配置档案管理 ──
-
-  /** 获取所有配置名称 */
+  /**
   static async getProfileNames(): Promise<string[]> {
     await CustomKeyStore.ensureInit();
     return CustomKeyStore.profiles!.map(p => p.name);
   }
 
-  /** 获取当前活跃配置名称 */
+  /**
   static async getActiveProfileName(): Promise<string> {
     await CustomKeyStore.ensureInit();
     return CustomKeyStore.activeProfileName;
   }
 
-  /** 获取当前活跃配置 */
+  /**
   static async getActiveProfile(): Promise<CustomKeyProfile> {
     await CustomKeyStore.ensureInit();
     const profile = CustomKeyStore.profiles!.find(p => p.name === CustomKeyStore.activeProfileName);
     return profile ?? CustomKeyStore.profiles![0];
   }
 
-  /** 切换到指定配置 */
+  /**
   static async switchProfile(name: string): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     const profile = CustomKeyStore.profiles!.find(p => p.name === name);
@@ -195,7 +167,7 @@ export class CustomKeyStore {
     return profile;
   }
 
-  /** 循环切换到下一个配置，并返回切换后的配置 */
+  /**
   static async cycleNextProfile(): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.length <= 1) return null;
@@ -207,11 +179,11 @@ export class CustomKeyStore {
     return next;
   }
 
-  /** 创建新配置 */
+  /**
   static async createProfile(name: string): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.find(p => p.name === name)) {
-      return null; // 名称重复
+      return null;
     }
     const profile = createDefaultProfile(name);
     CustomKeyStore.profiles!.push(profile);
@@ -220,7 +192,7 @@ export class CustomKeyStore {
     return profile;
   }
 
-  /** 删除配置（不允许删除最后一个） */
+  /**
   static async deleteProfile(name: string): Promise<boolean> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.length <= 1) return false;
@@ -234,7 +206,7 @@ export class CustomKeyStore {
     return true;
   }
 
-  /** 重命名配置 */
+  /**
   static async renameProfile(oldName: string, newName: string): Promise<boolean> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.find(p => p.name === newName)) return false;
@@ -248,11 +220,11 @@ export class CustomKeyStore {
     return true;
   }
 
-  /** 复制当前活跃配置为新配置并切换过去 */
+  /**
   static async duplicateProfile(newName: string): Promise<CustomKeyProfile | null> {
     await CustomKeyStore.ensureInit();
     if (CustomKeyStore.profiles!.find(p => p.name === newName)) {
-      return null; // 名称重复
+      return null;
     }
     const source = await CustomKeyStore.getActiveProfile();
     const cloned: CustomKeyProfile = {
@@ -269,22 +241,20 @@ export class CustomKeyStore {
     return cloned;
   }
 
-  // ── 按键管理 ──
-
-  /** 获取当前配置的所有按键 */
+  /**
   static async getKeys(): Promise<CustomKeyDef[]> {
     const profile = await CustomKeyStore.getActiveProfile();
     return profile.keys;
   }
 
-  /** 添加按键到当前配置 */
+  /**
   static async addKey(key: CustomKeyDef): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     profile.keys.push(key);
     await CustomKeyStore.save();
   }
 
-  /** 更新按键 */
+  /**
   static async updateKey(key: CustomKeyDef): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     const idx = profile.keys.findIndex(k => k.id === key.id);
@@ -294,7 +264,7 @@ export class CustomKeyStore {
     }
   }
 
-  /** 删除按键 */
+  /**
   static async deleteKey(keyId: string): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     const idx = profile.keys.findIndex(k => k.id === keyId);
@@ -304,16 +274,14 @@ export class CustomKeyStore {
     }
   }
 
-  /** 批量更新按键（编辑模式完成后一次性保存） */
+  /**
   static async saveKeys(keys: CustomKeyDef[]): Promise<void> {
     const profile = await CustomKeyStore.getActiveProfile();
     profile.keys = keys;
     await CustomKeyStore.save();
   }
 
-  // ── 导入/导出 ──
-
-  /** 导出当前配置为 JSON 字符串 */
+  /**
   static async exportProfile(): Promise<string> {
     const profile = await CustomKeyStore.getActiveProfile();
     const exportData: ExportData = {
@@ -323,14 +291,13 @@ export class CustomKeyStore {
     return JSON.stringify(exportData);
   }
 
-  /** 从 JSON 字符串导入配置 */
+  /**
   static async importProfile(json: string): Promise<boolean> {
     try {
       const data = JSON.parse(json) as ExportData;
       if (!data.profile || !data.profile.name || !Array.isArray(data.profile.keys)) {
         return false;
       }
-      // 避免名称冲突
       await CustomKeyStore.ensureInit();
       let name = data.profile.name;
       let suffix = 1;
@@ -338,7 +305,6 @@ export class CustomKeyStore {
         name = `${data.profile.name} (${suffix++})`;
       }
       data.profile.name = name;
-      // 导入数据也可能是旧的绝对坐标格式，做一次迁移
       CustomKeyStore.migrateProfileKeys(data.profile);
       CustomKeyStore.profiles!.push(data.profile);
       CustomKeyStore.activeProfileName = name;
@@ -350,12 +316,6 @@ export class CustomKeyStore {
     }
   }
 
-  /**
-   * 合并导入：将 JSON 中的按键合并到当前活跃配置
-   * 与 importProfile 不同，不创建新配置，而是将按键追加到当前配置中。
-   * 每个导入按键分配新 ID，略微偏移位置避免完全重叠。
-   * @returns 合并的按键数量，失败返回 -1
-   */
   static async mergeImportKeys(json: string): Promise<number> {
     try {
       const data = JSON.parse(json) as ExportData;
@@ -367,7 +327,6 @@ export class CustomKeyStore {
       let count = 0;
       for (const key of data.profile.keys) {
         key.id = generateKeyId();
-        // 略微偏移避免完全重叠
         key.xPercent = Math.max(0, Math.min(1, (key.xPercent ?? 0.5) + 0.02));
         key.yPercent = Math.max(0, Math.min(1, (key.yPercent ?? 0.5) + 0.02));
         profile.keys.push(key);
@@ -381,17 +340,10 @@ export class CustomKeyStore {
     }
   }
 
-  // ── 游戏→配置自动关联 ──
-
-  /**
-   * 获取游戏关联的配置名称。
-   * @returns 配置名称，未关联则返回 null
-   */
   static async getGameProfileName(appId: number): Promise<string | null> {
     await CustomKeyStore.ensureInit();
     const name = CustomKeyStore.gameProfiles?.[String(appId)];
     if (!name) return null;
-    // 验证配置仍然存在
     if (!CustomKeyStore.profiles!.find(p => p.name === name)) {
       CustomKeyStore.gameProfiles![String(appId)] = '';
       await PreferencesUtil.put(STORAGE_KEY_GAME_PROFILES, JSON.stringify(CustomKeyStore.gameProfiles));
@@ -400,9 +352,6 @@ export class CustomKeyStore {
     return name;
   }
 
-  /**
-   * 保存游戏→配置关联
-   */
   static async setGameProfile(appId: number, profileName: string): Promise<void> {
     await CustomKeyStore.ensureInit();
     if (!CustomKeyStore.gameProfiles) {
@@ -412,15 +361,9 @@ export class CustomKeyStore {
     await PreferencesUtil.put(STORAGE_KEY_GAME_PROFILES, JSON.stringify(CustomKeyStore.gameProfiles));
   }
 
-  /**
-   * 根据游戏自动加载关联配置。
-   * 如果该游戏有记忆的配置，自动切换到该配置。
-   * @returns 加载的配置，无关联则返回 null（不改变当前配置）
-   */
   static async loadGameProfile(appId: number): Promise<CustomKeyProfile | null> {
     const name = await CustomKeyStore.getGameProfileName(appId);
     if (!name) return null;
-    // 已经是当前配置则不重复切换
     if (name === CustomKeyStore.activeProfileName) return null;
     return CustomKeyStore.switchProfile(name);
   }

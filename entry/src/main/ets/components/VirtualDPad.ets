@@ -9,57 +9,47 @@
  */
 
 /**
- * 虚拟十字键盘 (D-Pad) 组件
  *
- * 参照 Android DigitalPad.java 的设计：
- * - 一个控件涵盖上/下/左/右 4 个方向，并支持对角线组合（8-way）
- * - 触摸区域按 3×3 九宫格划分：外围为方向区域，中心为无操作区域
- * - 视觉上绘制十字形 4 个方向矩形 + 4 条对角连接线
- * - 输出方向位掩码（与 GamepadButton.UP/DOWN/LEFT/RIGHT 一致）
  */
 
-/** D-Pad 方向位掩码（与 GamepadButton.UP/DOWN/LEFT/RIGHT 值一致） */
+/**
 export const DPAD_LEFT: number = 0x0004;
 export const DPAD_UP: number = 0x0001;
 export const DPAD_RIGHT: number = 0x0008;
 export const DPAD_DOWN: number = 0x0002;
 
-/** 方向变化回调，参数为方向位掩码组合（0 = 无方向） */
+/**
 export type DPadDirectionCallback = (direction: number) => void;
 
-/** 是否处于编辑模式 */
+/**
 export type DPadEditModeGetter = () => boolean;
 
 @Component
 export struct VirtualDPad {
-  /** D-Pad 尺寸 (vp)，正方形边长 */
+  /**
   @Prop dpadSize: number = 120;
-  /** 常态颜色 */
+  /**
   @Prop normalColor: string = '#6050C080';
-  /** 按下时颜色 */
+  /**
   @Prop pressedColor: string = '#C070E090';
-  /** 背景色 */
+  /**
   @Prop bgColor: string = '#3050C080';
-  /** 透明度 0-100 */
+  /**
   @Prop opacity_: number = 80;
 
-  // 回调
   onDirectionChange: DPadDirectionCallback = (_dir: number): void => {};
   isEditMode: DPadEditModeGetter = (): boolean => false;
 
-  // === 内部状态 ===
-  /** 当前方向位掩码（避免与 CustomComponent.direction 冲突） */
+  /**
   @State private currentDir: number = 0;
 
-  // 触摸追踪
   private trackingTouchId: number = -1;
 
-  // 预计算（padSize 避免与 CustomComponent.size 冲突）
   private padSize: number = 120;
-  /** 方向区域分界线：<33% =左/上, >66% =右/下 */
+  /**
   private threshold33: number = 40;
   private threshold66: number = 80;
-  /** 方向矩形厚度 (33%) */
+  /**
   private bandWidth: number = 40;
 
   aboutToAppear(): void {
@@ -71,14 +61,12 @@ export struct VirtualDPad {
 
   build() {
     Stack() {
-      // 背景填充（用于命中测试，与 VirtualJoystick 同 #01000000 策略）
       Rect()
         .width(this.padSize)
         .height(this.padSize)
         .fill('#01000000')
         .borderRadius(8)
 
-      // 中心方块（无方向指示器）
       if (this.currentDir === 0) {
         Rect()
           .width(this.bandWidth)
@@ -89,7 +77,6 @@ export struct VirtualDPad {
           .borderRadius(4)
       }
 
-      // 上方区域
       Rect()
         .width(this.bandWidth)
         .height(this.threshold33)
@@ -99,7 +86,6 @@ export struct VirtualDPad {
         .borderRadius(4)
         .position({ x: this.threshold33, y: 0 })
 
-      // 下方区域
       Rect()
         .width(this.bandWidth)
         .height(this.threshold33)
@@ -109,7 +95,6 @@ export struct VirtualDPad {
         .borderRadius(4)
         .position({ x: this.threshold33, y: this.threshold66 })
 
-      // 左方区域
       Rect()
         .width(this.threshold33)
         .height(this.bandWidth)
@@ -119,7 +104,6 @@ export struct VirtualDPad {
         .borderRadius(4)
         .position({ x: 0, y: this.threshold33 })
 
-      // 右方区域
       Rect()
         .width(this.threshold33)
         .height(this.bandWidth)
@@ -129,7 +113,6 @@ export struct VirtualDPad {
         .borderRadius(4)
         .position({ x: this.threshold66, y: this.threshold33 })
 
-      // 方向箭头符号
       Text('▲')
         .fontSize(this.padSize * 0.12)
         .fontColor((this.currentDir & DPAD_UP) > 0 ? this.pressedColor : this.normalColor)
@@ -199,11 +182,8 @@ export struct VirtualDPad {
   }
 
   /**
-   * 根据触摸坐标计算方向位掩码
-   * 参照 Android DigitalPad.java 的 3×3 九宫格算法：
    * - X < 33% → LEFT,  X > 66% → RIGHT
    * - Y < 33% → UP,    Y > 66% → DOWN
-   * - 可同时触发两个方向（对角线）
    */
   private updateDirection(x: number, y: number): void {
     let newDir: number = 0;

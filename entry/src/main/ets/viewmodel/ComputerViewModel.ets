@@ -11,11 +11,6 @@
 import { ComputerInfo, ComputerState, PairState, AddressHolder } from '../model/ComputerInfo';
 import { ComputerManager } from '../service/ComputerManager';
 
-/**
- * 可观察的电脑数据类
- * 使用 @Observed 装饰器支持深度响应式
- * 注意：避免在 @Observed 类中使用 getter，会导致性能问题
- */
 @Observed
 export class ObservableComputer implements AddressHolder {
   uuid: string = '';
@@ -28,17 +23,14 @@ export class ObservableComputer implements AddressHolder {
   macAddress: string = '';
   localAddress: string = '';
   remoteAddress: string = '';
-  manualAddress: string = '';  // 用户手动输入的地址（如域名），轮询时最优先尝试
-  ipv6Address: string = '';     // IPv6 地址
+  manualAddress: string = '';
+  ipv6Address: string = '';
   pairName: string = '';
   gpuType: string = '';
   isNvidiaSoftware: boolean = false;
-  // 主机头像 - 使用第一个应用的缩略图
   boxArtUrl: string = '';
-  // 自定义 HTTP 端口
   httpPort: number | undefined = undefined;
   
-  // 缓存的状态值 - 避免使用 getter 引起的性能问题
   isOnline: boolean = false;
   isPaired: boolean = false;
   isGaming: boolean = false;
@@ -69,11 +61,9 @@ export class ObservableComputer implements AddressHolder {
     this.boxArtUrl = info.boxArtUrl || '';
     this.httpPort = info.httpPort;
     
-    // 更新缓存的计算值
     this.updateCachedValues();
   }
   
-  // 更新缓存的计算值
   private updateCachedValues(): void {
     this.isOnline = this.state === ComputerState.ONLINE;
     this.isPaired = this.pairState === PairState.PAIRED;
@@ -116,26 +106,19 @@ export class ObservableComputer implements AddressHolder {
 }
 
 /**
- * 电脑列表 ViewModel
  * 
- * 管理电脑列表的状态和业务逻辑
  */
 @Observed
 export class ComputerListViewModel {
-  // 电脑列表
   computers: ObservableComputer[] = [];
   
-  // 加载状态
   isLoading: boolean = false;
   isRefreshing: boolean = false;
   
-  // 错误信息
   errorMessage: string = '';
   
-  // 选中的电脑（用于详情/操作）
   selectedComputer: ObservableComputer | null = null;
   
-  // 配对相关
   isPairing: boolean = false;
   pairingPin: string = '';
   pairingComputer: ObservableComputer | null = null;
@@ -146,9 +129,6 @@ export class ComputerListViewModel {
     this.computerManager = ComputerManager.getInstance();
   }
   
-  /**
-   * 加载电脑列表
-   */
   async loadComputers(): Promise<void> {
     if (this.isLoading) return;
     
@@ -166,16 +146,12 @@ export class ComputerListViewModel {
     }
   }
   
-  /**
-   * 刷新电脑列表（重新轮询）
-   */
   async refreshComputers(): Promise<void> {
     if (this.isRefreshing) return;
     
     this.isRefreshing = true;
     
     try {
-      // 轮询所有电脑获取最新状态
       const computers = await this.computerManager.getComputers();
       for (const computer of computers) {
         await this.computerManager.pollComputer(computer);
@@ -189,15 +165,10 @@ export class ComputerListViewModel {
     }
   }
   
-  /**
-   * 更新电脑列表
-   */
   private updateComputerList(infos: ComputerInfo[]): void {
-    // 更新现有项或添加新项
     const existingUuids = new Set(this.computers.map(c => c.uuid));
     const newUuids = new Set(infos.map(i => i.uuid));
     
-    // 更新现有电脑
     for (const computer of this.computers) {
       const info = infos.find(i => i.uuid === computer.uuid);
       if (info) {
@@ -205,31 +176,22 @@ export class ComputerListViewModel {
       }
     }
     
-    // 添加新电脑
     for (const info of infos) {
       if (!existingUuids.has(info.uuid)) {
         this.computers.push(new ObservableComputer(info));
       }
     }
     
-    // 移除已删除的电脑
     this.computers = this.computers.filter(c => newUuids.has(c.uuid));
     
-    // 更新缓存的统计值，触发 UI 更新
     this.updateCachedCounts();
   }
   
-  /**
-   * 更新缓存的统计值（触发 @Observed 响应式更新）
-   */
   private updateCachedCounts(): void {
     this.computerCount = this.computers.length;
     this.onlineCount = this.computers.filter(c => c.isOnline).length;
   }
   
-  /**
-   * 添加电脑
-   */
   async addComputer(address: string): Promise<boolean> {
     this.isLoading = true;
     this.errorMessage = '';
@@ -252,17 +214,11 @@ export class ComputerListViewModel {
     }
   }
   
-  /**
-   * 移除电脑
-   */
   async removeComputer(uuid: string): Promise<void> {
     await this.computerManager.removeComputer(uuid);
     this.computers = this.computers.filter(c => c.uuid !== uuid);
   }
   
-  /**
-   * 开始配对
-   */
   async startPairing(computer: ObservableComputer): Promise<string> {
     this.isPairing = true;
     this.pairingComputer = computer;
@@ -280,74 +236,50 @@ export class ComputerListViewModel {
     }
   }
   
-  /**
-   * 取消配对
-   */
   cancelPairing(): void {
     this.isPairing = false;
     this.pairingPin = '';
     this.pairingComputer = null;
   }
   
-  /**
-   * 唤醒电脑
-   */
   async wakeComputer(computer: ObservableComputer): Promise<void> {
     await this.computerManager.wakeComputer(computer.uuid);
   }
   
-  /**
-   * 选择电脑
-   */
   selectComputer(computer: ObservableComputer): void {
     this.selectedComputer = computer;
   }
   
-  /**
-   * 清除选择
-   */
   clearSelection(): void {
     this.selectedComputer = null;
   }
   
-  // 缓存的统计值（避免 getter 不触发 UI 更新的问题）
   computerCount: number = 0;
   onlineCount: number = 0;
   
-  /**
-   * 是否为空
-   */
   get isEmpty(): boolean {
     return this.computers.length === 0;
   }
 }
 
-/**
- * 电脑列表数据源
- * 实现 IDataSource 接口以支持 LazyForEach
- */
 export class ComputerDataSource implements IDataSource {
   private listeners: DataChangeListener[] = [];
   private dataArray: ObservableComputer[] = [];
   
-  // 获取数据总数
   totalCount(): number {
     return this.dataArray.length;
   }
   
-  // 获取指定索引的数据
   getData(index: number): ObservableComputer {
     return this.dataArray[index];
   }
   
-  // 注册数据变化监听器
   registerDataChangeListener(listener: DataChangeListener): void {
     if (this.listeners.indexOf(listener) < 0) {
       this.listeners.push(listener);
     }
   }
   
-  // 注销数据变化监听器
   unregisterDataChangeListener(listener: DataChangeListener): void {
     const pos = this.listeners.indexOf(listener);
     if (pos >= 0) {
@@ -355,52 +287,44 @@ export class ComputerDataSource implements IDataSource {
     }
   }
   
-  // 重新加载所有数据
   reloadData(data: ObservableComputer[]): void {
     this.dataArray = data;
     this.notifyDataReload();
   }
   
-  // 更新单个数据项（不重建组件，只更新内容）
   updateItem(index: number): void {
     this.notifyDataChange(index);
   }
   
-  // 通知数据重新加载
   private notifyDataReload(): void {
     this.listeners.forEach(listener => {
       listener.onDataReloaded();
     });
   }
   
-  // 通知单个数据变化
   private notifyDataChange(index: number): void {
     this.listeners.forEach(listener => {
       listener.onDataChange(index);
     });
   }
   
-  // 通知数据添加
   notifyDataAdd(index: number): void {
     this.listeners.forEach(listener => {
       listener.onDataAdd(index);
     });
   }
   
-  // 通知数据删除
   notifyDataDelete(index: number): void {
     this.listeners.forEach(listener => {
       listener.onDataDelete(index);
     });
   }
   
-  // 添加数据
   pushData(data: ObservableComputer): void {
     this.dataArray.push(data);
     this.notifyDataAdd(this.dataArray.length - 1);
   }
   
-  // 删除数据
   deleteData(index: number): void {
     this.dataArray.splice(index, 1);
     this.notifyDataDelete(index);

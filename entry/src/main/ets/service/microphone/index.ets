@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- * 麦克风模块导出
- */
 
 export { MicrophoneConfig, MicrophoneState, MicrophoneStateListener } from './MicrophoneConfig';
 export { MicrophoneCapturer, MicrophoneDataCallback } from './MicrophoneCapturer';

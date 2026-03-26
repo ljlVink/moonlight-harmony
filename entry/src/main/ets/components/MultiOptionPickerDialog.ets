@@ -9,47 +9,47 @@
  */
 
 /**
- * 多选选项选择器弹窗组件
- * 
- * 使用 CustomDialogController 实现的底部弹窗多选选择器
+ * Multi-select option picker dialog component
+ *
+ * Bottom sheet multi-select picker using CustomDialogController
  */
 import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
 import { LengthMetrics, ColorMetrics } from '@kit.ArkUI';
 
 /**
- * 多选选项配置
+ * Multi-select option config
  */
 export interface MultiOptionItem {
-  /** 显示标题 */
+  /** Display title */
   title: string;
-  /** 选项键值 */
+  /** Option key value */
   key: string;
-  /** 图标（可选）*/
+  /** Icon (optional)*/
   icon?: Resource;
 }
 
 /**
- * 多选选择器配置
+ * Multi-select picker config
  */
 export interface MultiOptionPickerDialogConfig {
-  /** 弹窗标题 */
+  /** Dialog title */
   title: string;
-  /** 副标题（可选）*/
+  /** Subtitle (optional)*/
   subtitle?: string;
-  /** 选项列表 */
+  /** Option list */
   options: MultiOptionItem[];
-  /** 当前选中的键值列表 */
+  /** Currently selected key list */
   selectedKeys: string[];
-  /** 最小选中数量（可选，默认0）*/
+  /** Minimum selected count (optional, default 0)*/
   minSelected?: number;
-  /** 选择变更回调 */
+  /** Selection change callback */
   onSelectionChange: (selectedKeys: string[]) => void;
-  /** 取消回调（可选）*/
+  /** Cancel callback (optional)*/
   onCancel?: () => void;
 }
 
 /**
- * 多选选项选择器弹窗
+ * Multi-select option picker dialog
  */
 @CustomDialog
 export struct MultiOptionPickerDialog {
@@ -61,24 +61,24 @@ export struct MultiOptionPickerDialog {
     onSelectionChange: () => {}
   };
   
-  // 本地选中状态
+  // Local selection state
   @State localSelectedKeys: string[] = [];
   
   aboutToAppear(): void {
-    // 复制初始选中状态
+    // Copy initial selection state
     this.localSelectedKeys = [...this.config.selectedKeys];
   }
   
   private toggleOption(key: string): void {
     const index = this.localSelectedKeys.indexOf(key);
     if (index >= 0) {
-      // 取消选中 - 检查最小选中数量
+      // Deselect - check minimum selected count
       const minSelected = this.config.minSelected ?? 0;
       if (this.localSelectedKeys.length > minSelected) {
         this.localSelectedKeys = this.localSelectedKeys.filter(k => k !== key);
       }
     } else {
-      // 选中
+      // Select
       this.localSelectedKeys = [...this.localSelectedKeys, key];
     }
   }
@@ -89,7 +89,7 @@ export struct MultiOptionPickerDialog {
   
   build() {
     Column() {
-      // 标题栏
+      // Title bar
       Column() {
         Text(this.config.title)
           .fontSize(AppSizes.FontTitle)
@@ -107,17 +107,17 @@ export struct MultiOptionPickerDialog {
       .padding({ top: AppSpacing.Large, bottom: AppSpacing.Medium })
       .alignItems(HorizontalAlign.Center)
       
-      // 分割线
+      // Divider
       Divider()
         .strokeWidth(0.5)
         .color(AppColors.Divider)
       
-      // 选项列表
+      // Option list
       Scroll() {
         Column() {
           ForEach(this.config.options, (option: MultiOptionItem, index: number) => {
             Row() {
-              // 图标（如果有）
+              // Icon (if any)
               if (option.icon) {
                 Image(option.icon)
                   .width(24)
@@ -126,14 +126,14 @@ export struct MultiOptionPickerDialog {
                   .margin({ right: AppSpacing.Medium })
               }
               
-              // 文本内容
+              // Text content
               Text(option.title)
                 .fontSize(AppSizes.FontBody)
                 .fontColor(AppColors.TextPrimary)
                 .fontWeight(this.isSelected(option.key) ? FontWeight.Bold : FontWeight.Normal)
                 .layoutWeight(1)
               
-              // 选中标记（复选框样式）
+              // Selection mark (checkbox style)
               Stack() {
                 if (this.isSelected(option.key)) {
                   Image($r('sys.media.ohos_ic_public_ok'))
@@ -166,12 +166,12 @@ export struct MultiOptionPickerDialog {
             })
             .onKeyEvent((event: KeyEvent) => {
               if (event.type === KeyType.Down) {
-                // A键切换选中
+                // A key toggles selection
                 if (event.keyCode === 2054 || event.keyCode === 2050) {
                   this.toggleOption(option.key);
                   return true;
                 }
-                // B键关闭
+                // B key closes
                 if (event.keyCode === 2070 || event.keyCode === 2012) {
                   if (this.config.onCancel) {
                     this.config.onCancel();
@@ -192,10 +192,10 @@ export struct MultiOptionPickerDialog {
       .scrollBar(BarState.Off)
       .constraintSize({ maxHeight: 350 })
       
-      // 按钮区域
+      // Button area
       Row({ space: AppSpacing.Medium }) {
-        // 取消按钮
-        Button('取消')
+        // Cancel button
+        Button('Cancel')
           .layoutWeight(1)
           .height(48)
           .fontSize(AppSizes.FontBody)
@@ -209,8 +209,8 @@ export struct MultiOptionPickerDialog {
             this.controller.close();
           })
         
-        // 确认按钮
-        Button('确定')
+        // Confirm button
+        Button('OK')
           .layoutWeight(1)
           .height(48)
           .fontSize(AppSizes.FontBody)

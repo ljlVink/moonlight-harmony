@@ -9,11 +9,7 @@
  */
 
 /**
- * PC 列表页面对话框组件
  *
- * 包含:
- * - PIN 码配对对话框
- * - 关于对话框
  */
 import { promptAction } from '@kit.ArkUI';
 import { common, bundleManager, Want } from '@kit.AbilityKit';
@@ -23,9 +19,6 @@ import { AppColors, AppSizes, AppSpacing, AppAnimation } from '../common/Theme';
 const GITHUB_URL = 'https://github.com/AlkaidLab/moonlight-harmony';
 const QQ_GROUP_NUMBER = '103206957';
 
-/**
- * PIN 码对话框
- */
 @Component
 export struct PinDialogView {
   @Prop pin: string = '';
@@ -34,14 +27,12 @@ export struct PinDialogView {
 
   build() {
     Stack() {
-      // 背景遮罩
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor('#66000000')
         .onClick(() => { this.onClose(); })
 
-      // 对话框
       Column() {
         Text('配对 PIN 码')
           .fontSize(AppSizes.FontHeadline)
@@ -55,7 +46,6 @@ export struct PinDialogView {
           .textAlign(TextAlign.Center)
           .margin({ bottom: AppSpacing.Large })
 
-        // PIN 码显示
         Row() {
           ForEach(this.pin.split(''), (digit: string) => {
             Text(digit)
@@ -98,23 +88,18 @@ export struct PinDialogView {
   }
 }
 
-/**
- * 关于对话框
- */
 @Component
 export struct AboutDialogView {
   onClose: () => void = () => {};
 
   build() {
     Stack() {
-      // 背景遮罩
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor('#66000000')
         .onClick(() => { this.onClose(); })
 
-      // 对话框
       Column() {
         Image($r('app.media.vplus'))
           .width(80)
@@ -146,7 +131,6 @@ export struct AboutDialogView {
           .textAlign(TextAlign.Center)
           .margin({ bottom: AppSpacing.XLarge })
 
-        // 按钮组
         Row() {
           Button('GitHub')
             .height(40)

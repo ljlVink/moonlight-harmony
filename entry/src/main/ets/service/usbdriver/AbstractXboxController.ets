@@ -9,10 +9,10 @@
  */
 
 /**
- * 抽象 Xbox 风格控制器基类
- * 
- * 参考 Android moonlight-android AbstractXboxController
- * 用于 Xbox 360 和 Xbox One 控制器
+ * Abstract Xbox-style controller base class
+ *
+ * Reference: Android moonlight-android AbstractXboxController
+ * Used for Xbox 360 and Xbox One controllers
  */
 
 import { usbManager } from '@kit.BasicServicesKit';
@@ -35,7 +35,7 @@ export abstract class AbstractXboxController extends AbstractController {
   private inputThread: boolean = false;
   private stopped: boolean = false;
   
-  // DDK 高速轮询器 (绕过 usbManager IPC)
+  // DDK high-speed poller (bypasses usbManager IPC)
   private ddkPoller: DdkUsbPoller | null = null;
   private useDdkPolling: boolean = false;
   
@@ -51,8 +51,8 @@ export abstract class AbstractXboxController extends AbstractController {
     this.type = ControllerType.XBOX;
     this.capabilities = ControllerCapabilities.ANALOG_TRIGGERS | ControllerCapabilities.RUMBLE;
     
-    // 支持的按钮
-    this.supportedButtonFlags = 
+    // Supported buttons
+    this.supportedButtonFlags =
       ButtonFlags.A_FLAG | ButtonFlags.B_FLAG | ButtonFlags.X_FLAG | ButtonFlags.Y_FLAG |
       ButtonFlags.UP_FLAG | ButtonFlags.DOWN_FLAG | ButtonFlags.LEFT_FLAG | ButtonFlags.RIGHT_FLAG |
       ButtonFlags.LB_FLAG | ButtonFlags.RB_FLAG |
@@ -60,62 +60,56 @@ export abstract class AbstractXboxController extends AbstractController {
       ButtonFlags.BACK_FLAG | ButtonFlags.PLAY_FLAG | ButtonFlags.SPECIAL_BUTTON_FLAG;
   }
   
-  /**
-   * 查找并设置端点
-   */
   private findEndpoints(): boolean {
     if (!this.device.configs || this.device.configs.length === 0) {
-      console.error(`${TAG} 设备没有配置`);
+      console.error(`${TAG} Device has no configuration`);
       return false;
     }
     
     const config = this.device.configs[0];
     if (!config.interfaces || config.interfaces.length === 0) {
-      console.error(`${TAG} 配置没有接口`);
+      console.error(`${TAG} Configuration has no interface`);
       return false;
     }
     
-    // 查找第一个接口
+    // Find the first interface
     this.usbInterface = config.interfaces[0];
     
     if (!this.usbInterface.endpoints || this.usbInterface.endpoints.length === 0) {
-      console.error(`${TAG} 接口没有端点`);
+      console.error(`${TAG} Interface has no endpoints`);
       return false;
     }
     
-    // 查找输入和输出端点
+    // Find input and output endpoints
     for (const endpoint of this.usbInterface.endpoints) {
       const direction = endpoint.direction;
       
       if (direction === usbManager.USBRequestDirection.USB_REQUEST_DIR_FROM_DEVICE) {
         if (this.inEndpoint !== null) {
-          console.warn(`${TAG} 发现重复的输入端点`);
+          console.warn(`${TAG} Duplicate input endpoint found`);
           return false;
         }
         this.inEndpoint = endpoint;
-        console.info(`${TAG} 找到输入端点: address=0x${endpoint.address.toString(16)}`);
+        console.info(`${TAG} Found input endpoint: address=0x${endpoint.address.toString(16)}`);
       } else if (direction === usbManager.USBRequestDirection.USB_REQUEST_DIR_TO_DEVICE) {
         if (this.outEndpoint !== null) {
-          console.warn(`${TAG} 发现重复的输出端点`);
+          console.warn(`${TAG} Duplicate output endpoint found`);
           return false;
         }
         this.outEndpoint = endpoint;
-        console.info(`${TAG} 找到输出端点: address=0x${endpoint.address.toString(16)}`);
+        console.info(`${TAG} Found output endpoint: address=0x${endpoint.address.toString(16)}`);
       }
     }
     
-    // 确保找到了必要的端点
+    // Ensure required endpoints are found
     if (this.inEndpoint === null || this.outEndpoint === null) {
-      console.warn(`${TAG} 缺少必要的端点: in=${this.inEndpoint !== null}, out=${this.outEndpoint !== null}`);
+      console.warn(`${TAG} Missing required endpoints: in=${this.inEndpoint !== null}, out=${this.outEndpoint !== null}`);
       return false;
     }
     
     return true;
   }
   
-  /**
-   * 声明接口
-   */
   private claimInterface(): boolean {
     if (!this.pipe || !this.usbInterface) {
       return false;
@@ -124,30 +118,27 @@ export abstract class AbstractXboxController extends AbstractController {
     try {
       const result = usbManager.claimInterface(this.pipe, this.usbInterface, true);
       if (result !== 0) {
-        console.error(`${TAG} 声明接口失败: ${result}`);
+        console.error(`${TAG} Failed to claim interface: ${result}`);
         return false;
       }
-      console.info(`${TAG} 成功声明接口`);
+      console.info(`${TAG} Successfully claimed interface`);
       return true;
     } catch (err) {
-      console.error(`${TAG} 声明接口异常:`, err);
+      console.error(`${TAG} Exception claiming interface:`, err);
       return false;
     }
   }
   
-  /**
-   * 批量传输读取
-   */
   protected async bulkRead(timeout: number = 3000): Promise<Uint8Array | null> {
     if (!this.pipe || !this.inEndpoint) {
-      throw new Error('USB 管道或端点未初始化');
+      throw new Error('USB pipe or endpoint not initialized');
     }
     
-    // 创建读取缓冲区
+    // Create read buffer
     const buffer = new Uint8Array(64);
     const result = await usbManager.bulkTransfer(this.pipe, this.inEndpoint, buffer, timeout);
     
-    // 负数表示错误
+    // Negative value indicates error
     if (result < 0) {
       throw createUsbError(result);
     }
@@ -158,49 +149,43 @@ export abstract class AbstractXboxController extends AbstractController {
     return null;
   }
   
-  /**
-   * 批量传输写入
-   */
   protected async bulkWrite(data: Uint8Array, timeout: number = 3000): Promise<number> {
-    // DDK 路径: 通过 DDK 同步发送
+    // DDK path: send via DDK synchronously
     if (this.useDdkPolling && this.ddkPoller) {
       const ret = this.ddkPoller.sendOutput(data);
       if (ret < 0) {
-        console.error(`${TAG} DDK sendOutput 失败: ret=${ret}, dataLen=${data.length}`);
+        console.error(`${TAG} DDK sendOutput failed: ret=${ret}, dataLen=${data.length}`);
       }
       return ret;
     }
 
-    // usbManager 路径
+    // usbManager path
     if (!this.pipe || !this.outEndpoint) {
       return -1;
     }
     
     try {
-      // HarmonyOS bulkTransfer 返回传输的字节数
+      // HarmonyOS bulkTransfer returns transferred bytes
       const result = await usbManager.bulkTransfer(this.pipe, this.outEndpoint, data, timeout);
       return typeof result === 'number' ? result : data.length;
     } catch (err) {
-      console.error(`${TAG} 批量写入失败:`, err);
+      console.error(`${TAG} Bulk write failed:`, err);
       return -1;
     }
   }
   
-  /**
-   * 输入读取线程 (ArkTS 后备方案)
-   */
   private async inputLoop(): Promise<void> {
-    console.info(`${TAG} 输入循环启动`);
+    console.info(`${TAG} Input loop started`);
     
-    // 初始化完成，标记就绪并通知
+    // Initialization complete, mark ready and notify
     this.notifyDeviceAdded();
     
     let detectedHardwareError = false;
     
     while (!this.stopped) {
       try {
-        // 使用较长的超时（与 Android 一致）
-        // 有数据时会立即返回，不会影响实际轮询率
+        // Use longer timeout (consistent with Android)
+        // Returns immediately when data is available
         const buffer = await this.bulkRead(1000);
         
         if (this.stopped) {
@@ -214,38 +199,38 @@ export abstract class AbstractXboxController extends AbstractController {
         }
       } catch (err) {
         if (!this.stopped) {
-          // 检查错误类型
+          // Check error type
           const usbErr = err instanceof UsbError ? err : null;
           const errorCode = usbErr ? usbErr.code : 0;
-          const retryable = usbErr ? usbErr.retryable : true;  // 默认可重试
+          const retryable = usbErr ? usbErr.retryable : true;
           
-          // 超时错误 - 继续轮询
+          // Timeout error - continue polling
           if (errorCode === -8) {  // USB_ERROR_TIMEOUT
             continue;
           } else if (errorCode === -4) {  // USB_ERROR_NO_DEVICE
-            // 如果设置了忽略断开信号，继续轮询
+            // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} 设备不可达但忽略断开信号已启用，继续轮询: ${err}`);
+              console.warn(`${TAG} Device unreachable but ignore disconnect enabled, continuing: ${err}`);
               continue;
             }
-            console.warn(`${TAG} 设备不可达: ${err}`);
+            console.warn(`${TAG} Device unreachable: ${err}`);
             break;
           } else if (isHardwareError(errorCode)) {
-            // 如果设置了忽略断开信号，继续轮询
+            // If ignore disconnect is set, continue polling
             if (this.ignoreDisconnect) {
-              console.warn(`${TAG} 检测到硬件错误但忽略断开信号已启用，继续轮询: ${err}`);
+              console.warn(`${TAG} Hardware error detected but ignore disconnect enabled, continuing: ${err}`);
               continue;
             }
-            console.error(`${TAG} 检测到硬件错误: ${err}`);
+            console.error(`${TAG} Hardware error detected: ${err}`);
             detectedHardwareError = true;
             break;
           } else {
-            console.error(`${TAG} 输入读取错误: ${err}`);
-            // 其他错误 - 如果标记为可重试则继续，否则停止
+            console.error(`${TAG} Input read error: ${err}`);
+            // Other errors - continue if retryable, otherwise stop
             if (!retryable) {
-              // 如果设置了忽略断开信号，也继续轮询
+              // If ignore disconnect is set, continue polling
               if (this.ignoreDisconnect) {
-                console.warn(`${TAG} 不可重试错误但忽略断开信号已启用，继续轮询: ${err}`);
+                console.warn(`${TAG} Non-retryable error but ignore disconnect enabled, continuing: ${err}`);
                 continue;
               }
               break;
@@ -255,94 +240,91 @@ export abstract class AbstractXboxController extends AbstractController {
       }
     }
     
-    console.info(`${TAG} 输入循环结束`);
+    console.info(`${TAG} Input loop ended`);
     
-    // 根据错误类型决定是否通知设备移除
+    // Decide whether to notify device removal based on error type
     if (!this.stopped) {
       if (detectedHardwareError) {
-        console.error(`${TAG} 由于硬件错误，自动停止控制器`);
+        console.error(`${TAG} Stopping controller due to hardware error`);
         this.stop();
       } else {
-        // 设备断开或其他错误
-        console.warn(`${TAG} 由于设备断开/IO错误，自动停止控制器`);
+        // Device disconnected or other error
+        console.warn(`${TAG} Stopping controller due to device disconnect/IO error`);
         this.stop();
       }
     }
   }
   
-  /**
-   * 启动控制器
-   */
   start(): boolean {
-    console.info(`${TAG} 启动控制器: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`);
+    console.info(`${TAG} Starting controller: VID=0x${this.vendorId.toString(16)}, PID=0x${this.productId.toString(16)}, DDK=${this.ddkPollingEnabled}`);
     this.markInitializing();
 
-    // 查找端点
+    // Find endpoints
     if (!this.findEndpoints()) {
-      console.error(`${TAG} 查找端点失败`);
+      console.error(`${TAG} Failed to find endpoints`);
       return false;
     }
 
-    // ====== 优先尝试 DDK 路径 (绕过 usbManager IPC 瓶颈) ======
-    console.info(`${TAG} DDK 条件: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`);
+    // ====== Try DDK path first ======
+    console.info(`${TAG} DDK conditions: enabled=${this.ddkPollingEnabled}, available=${DdkUsbPoller.isAvailable()}, inEp=${this.inEndpoint !== null}`);
     if (this.ddkPollingEnabled && DdkUsbPoller.isAvailable() && this.inEndpoint) {
       const ddkStarted = this.tryDdkPath();
       if (ddkStarted) {
         return true;
       }
-      console.warn(`${TAG} DDK 路径失败，回退到 usbManager 路径`);
+      console.warn(`${TAG} DDK path failed, falling back to usbManager path`);
     }
 
-    // ====== 回退: usbManager 路径 ======
-
-    // 声明接口
+    // ====== Fallback: usbManager path ======
+    
+    // Claim interface
     if (!this.claimInterface()) {
-      console.error(`${TAG} 声明接口失败`);
+      console.error(`${TAG} Failed to claim interface`);
       return false;
     }
 
-    // 执行初始化
+    // Perform initialization
     if (!this.doInit()) {
-      console.error(`${TAG} 初始化失败`);
+      console.error(`${TAG} Initialization failed`);
       return false;
     }
 
-    // 启动输入循环
+    // Start input loop
     this.stopped = false;
     this.inputThread = true;
 
-    // ArkTS async 轮询
+    // ArkTS async polling
     this.inputLoop();
 
     return true;
   }
 
   /**
-   * 尝试通过 USB DDK 路径启动控制器
-   * DDK 完全绕过 usbManager，需要在 claimInterface 之前调用
+   * Try to start controller via USB DDK path
+   * DDK completely bypasses usbManager, must be called before claimInterface
    *
-   * @returns 是否成功
+   * @returns Whether successful
    */
   private tryDdkPath(): boolean {
-    console.info(`${TAG} 尝试 DDK 路径...`);
+    console.info(`${TAG} Trying DDK path...`);
 
-    // Step 1: 初始化 DDK
+    // Step 1: Initialize DDK
     const initResult = DdkUsbPoller.init();
     if (initResult.code !== 0) {
-      console.warn(`${TAG} DDK init 失败: ${initResult.error}`);
+      console.warn(`${TAG} DDK init failed: ${initResult.error}`);
       return false;
     }
 
-    // Step 2: 通过 DDK 查找设备
+    // Step 2: Find device via DDK
     let ddkDeviceId: number | undefined;
 
-    // 方式 A: GetDevices + 匹配 VID/PID
+    // Method A: GetDevices + match VID/PID
     const findResult = DdkUsbPoller.findDevice(this.vendorId, this.productId);
     if (findResult.found && findResult.deviceId !== undefined) {
       ddkDeviceId = findResult.deviceId;
     } else {
-      // 方式 B: 从 busNum/devAddress 构造 deviceId
-      console.info(`${TAG} GetDevices 未找到设备，尝试 makeDeviceId...`);
+      // Method B: Construct deviceId from busNum/devAddress
+      console.info(`${TAG} Device not found via GetDevices, trying makeDeviceId...`);
       const makeResult = DdkUsbPoller.makeDeviceId(this.device.busNum, this.device.devAddress);
       if (makeResult.found && makeResult.deviceId !== undefined) {
         ddkDeviceId = makeResult.deviceId;
@@ -350,28 +332,28 @@ export abstract class AbstractXboxController extends AbstractController {
     }
 
     if (ddkDeviceId === undefined) {
-      console.warn(`${TAG} DDK 无法获取 deviceId`);
-      return false;  // pipe 未关闭，无需恢复
+      console.warn(`${TAG} DDK failed to get deviceId`);
+      return false;
     }
     const ifaceIndex = this.usbInterface?.id ?? 0;
     const inEp = this.inEndpoint!.address;
     const outEp = this.outEndpoint?.address ?? 0;
     const maxPkt = this.inEndpoint!.maxPacketSize || 64;
 
-    console.info(`${TAG} DDK 设备已匹配: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`);
+    console.info(`${TAG} DDK device matched: deviceId=${ddkDeviceId}, iface=${ifaceIndex}, inEp=0x${inEp.toString(16)}, outEp=0x${outEp.toString(16)}`);
 
-    // Step 3: 关闭 usbManager 管道 (DDK 无法在 usbManager 已连接的设备上 ClaimInterface)
+    // Step 3: Close usbManager pipe (DDK cannot ClaimInterface on a device already connected via usbManager)
     if (this.pipe) {
-      console.info(`${TAG} 关闭 usbManager 管道以释放设备给 DDK...`);
+      console.info(`${TAG} Closing usbManager pipe to release device for DDK...`);
       try {
         usbManager.closePipe(this.pipe);
       } catch (err) {
-        console.warn(`${TAG} closePipe 异常: ${err}`);
+        console.warn(`${TAG} closePipe exception: ${err}`);
       }
       this.pipe = null;
     }
 
-    // Step 4: 创建 DDK poller 并启动 (内部会 ClaimInterface + CreateMemMap + pthread)
+    // Step 4: Create DDK poller and start
     this.ddkPoller = new DdkUsbPoller();
     const started = this.ddkPoller.start(
       ddkDeviceId,
@@ -387,71 +369,67 @@ export abstract class AbstractXboxController extends AbstractController {
       },
       (errorCode: number) => {
         if (this.stopped) return;
-        console.warn(`${TAG} DDK 轮询错误: ${errorCode}`);
+        console.warn(`${TAG} DDK polling error: ${errorCode}`);
 
-        // 检查原生轮询线程是否仍在运行
+        // Check if native polling thread is still running
         const nativeStillRunning = this.ddkPoller?.isNativeRunning() ?? false;
 
         if (this.ignoreDisconnect) {
           if (!nativeStillRunning) {
-            // 原生线程已退出但 ignoreDisconnect 开启 — 手柄会彻底无响应
-            // 记录警告，不主动 stop (避免串流中移除手柄)
-            console.error(`${TAG} DDK 原生线程已退出! 错误码=${errorCode}, 手柄输入将中断直到重新连接`);
+            // Native thread exited but ignoreDisconnect is on - controller will be completely unresponsive
+            console.error(`${TAG} DDK native thread exited! errorCode=${errorCode}, controller input will be interrupted until reconnection`);
           }
           return;
         }
-        console.error(`${TAG} DDK 轮询致命错误: ${errorCode}, 停止控制器`);
+        console.error(`${TAG} DDK polling fatal error: ${errorCode}, stopping controller`);
         this.stop();
       },
       100  // 100ms timeout per read
     );
 
     if (!started) {
-      console.warn(`${TAG} DDK startPoller 失败`);
+      console.warn(`${TAG} DDK startPoller failed`);
       this.ddkPoller = null;
-      // 恢复 usbManager 管道 (DDK 失败后需要回退到 usbManager)
+      // Restore usbManager pipe (need to fallback to usbManager after DDK failure)
       this.reconnectPipe();
       return false;
     }
 
-    // Step 4: 通过 DDK 执行初始化 (发送 init 包)
+    // Step 4: Perform initialization via DDK (send init packet)
     this.stopped = false;
     this.useDdkPolling = true;
     this.ddkActive = true;
 
-    // 同步忽略断开信号设置到原生层
+    // Sync ignore disconnect setting to native layer
     if (this.ignoreDisconnect) {
       this.ddkPoller.setIgnoreDisconnect(true);
     }
 
     if (!this.doInit()) {
-      console.warn(`${TAG} DDK 路径下 doInit 失败`);
-      // doInit 失败不一定要终止 — 某些控制器不需要 init
+      console.warn(`${TAG} doInit failed under DDK path`);
+      // doInit failure doesn't necessarily terminate - some controllers don't need init
     }
 
-    // DDK 已启动，标记就绪并通知
+    // DDK started, mark ready and notify
     this.notifyDeviceAdded();
 
-    console.info(`${TAG} 控制器已启动 (DDK 高速轮询)`);
+    console.info(`${TAG} Controller started (DDK high-speed polling)`);
     return true;
   }
   
-  /**
-   * 停止控制器
-   */
   stop(): void {
     if (this.stopped) {
       return;
     }
     
-    console.info(`${TAG} 停止控制器`);
+    console.info(`${TAG} Stopping controller`);
     this.stopped = true;
     this.markStopped();
 
-    // 先发送振动停止命令（必须在 DDK 释放前，否则无法发送）
+    // Send rumble stop command first (must be done before DDK release, otherwise cannot send)
     this.rumble(0, 0);
 
-    // 保存 DDK 状态，再停止 DDK 轮询器
+    // Save DDK state, then stop DDK poller
     const wasDdkPolling = this.useDdkPolling;
     if (this.ddkPoller) {
       this.ddkPoller.stop();
@@ -459,60 +437,57 @@ export abstract class AbstractXboxController extends AbstractController {
       this.useDdkPolling = false;
     }
     
-    // 释放接口 (仅在 usbManager 路径下，DDK 路径由 stopPoller 内部释放)
+    // Release interface (usbManager path only, DDK path is released internally by stopPoller)
     if (!wasDdkPolling && this.pipe && this.usbInterface) {
       try {
         usbManager.releaseInterface(this.pipe, this.usbInterface);
       } catch (err) {
-        console.error(`${TAG} 释放接口失败:`, err);
+        console.error(`${TAG} Failed to release interface:`, err);
       }
     }
     
-    // 关闭管道
+    // Close pipe
     if (this.pipe) {
       try {
         usbManager.closePipe(this.pipe);
       } catch (err) {
-        console.error(`${TAG} 关闭管道失败:`, err);
+        console.error(`${TAG} Failed to close pipe:`, err);
       }
       this.pipe = null;
     }
     
-    // 通知设备已移除
+    // Notify device removed
     this.notifyDeviceRemoved();
   }
   
-  /**
-   * 检查控制器是否已连接
-   */
   isConnected(): boolean {
     return !this.stopped && (this.pipe !== null || this.useDdkPolling);
   }
 
   /**
-   * 恢复 usbManager 管道 (DDK 失败后回退用)
+   * Restore usbManager pipe (for DDK failure fallback)
    */
   private reconnectPipe(): void {
-    if (this.pipe) return; // 已有管道
+    if (this.pipe) return;
     try {
-      console.info(`${TAG} 恢复 usbManager 管道...`);
+      console.info(`${TAG} Restoring usbManager pipe...`);
       this.pipe = usbManager.connectDevice(this.device);
-      console.info(`${TAG} usbManager 管道已恢复`);
+      console.info(`${TAG} usbManager pipe restored`);
     } catch (err) {
-      console.error(`${TAG} 恢复管道失败: ${err}`);
+      console.error(`${TAG} Failed to restore pipe: ${err}`);
     }
   }
   
   /**
-   * 处理读取的数据
-   * @param buffer 读取的数据缓冲区
-   * @returns 是否应该发送输入报告
+   * Handle read data
+   * @param buffer Read data buffer
+   * @returns Whether input report should be sent
    */
   protected abstract handleRead(buffer: Uint8Array): boolean;
   
   /**
-   * 执行设备初始化
-   * @returns 是否初始化成功
+   * Perform device initialization
+   * @returns Whether initialization succeeded
    */
   protected abstract doInit(): boolean;
 }

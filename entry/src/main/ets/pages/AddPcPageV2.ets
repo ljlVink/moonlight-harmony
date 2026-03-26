@@ -12,21 +12,17 @@ import { router, promptAction } from '@kit.ArkUI';
 import { ComputerManager } from '../service/ComputerManager';
 import { AppColors, AppSizes, AppSpacing, AppAnimation, AppShadows } from '../common/Theme';
 
-/**
- * 地址解析结果
- */
+
 class AddressPortResult {
   address: string = '';
   port: number | undefined = undefined;
 }
 
-/**
- * 添加电脑页面 - 清新风格
- */
+
 @Entry
 @Component
 struct AddPcPageV2 {
-  @StorageProp('topSafeHeight') topSafeHeight: number = 56;  // 动态状态栏安全区高度
+  @StorageProp('topSafeHeight') topSafeHeight: number = 56;
   @State ipAddress: string = '';
   @State isAdding: boolean = false;
   @State errorMessage: string = '';
@@ -36,15 +32,15 @@ struct AddPcPageV2 {
   @State inputFocused: boolean = false;
   @State headerOffset: number = -20;
   @State headerOpacity: number = 0;
-  // 颠佬语录索引
+
   @State dianLaoIndex: number = 0;
-  // 颠佬表情动画
+
   @State dianLaoScale: number = 1;
   @State dianLaoBounce: number = 0;
 
   private computerManager: ComputerManager = ComputerManager.getInstance();
 
-  // 颠佬语录
+
   private readonly dianLaoQuotes: string[] = [
     '正在初始化颠佬协议...',
     '连接上了就是颠佬 ⚡',
@@ -58,10 +54,10 @@ struct AddPcPageV2 {
   ];
 
   aboutToAppear() {
-    // 随机选择初始语录
+
     this.dianLaoIndex = Math.floor(Math.random() * this.dianLaoQuotes.length);
 
-    // 入场动画
+
     setTimeout(() => {
       animateTo({
         duration: AppAnimation.Slow,
@@ -72,7 +68,7 @@ struct AddPcPageV2 {
       });
     }, 100);
 
-    // 颠佬弹跳动画
+
     setTimeout(() => {
       this.startDianLaoBounce();
     }, 600);
@@ -81,22 +77,22 @@ struct AddPcPageV2 {
   build() {
 
     Column() {
-      // 顶部导航
+
       this.NavBar()
 
-      // 主内容
+
       Scroll() {
         Column() {
-          // 顶部插画区域
+
           this.HeroSection()
 
-          // 输入卡片
+
           this.InputCard()
 
-          // 帮助信息
+
           this.HelpSection()
 
-          // 底部留白
+
           Blank().height(40)
         }
         .width('100%')
@@ -137,9 +133,9 @@ struct AddPcPageV2 {
   @Builder
   HeroSection() {
     Column() {
-      // 电佬角色区域
+
       Stack() {
-        // 底层脉冲光晕
+
         Circle()
           .width(120)
           .height(120)
@@ -153,7 +149,7 @@ struct AddPcPageV2 {
             playMode: PlayMode.Alternate
           })
 
-        // 电路装饰线（左）
+
         Row() {
           Text('━━╸')
             .fontSize(12)
@@ -162,7 +158,7 @@ struct AddPcPageV2 {
         }
         .offset({ x: -65, y: 0 })
 
-        // 电路装饰线（右）
+
         Row() {
           Text('╺━━')
             .fontSize(12)
@@ -171,7 +167,7 @@ struct AddPcPageV2 {
         }
         .offset({ x: 65, y: 0 })
 
-        // 主角色容器 - 显卡造型
+
         Column() {
           Image($r('app.media.ic_gpu'))
             .width(44)
@@ -188,18 +184,18 @@ struct AddPcPageV2 {
         .borderWidth(2)
         .borderColor(AppColors.Primary)
         .onClick(() => {
-          // 点击切换语录
+
           animateTo({
             duration: 300,
             curve: Curve.EaseOut
           }, () => {
             this.dianLaoIndex = (this.dianLaoIndex + 1) % this.dianLaoQuotes.length;
           });
-          // 弹跳反馈
+
           this.triggerBounce();
         })
 
-        // 状态指示灯
+
         Column()
           .width(12)
           .height(12)
@@ -213,7 +209,7 @@ struct AddPcPageV2 {
           })
           .offset({ x: 30, y: -30 })
 
-        // 5090 型号标签
+
         Text('5090')
           .fontSize(9)
           .fontWeight(FontWeight.Bold)
@@ -227,7 +223,7 @@ struct AddPcPageV2 {
       .offset({ y: this.headerOffset })
       .opacity(this.headerOpacity)
 
-      // 标题 - 编程风格
+
       Row() {
         Text('new')
           .fontSize(13)
@@ -256,7 +252,7 @@ struct AddPcPageV2 {
         .offset({ y: this.headerOffset })
         .opacity(this.headerOpacity)
 
-      // 电佬语录 - 可点击切换
+
       Text(this.dianLaoQuotes[this.dianLaoIndex])
         .fontSize(AppSizes.FontCaption)
         .fontColor(AppColors.TextTertiary)
@@ -284,11 +280,11 @@ struct AddPcPageV2 {
     .alignItems(HorizontalAlign.Center)
   }
 
-  /**
-   * 电佬弹跳动画
+/**
+   * DianLao bounce animation
    */
   private startDianLaoBounce(): void {
-    // 渐变脉冲效果
+
     animateTo({
       duration: 2000,
       curve: Curve.EaseInOut,
@@ -299,8 +295,8 @@ struct AddPcPageV2 {
     });
   }
 
-  /**
-   * 点击弹跳反馈
+/**
+   * Click bounce feedback
    */
   private triggerBounce(): void {
     animateTo({
@@ -322,9 +318,9 @@ struct AddPcPageV2 {
   @Builder
   InputCard() {
     Column() {
-      // 输入区域
+
       Column() {
-        // 标签
+
         Row() {
           Text('主机地址')
             .fontSize(AppSizes.FontCaption)
@@ -334,7 +330,7 @@ struct AddPcPageV2 {
         .width('100%')
         .margin({ bottom: AppSpacing.Small })
 
-        // 输入框
+
         Row() {
           Image($r('app.media.ic_computer'))
             .width(18)
@@ -393,7 +389,7 @@ struct AddPcPageV2 {
         })
         .animation({ duration: AppAnimation.Fast })
 
-        // 端口提示
+
         if (!this.errorMessage && this.ipAddress.length === 0) {
           Text('支持 IPv4、IPv6 和自定义端口（如 :47989）')
             .fontSize(11)
@@ -404,7 +400,7 @@ struct AddPcPageV2 {
       }
       .width('100%')
 
-      // 错误提示
+
       if (this.errorMessage) {
         Row() {
           Image($r('app.media.ic_error'))
@@ -427,8 +423,7 @@ struct AddPcPageV2 {
           .combine(TransitionEffect.translate({ y: -4 })))
       }
 
-      // 添加按钮 — 遵循 HarmonyOS 强调按钮规范：
-      // 始终使用主色背景，禁用态通过降低不透明度表达，保证文字对比度 ≥ 4.5:1
+// Add button - HarmonyOS emphasis button guidelines
       Button({ type: ButtonType.Normal }) {
         Row() {
           if (this.isAdding) {
@@ -477,7 +472,7 @@ struct AddPcPageV2 {
   @Builder
   HelpSection() {
     Column() {
-      // 标题
+
       Row() {
         Text('💡')
           .fontSize(14)
@@ -490,7 +485,7 @@ struct AddPcPageV2 {
       .width('100%')
       .margin({ bottom: AppSpacing.Medium })
 
-      // 提示列表 - 分两列
+
       Flex({ wrap: FlexWrap.Wrap }) {
         this.TipChip('📡', '同一网络')
         this.TipChip('☀️', 'Sunshine / GFE')
@@ -532,7 +527,7 @@ struct AddPcPageV2 {
       return;
     }
     
-    // 分离地址和端口
+
     const parseResult = this.parseAddressAndPort(value);
     if (!parseResult) {
       this.isValidInput = false;
@@ -542,13 +537,13 @@ struct AddPcPageV2 {
     const address = parseResult.address;
     const port = parseResult.port;
     
-    // 验证端口（如果存在）
+
     if (port !== undefined && (port <= 0 || port > 65535)) {
       this.isValidInput = false;
       return;
     }
     
-    // IPv4 格式
+
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (ipv4Regex.test(address)) {
       const parts = address.split('.');
@@ -559,20 +554,20 @@ struct AddPcPageV2 {
       return;
     }
     
-    // IPv6 格式 (简化检测)
+
     if (address.includes(':')) {
       this.isValidInput = true;
       return;
     }
     
-    // 主机名格式
+
     const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/;
     this.isValidInput = hostnameRegex.test(address);
   }
 
-  /**
-   * 解析地址和端口
-   * 支持格式：
+/**
+   * Parse address and port
+   * Supported formats:
    *   - "192.168.1.100" -> { address: "192.168.1.100" }
    *   - "192.168.1.100:47989" -> { address: "192.168.1.100", port: 47989 }
    *   - "[::1]" -> { address: "::1" }
@@ -580,7 +575,7 @@ struct AddPcPageV2 {
    *   - "::1" -> { address: "::1" }
    */
   private parseAddressAndPort(input: string): AddressPortResult | null {
-    // 检查是否为 IPv6 地址（包含多个冒号）
+
     let colonCount = 0;
     for (let i = 0; i < input.length; i++) {
       if (input.charAt(i) === ':') {
@@ -592,7 +587,7 @@ struct AddPcPageV2 {
     
     if (isLikelyIPv6) {
       if (input.startsWith('[')) {
-        // 格式: [::1] 或 [::1]:47989
+
         const closeBracket = input.indexOf(']');
         if (closeBracket > 0) {
           result.address = input.substring(1, closeBracket);
@@ -603,21 +598,19 @@ struct AddPcPageV2 {
               result.port = port;
               return result;
             }
-            return null; // 无效端口
-          }
+            return null;          }
           return result;
         }
-        return null; // 无效格式
-      } else {
-        // 纯 IPv6 地址，不尝试解析端口（太复杂）
+        return null;      } else {
+
         result.address = input;
         return result;
       }
     } else {
-      // IPv4 或主机名
+
       const colonIndex = input.indexOf(':');
       if (colonIndex > 0) {
-        // 格式: 192.168.1.100:47989
+
         result.address = input.substring(0, colonIndex);
         const portStr = input.substring(colonIndex + 1);
         const port = parseInt(portStr);
@@ -625,8 +618,7 @@ struct AddPcPageV2 {
           result.port = port;
           return result;
         }
-        return null; // 无效端口
-      }
+        return null;      }
       result.address = input;
       return result;
     }
@@ -650,7 +642,7 @@ struct AddPcPageV2 {
         });
 
         promptAction.showToast({
-          message: '🎉 主机添加成功',
+          message: '🎉 Host added successfully',
           duration: 1500
         });
 
@@ -658,11 +650,11 @@ struct AddPcPageV2 {
           router.back();
         }, 800);
       } else {
-        this.errorMessage = '无法连接到主机，请检查地址是否正确';
+        this.errorMessage = 'Cannot connect to host, please check the address';
         this.isAdding = false;
       }
     } catch (err) {
-      this.errorMessage = (err as Error).message || '连接失败，请重试';
+      this.errorMessage = (err as Error).message || 'Connection failed, please retry';
       this.isAdding = false;
     }
   }

@@ -9,24 +9,16 @@
  */
 
 /**
- * USB 错误码定义
  * 
- * 参考 libusb 错误码
  * https://libusb.sourceforge.io/api-1.0/group__libusb__misc.html
  */
 
-/**
- * 错误分析结果接口
- */
 export interface ErrorAnalysisResult {
   likelySleepMode: boolean;
   likelyDisconnected: boolean;
   confidence: number;
 }
 
-/**
- * USB 错误异常，携带错误码和重试标志
- */
 export class UsbError extends Error {
   code: number;
   retryable: boolean;
@@ -38,7 +30,6 @@ export class UsbError extends Error {
   }
 }
 
-// USB 错误码常量
 export const USB_SUCCESS = 0;
 export const USB_ERROR_IO = -1;
 export const USB_ERROR_INVALID_PARAM = -2;
@@ -54,14 +45,8 @@ export const USB_ERROR_NOT_SUPPORTED = -12;
 export const USB_ERROR_OTHER = -99;
 
 /**
- * 判断是否为省电模式错误
  * 
- * 省电模式特征：
- * 1. NO_DEVICE (-4): 设备暂时不可达，但物理上仍连接
- * 2. TIMEOUT (-8): 设备在省电模式下不响应读取请求
  * 
- * @param errorCode USB 错误码
- * @returns 如果是省电模式错误返回 true
  */
 export function isSleepModeError(errorCode: number): boolean {
   return errorCode === USB_ERROR_NO_DEVICE || 
@@ -69,15 +54,8 @@ export function isSleepModeError(errorCode: number): boolean {
 }
 
 /**
- * 判断是否为硬件错误
  * 
- * 硬件错误特征：
- * 1. PIPE (-9): 端点状态错误，通常表示 USB 协议级别的通信失败
- * 2. IO (-1): 底层 I/O 错误，可能是物理连接问题
- * 3. ACCESS (-3): 权限问题，通常不会自动恢复
  * 
- * @param errorCode USB 错误码
- * @returns 如果是硬件错误返回 true
  */
 export function isHardwareError(errorCode: number): boolean {
   return errorCode === USB_ERROR_PIPE ||
@@ -85,20 +63,12 @@ export function isHardwareError(errorCode: number): boolean {
          errorCode === USB_ERROR_ACCESS;
 }
 
-/**
- * 判断是否应该尝试重新连接
- * @param errorCode USB 错误码
- * @returns 如果应该尝试重新连接返回 true
- */
 export function shouldRetry(errorCode: number): boolean {
   return isSleepModeError(errorCode);
 }
 
 /**
- * 分析错误模式以判断是否可能是省电模式
  * 
- * @param errorHistory 最近的错误码历史（最新的在前）
- * @returns 分析结果
  */
 export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult {
   if (errorHistory.length === 0) {
@@ -112,7 +82,6 @@ export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult
   
   const lastError = errorHistory[0];
   
-  // 如果最后一个错误是 PIPE，几乎肯定是断开
   if (lastError === USB_ERROR_PIPE) {
     const result: ErrorAnalysisResult = {
       likelySleepMode: false,
@@ -122,7 +91,6 @@ export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult
     return result;
   }
   
-  // 如果最后一个错误是 IO，很可能是断开
   if (lastError === USB_ERROR_IO) {
     const result: ErrorAnalysisResult = {
       likelySleepMode: false,
@@ -132,7 +100,6 @@ export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult
     return result;
   }
   
-  // 如果只有 TIMEOUT，很可能是省电模式
   if (lastError === USB_ERROR_TIMEOUT) {
     let allTimeouts = true;
     for (let i = 0; i < errorHistory.length; i++) {
@@ -151,7 +118,6 @@ export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult
     }
   }
   
-  // NO_DEVICE 错误：检查之前是否有 TIMEOUT
   if (lastError === USB_ERROR_NO_DEVICE) {
     let hadTimeout = false;
     for (let i = 0; i < errorHistory.length; i++) {
@@ -168,7 +134,6 @@ export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult
       };
       return result;
     }
-    // 直接出现 NO_DEVICE，可能是拔出
     const result: ErrorAnalysisResult = {
       likelySleepMode: false,
       likelyDisconnected: true,
@@ -185,11 +150,6 @@ export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult
   return result;
 }
 
-/**
- * 获取错误描述
- * @param errorCode USB 错误码
- * @returns 错误描述
- */
 export function getErrorDescription(errorCode: number): string {
   switch (errorCode) {
     case USB_SUCCESS:
@@ -221,11 +181,6 @@ export function getErrorDescription(errorCode: number): string {
   }
 }
 
-/**
- * 创建 USB 错误异常
- * @param errorCode USB 错误码
- * @returns UsbError 异常对象
- */
 export function createUsbError(errorCode: number): UsbError {
   const desc = getErrorDescription(errorCode);
   
