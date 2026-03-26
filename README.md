@@ -6,8 +6,8 @@
   # Moonlight V+ for HarmonyOS
 
   [![GitHub License](https://img.shields.io/github/license/AlkaidLab/moonlight-harmony)](LICENSE)
-  [![HarmonyOS](https://img.shields.io/badge/HarmonyOS-5.0%2B-blue)](https://www.harmonyos.com/)
-  [![API Version](https://img.shields.io/badge/API-12%2B-green)](https://developer.huawei.com/)
+  [![HarmonyOS](https://img.shields.io/badge/HarmonyOS-6.0%2B-blue)](https://www.harmonyos.com/)
+  [![API Version](https://img.shields.io/badge/API-20%2B-green)](https://developer.huawei.com/)
 
   基于 [Moonlight V+](https://github.com/qiin2333/moonlight-vplus) 的鸿蒙原生移植版本
 </div>
@@ -54,7 +54,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/AlkaidLab/moonlight-harmony.git
+git clone https://github.com/ljlvink/moonlight-harmony.git
 
 git submodule update --init --recursive
 
