@@ -105,9 +105,6 @@ export class ObservableComputer implements AddressHolder {
   }
 }
 
-/**
- *
- */
 @Observed
 export class ComputerListViewModel {
   computers: ObservableComputer[] = [];

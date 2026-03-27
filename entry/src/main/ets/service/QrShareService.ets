@@ -181,7 +181,12 @@ function decodeSimpleAction(s: string): KeyAction {
   if (s.startsWith("J,")) {
     const parts = s.split(",");
     const stick = parts[1] === "l" ? "left" : "right";
-    const dirMap = new Map<string, string>([["u", "up"], ["d", "down"], ["l", "left"], ["r", "right"]]);
+    const dirMap = new Map<string, string>([
+      ["u", "up"],
+      ["d", "down"],
+      ["l", "left"],
+      ["r", "right"],
+    ]);
     const dir = dirMap.get(parts[2]) ?? "up";
     return { type: "gamepadStick", stick: stick, direction: dir } as GamepadStickAction;
   }

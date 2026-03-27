@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import { usbManager } from "@kit.BasicServicesKit";
 import { BusinessError } from "@kit.BasicServicesKit";
 import { commonEventManager } from "@kit.BasicServicesKit";

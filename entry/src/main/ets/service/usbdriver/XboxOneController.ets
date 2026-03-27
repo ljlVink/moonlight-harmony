@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import { usbManager } from "@kit.BasicServicesKit";
 import { AbstractXboxController } from "./AbstractXboxController";
 import { UsbDriverListener } from "./UsbDriverListener";

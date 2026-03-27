@@ -19,9 +19,6 @@ import { StringUtil } from "../utils/StringUtil";
 import { CryptoUtil } from "../utils/CryptoUtil";
 import { DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT } from "../common/NetworkConstants";
 
-/**
- *
- */
 export interface ServerInfo {
   hostname: string;
   uniqueId: string;

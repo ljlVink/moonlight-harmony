@@ -1000,7 +1000,8 @@ struct SettingsPageV2 {
                     },
                     {
                       title: "Input Kit 触摸接收",
-                      subtitle: "通过 Input Kit 拦截器接收触摸、鼠标和键盘事件，绕过 ArkUI 事件分发（需要 ohos.permission.INTERCEPT_INPUT_EVENT 权限）",
+                      subtitle:
+                        "通过 Input Kit 拦截器接收触摸、鼠标和键盘事件，绕过 ArkUI 事件分发（需要 ohos.permission.INTERCEPT_INPUT_EVENT 权限）",
                       type: "toggle",
                       value: this.enableInputKitTouch,
                       action: () => {
@@ -2154,10 +2155,7 @@ struct SettingsPageV2 {
         this.enableKeyInterceptor = false;
         this.saveSetting(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
       }
-      this.enableInputKitTouch = await this.loadBoolean(
-        SettingsKeys.ENABLE_INPUT_KIT_TOUCH,
-        false,
-      );
+      this.enableInputKitTouch = await this.loadBoolean(SettingsKeys.ENABLE_INPUT_KIT_TOUCH, false);
       this.gcButtonHomeMapping = await PreferencesUtil.get<string>(
         SettingsKeys.GC_BUTTON_HOME_MAPPING,
         "guide",

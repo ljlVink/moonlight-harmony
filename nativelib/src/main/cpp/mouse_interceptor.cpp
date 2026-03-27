@@ -70,9 +70,7 @@ static int MapMouseButton(int32_t button)
     }
 }
 
-/**
- *
- */
+
 static void WarpCursorToCenter()
 {
     if (!g_injectEvent) return;

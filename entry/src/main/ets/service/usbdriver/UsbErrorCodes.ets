@@ -66,9 +66,6 @@ export function shouldRetry(errorCode: number): boolean {
   return isSleepModeError(errorCode);
 }
 
-/**
- *
- */
 export function analyzeErrorPattern(errorHistory: number[]): ErrorAnalysisResult {
   if (errorHistory.length === 0) {
     const result: ErrorAnalysisResult = {

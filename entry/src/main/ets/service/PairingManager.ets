@@ -32,9 +32,6 @@ export interface PairResult {
   pairName?: string;
 }
 
-/**
- *
- */
 export class PairingManager {
   private baseUrl: string;
   private address: string;

@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 export class XmlUtil {
   static getValue(xml: string, tag: string, required: boolean = false): string {
     const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, "s");

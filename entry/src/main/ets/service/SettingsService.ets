@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 import { PreferencesUtil } from "../utils/PreferencesUtil";
 import { display } from "@kit.ArkUI";
 import {

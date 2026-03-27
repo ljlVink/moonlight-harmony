@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import nativeLib from "libmoonlight_nativelib.so";
 
 export interface GameControllerDeviceInfo {
@@ -95,9 +91,6 @@ export class ButtonCode {
   static readonly DPAD_RIGHT = 2015;
 }
 
-/**
- *
- */
 export class GameControllerService {
   private static instance: GameControllerService;
   private initialized: boolean = false;

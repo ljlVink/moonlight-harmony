@@ -22,9 +22,7 @@
 // Forward declaration — libopus
 struct OpusEncoder;
 
-/**
- *
- */
+
 class OhosOpusEncoder {
 public:
     OhosOpusEncoder();

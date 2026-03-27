@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import { AbstractController } from "./AbstractController";
 
 export interface UsbDriverListener {

@@ -22,9 +22,6 @@ export interface DiscoveredComputer {
   ipv6Address?: string;
 }
 
-/**
- *
- */
 export class MdnsDiscovery {
   private static readonly SERVICE_TYPE = "_nvstream._tcp";
   private static readonly DISCOVERY_TIMEOUT = 5000;

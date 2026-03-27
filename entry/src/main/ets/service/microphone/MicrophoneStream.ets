@@ -8,17 +8,11 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 import { MoonBridge, MoonBridgeClass } from "../MoonBridge";
 import { MicrophoneConfig, MicrophoneState, MicrophoneStateListener } from "./MicrophoneConfig";
 
 const TAG = "[MicStream]";
 
-/**
- *
- */
 export class MicrophoneStream {
   private moonBridge: MoonBridgeClass;
   private running: boolean = false;

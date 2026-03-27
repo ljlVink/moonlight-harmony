@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import { vibrator } from "@kit.SensorServiceKit";
 import { UsbDriverService, AbstractController } from "./usbdriver/index";
 import { RUMBLE_MAX } from "./GamepadTypes";

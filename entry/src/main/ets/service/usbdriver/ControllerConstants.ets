@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 export class ButtonFlags {
   static readonly UP_FLAG: number = 0x0001;
   static readonly DOWN_FLAG: number = 0x0002;

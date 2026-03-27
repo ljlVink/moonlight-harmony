@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 export interface NativeGamepadState {
   deviceId: number;
   buttons: number;
@@ -54,9 +50,6 @@ export enum NativeGamepadType {
   SWITCH = 3,
 }
 
-/**
- *
- */
 export interface NativeGamepadInterface {
   parseHidReport(
     vendorId: number,

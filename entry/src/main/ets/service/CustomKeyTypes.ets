@@ -499,7 +499,12 @@ export function getActionDisplayName(action: KeyAction): string {
       return action.trigger === "left" ? "LT" : "RT";
     case "gamepadStick": {
       const stickName = action.stick === "left" ? "LS" : "RS";
-      const dirMap = new Map<string, string>([["up", "↑"], ["down", "↓"], ["left", "←"], ["right", "→"]]);
+      const dirMap = new Map<string, string>([
+        ["up", "↑"],
+        ["down", "↓"],
+        ["left", "←"],
+        ["right", "→"],
+      ]);
       return `${stickName}${dirMap.get(action.direction) ?? action.direction}`;
     }
     case "analogStick": {
@@ -893,9 +898,6 @@ function buildWheelPadPresets(): KeyPreset[] {
   return list;
 }
 
-/**
- *
- */
 export function sendShortcutKeys(
   sendKeysFn: (keyCodes: number[]) => void,
   keys: number[],

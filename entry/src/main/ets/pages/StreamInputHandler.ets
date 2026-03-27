@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 import { display, window, promptAction } from "@kit.ArkUI";
 import { common } from "@kit.AbilityKit";
 import { StreamViewModel, TouchMode } from "../viewmodel/StreamViewModel";
@@ -219,10 +216,7 @@ export class StreamInputHandler {
    * Start the Input Kit unified interceptor (mouse + touch, keyboard).
    * When active, do NOT also start the mouse monitor (to avoid conflicts).
    */
-  startInputKitInterceptor(
-    viewWidth: number,
-    viewHeight: number,
-  ): boolean {
+  startInputKitInterceptor(viewWidth: number, viewHeight: number): boolean {
     const service = InputKitInterceptorService.getInstance();
 
     this.viewWidthVp = viewWidth;
@@ -370,7 +364,7 @@ export class StreamInputHandler {
       handleTouch,
     );
     console.info(
-      `StreamInputHandler: Input Kit 触摸拦截已${handleTouch ? '开启' : '关闭'} (模式=${mode})`,
+      `StreamInputHandler: Input Kit 触摸拦截已${handleTouch ? "开启" : "关闭"} (模式=${mode})`,
     );
     // Trigger window rect update with the new handleTouch value
     this.fetchAndUpdateWindowRectForInputKit();

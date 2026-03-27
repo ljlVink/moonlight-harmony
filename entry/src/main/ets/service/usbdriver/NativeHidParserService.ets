@@ -8,10 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
-
 import nativelib from "libmoonlight_nativelib.so";
 import { NativeGamepadState, NativeButtonFlags, NativeGamepadType } from "./NativeGamepad";
 

@@ -11,9 +11,6 @@
 import { util } from "@kit.ArkTS";
 import { CryptoUtil } from "./CryptoUtil";
 
-/**
- *
- */
 export class StringUtil {
   private static textDecoder: util.TextDecoder | null = null;
   private static textEncoder: util.TextEncoder | null = null;

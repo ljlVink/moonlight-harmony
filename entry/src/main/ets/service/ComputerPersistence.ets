@@ -8,9 +8,6 @@
  * (at your option) any later version.
  */
 
-/**
- *
- */
 import { ComputerInfo, ComputerInfoBuilder, ComputerState, PairState } from "../model/ComputerInfo";
 import { PreferencesUtil } from "../utils/PreferencesUtil";
 import { NvHttp } from "./NvHttp";
