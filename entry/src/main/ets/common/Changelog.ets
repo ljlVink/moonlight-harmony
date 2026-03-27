@@ -43,14 +43,14 @@ export function getChangeTypeConfig(type: string): ChangeTypeConfig {
   }
 }
 
-const TYPE_MAP: Record<string, string> = {
-  新增: "added",
-  优化: "improved",
-  改进: "improved",
-  修复: "fixed",
-  移除: "removed",
-  删除: "removed",
-};
+const TYPE_MAP = new Map<string, string>([
+  ["新增", "added"],
+  ["优化", "improved"],
+  ["改进", "improved"],
+  ["修复", "fixed"],
+  ["移除", "removed"],
+  ["删除", "removed"],
+]);
 
 export function parseChangelog(markdown: string): ChangelogEntry[] {
   const entries: ChangelogEntry[] = [];
@@ -95,7 +95,7 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
       collectingSummary = false;
 
       const typeName = line.substring(4).trim();
-      const mapped = TYPE_MAP[typeName];
+      const mapped = TYPE_MAP.get(typeName);
       if (mapped !== undefined) {
         currentType = mapped;
       }

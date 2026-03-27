@@ -499,8 +499,8 @@ export function getActionDisplayName(action: KeyAction): string {
       return action.trigger === "left" ? "LT" : "RT";
     case "gamepadStick": {
       const stickName = action.stick === "left" ? "LS" : "RS";
-      const dirMap: Record<string, string> = { up: "↑", down: "↓", left: "←", right: "→" };
-      return `${stickName}${dirMap[action.direction] ?? action.direction}`;
+      const dirMap = new Map<string, string>([["up", "↑"], ["down", "↓"], ["left", "←"], ["right", "→"]]);
+      return `${stickName}${dirMap.get(action.direction) ?? action.direction}`;
     }
     case "analogStick": {
       const asAction = action as AnalogStickAction;
@@ -538,16 +538,16 @@ export function getActionDisplayName(action: KeyAction): string {
       return action.keys.map((vk) => getVkDisplayName(vk)).join("+");
     }
     case "special":
-      const specialNames: Record<string, string> = {
-        toggleKeyboard: "键盘",
-        toggleIME: "输入法",
-        toggleMouseMode: "鼠标模式",
-        switchProfile: "切换配置",
-        openGameMenu: "菜单",
-        editMode: "编辑",
-        none: "无",
-      };
-      return specialNames[action.id] ?? action.id;
+      const specialNames = new Map<string, string>([
+        ["toggleKeyboard", "键盘"],
+        ["toggleIME", "输入法"],
+        ["toggleMouseMode", "鼠标模式"],
+        ["switchProfile", "切换配置"],
+        ["openGameMenu", "菜单"],
+        ["editMode", "编辑"],
+        ["none", "无"],
+      ]);
+      return specialNames.get(action.id) ?? action.id;
     default:
       return "未知";
   }

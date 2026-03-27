@@ -41,6 +41,21 @@ interface MouseInterceptorNative {
   isMouseInterceptorActive(): boolean;
 }
 
+interface InputKitInterceptorNative {
+  addInputKitInterceptor(keyCallback: (event: InterceptedKeyEvent) => void): number;
+  removeInputKitInterceptor(): number;
+  isInputKitInterceptorActive(): boolean;
+  configureInputKitInterceptor(
+    windowX: number,
+    windowY: number,
+    windowWidth: number,
+    windowHeight: number,
+    screenWidth: number,
+    screenHeight: number,
+    relativeMode: boolean,
+  ): void;
+}
+
 export class InputInterceptorService {
   private static instance: InputInterceptorService;
   private native: InputInterceptorNative;
@@ -176,6 +191,98 @@ export class MouseInterceptorService {
   isActive(): boolean {
     if (this.native) {
       return this.native.isMouseInterceptorActive();
+    }
+    return false;
+  }
+}
+
+/**
+ * InputKitInterceptorService
+ *
+ * Uses OH_Input_AddInputEventInterceptor (mouse + touch, no axis) and
+ * OH_Input_AddKeyEventInterceptor to receive system input events.
+ * This is an alternative input path that bypasses ArkUI event delivery.
+ */
+export class InputKitInterceptorService {
+  private static instance: InputKitInterceptorService;
+  private native: InputKitInterceptorNative | null;
+  private active: boolean = false;
+
+  private constructor() {
+    this.native = (nativeLib as Record<string, Object>)[
+      "InputKitInterceptor"
+    ] as InputKitInterceptorNative;
+  }
+
+  static getInstance(): InputKitInterceptorService {
+    if (!InputKitInterceptorService.instance) {
+      InputKitInterceptorService.instance = new InputKitInterceptorService();
+    }
+    return InputKitInterceptorService.instance;
+  }
+
+  /**
+   * Start the Input Kit interceptor.
+   * @param keyCallback Optional callback for keyboard events intercepted by the system.
+   * @returns 0 on success, non-zero error code on failure.
+   */
+  start(keyCallback?: KeyInterceptCallback): number {
+    if (this.active) {
+      this.stop();
+    }
+    if (!this.native) {
+      console.warn("InputKitInterceptor: Native 模块不可用");
+      return -1;
+    }
+
+    const cb = keyCallback ?? ((_event: InterceptedKeyEvent) => {});
+    const result = this.native.addInputKitInterceptor(cb);
+    if (result === 0) {
+      this.active = true;
+      console.info("InputKitInterceptor: 已启动（mouse + touch 拦截，keyboard 回调已注册）");
+    } else {
+      console.warn(`InputKitInterceptor: 启动失败，错误码=${result}`);
+    }
+    return result;
+  }
+
+  stop(): void {
+    if (!this.active || !this.native) {
+      return;
+    }
+    this.native.removeInputKitInterceptor();
+    this.active = false;
+    console.info("InputKitInterceptor: 已停止");
+  }
+
+  /**
+   * Configure the stream view dimensions used for coordinate normalization.
+   * Must be called before or after start() whenever the view size changes.
+   */
+  configure(
+    windowX: number,
+    windowY: number,
+    windowWidth: number,
+    windowHeight: number,
+    screenWidth: number,
+    screenHeight: number,
+    relativeMode: boolean,
+  ): void {
+    if (!this.native) return;
+    this.native.configureInputKitInterceptor(
+      windowX,
+      windowY,
+      windowWidth,
+      windowHeight,
+      screenWidth,
+      screenHeight,
+      relativeMode,
+    );
+  }
+
+  isActive(): boolean {
+    if (this.native) {
+      return this.native.isInputKitInterceptorActive();
     }
     return false;
   }

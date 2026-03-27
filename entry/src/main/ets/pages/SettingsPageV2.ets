@@ -163,6 +163,7 @@ struct SettingsPageV2 {
   @State ignoreDeviceDisconnect: boolean = false;
   @State enableKeyInterceptor: boolean = false;
   @State keyInterceptorAvailable: boolean = false;
+  @State enableInputKitTouch: boolean = false;
   @State gcButtonHomeMapping: string = "guide";
   @State usbDriverEnabled: boolean = false;
   @State forceUsbDriverOnly: boolean = false;
@@ -994,6 +995,19 @@ struct SettingsPageV2 {
                         this.saveSetting(
                           SettingsKeys.ENABLE_KEY_INTERCEPTOR,
                           this.enableKeyInterceptor,
+                        );
+                      },
+                    },
+                    {
+                      title: "Input Kit 触摸接收",
+                      subtitle: "通过 Input Kit 拦截器接收触摸、鼠标和键盘事件，绕过 ArkUI 事件分发（需要 ohos.permission.INTERCEPT_INPUT_EVENT 权限）",
+                      type: "toggle",
+                      value: this.enableInputKitTouch,
+                      action: () => {
+                        this.enableInputKitTouch = !this.enableInputKitTouch;
+                        this.saveSetting(
+                          SettingsKeys.ENABLE_INPUT_KIT_TOUCH,
+                          this.enableInputKitTouch,
                         );
                       },
                     },
@@ -2140,6 +2154,10 @@ struct SettingsPageV2 {
         this.enableKeyInterceptor = false;
         this.saveSetting(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false);
       }
+      this.enableInputKitTouch = await this.loadBoolean(
+        SettingsKeys.ENABLE_INPUT_KIT_TOUCH,
+        false,
+      );
       this.gcButtonHomeMapping = await PreferencesUtil.get<string>(
         SettingsKeys.GC_BUTTON_HOME_MAPPING,
         "guide",

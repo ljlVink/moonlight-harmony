@@ -75,6 +75,7 @@ export class SettingsKeys {
   static readonly IGNORE_DEVICE_DISCONNECT: string = "settings_ignore_device_disconnect";
   static readonly GC_BUTTON_HOME_MAPPING: string = "settings_gc_button_home_mapping";
   static readonly ENABLE_KEY_INTERCEPTOR: string = "settings_enable_key_interceptor";
+  static readonly ENABLE_INPUT_KIT_TOUCH: string = "settings_enable_input_kit_touch";
   static readonly USB_DRIVER_ENABLED: string = "settings_usb_driver_enabled";
   static readonly FORCE_USB_DRIVER_ONLY: string = "settings_force_usb_driver_only";
   static readonly DDK_HIGH_SPEED_POLLING: string = "settings_ddk_high_speed_polling";
@@ -148,6 +149,7 @@ export interface InputSettings {
   enableStartKeyMenu: boolean;
   ignoreDeviceDisconnect: boolean;
   enableKeyInterceptor: boolean;
+  enableInputKitTouch: boolean;
   usbDriverEnabled: boolean;
   forceUsbDriverOnly: boolean;
   ddkHighSpeedPolling: boolean;
@@ -622,6 +624,7 @@ export class SettingsService {
       enableStartKeyMenu: await this.getBoolean(SettingsKeys.ENABLE_START_KEY_MENU, true),
       ignoreDeviceDisconnect: await this.getBoolean(SettingsKeys.IGNORE_DEVICE_DISCONNECT, false),
       enableKeyInterceptor: await this.getBoolean(SettingsKeys.ENABLE_KEY_INTERCEPTOR, false),
+      enableInputKitTouch: await this.getBoolean(SettingsKeys.ENABLE_INPUT_KIT_TOUCH, false),
       usbDriverEnabled: await this.getBoolean(SettingsKeys.USB_DRIVER_ENABLED, false),
       forceUsbDriverOnly: await this.getBoolean(SettingsKeys.FORCE_USB_DRIVER_ONLY, false),
       ddkHighSpeedPolling: await this.getBoolean(SettingsKeys.DDK_HIGH_SPEED_POLLING, false),

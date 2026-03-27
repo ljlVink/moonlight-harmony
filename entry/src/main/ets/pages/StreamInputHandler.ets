@@ -36,6 +36,7 @@ import { KeyboardTranslator } from "../service/KeyboardTranslator";
 import {
   InputInterceptorService,
   MouseInterceptorService,
+  InputKitInterceptorService,
 } from "../service/InputInterceptorService";
 
 export class StreamInputHandler {
@@ -43,6 +44,7 @@ export class StreamInputHandler {
   private activeVkKeys: Set<number> = new Set<number>();
 
   private mouseInterceptorActive: boolean = false;
+  private inputKitInterceptorActive: boolean = false;
 
   private viewWidthVp: number = 0;
   private viewHeightVp: number = 0;
@@ -211,6 +213,136 @@ export class StreamInputHandler {
 
   isMouseInterceptorActive(): boolean {
     return this.mouseInterceptorActive;
+  }
+
+  /**
+   * Start the Input Kit unified interceptor (mouse + touch, keyboard).
+   * When active, do NOT also start the mouse monitor (to avoid conflicts).
+   */
+  startInputKitInterceptor(
+    viewWidth: number,
+    viewHeight: number,
+  ): boolean {
+    const service = InputKitInterceptorService.getInstance();
+
+    this.viewWidthVp = viewWidth;
+    this.viewHeightVp = viewHeight;
+
+    let screenWidthPx = 1080;
+    let screenHeightPx = 2400;
+    try {
+      const displayInfo = display.getDefaultDisplaySync();
+      screenWidthPx = displayInfo.width;
+      screenHeightPx = displayInfo.height;
+    } catch (_) {}
+
+    this.screenWidthPx = screenWidthPx;
+    this.screenHeightPx = screenHeightPx;
+
+    const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
+
+    service.configure(
+      0,
+      0,
+      screenWidthPx,
+      screenHeightPx,
+      screenWidthPx,
+      screenHeightPx,
+      relativeMode,
+    );
+
+    const result = service.start((event) => {
+      // Forward intercepted keyboard events (same logic as startKeyInterceptor)
+      if (!this.viewModel?.isConnected) return;
+      const keyCode = event.keyCode;
+      const isPressed = event.action === 1;
+
+      if ((keyCode >= 2300 && keyCode <= 2320) || keyCode === 110) {
+        const deviceId = event.deviceId ?? -1;
+        if (deviceId > 0) this.knownGamepadDeviceIds.add(deviceId);
+        this.gamepadManager?.handleKeyEvent(0, keyCode, isPressed);
+        return;
+      }
+
+      if (keyCode >= 2012 && keyCode <= 2015 && this.gamepadManager?.hasActiveGcGamepad()) {
+        const deviceId = event.deviceId ?? -1;
+        if (deviceId >= 0 && this.knownGamepadDeviceIds.has(deviceId)) return;
+      }
+
+      if (keyCode === 16 || keyCode === 17 || keyCode === 22) {
+        if (isPressed) this.handleVolumeKey(keyCode);
+        return;
+      }
+
+      if (keyCode === this.menuKeyCode) {
+        if (this.checkEscDoubleTap(isPressed)) return;
+      }
+
+      if (KeyboardTranslator.isKeyboardKey(keyCode)) {
+        const vkCode = KeyboardTranslator.translate(keyCode);
+        if (vkCode > 0) {
+          this.updateModifierFlags(vkCode, isPressed);
+          const session = this.viewModel?.getSession();
+          if (session) {
+            const keyAction = isPressed ? KEY_ACTION_DOWN : KEY_ACTION_UP;
+            session.sendKeyboardInput(vkCode, keyAction, this.modifierFlags);
+          }
+        }
+        return;
+      }
+    });
+
+    if (result === 0) {
+      this.inputKitInterceptorActive = true;
+      console.info(
+        `StreamInputHandler: Input Kit 拦截器已启动 (${screenWidthPx}x${screenHeightPx}px, ${relativeMode ? "relative" : "absolute"})`,
+      );
+      this.fetchAndUpdateWindowRectForInputKit();
+      return true;
+    }
+
+    this.inputKitInterceptorActive = false;
+    console.warn(`StreamInputHandler: Input Kit 拦截器启动失败 (${result})，回退到 ArkUI 事件`);
+    return false;
+  }
+
+  private fetchAndUpdateWindowRectForInputKit(): void {
+    try {
+      const context = getContext() as common.UIAbilityContext;
+      window
+        .getLastWindow(context)
+        .then((win: window.Window) => {
+          const rect = win.getWindowProperties().windowRect;
+          if (rect && this.inputKitInterceptorActive) {
+            const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
+            InputKitInterceptorService.getInstance().configure(
+              rect.left,
+              rect.top,
+              rect.width,
+              rect.height,
+              this.screenWidthPx,
+              this.screenHeightPx,
+              relativeMode,
+            );
+            console.info(
+              `StreamInputHandler: Input Kit 窗口坐标已更新 (${rect.left},${rect.top},${rect.width}x${rect.height})`,
+            );
+          }
+        })
+        .catch((err: Error) => {
+          console.warn(`StreamInputHandler: 获取窗口坐标失败: ${err?.message}`);
+        });
+    } catch (_) {}
+  }
+
+  stopInputKitInterceptor(): void {
+    if (!this.inputKitInterceptorActive) return;
+    InputKitInterceptorService.getInstance().stop();
+    this.inputKitInterceptorActive = false;
+  }
+
+  isInputKitInterceptorActive(): boolean {
+    return this.inputKitInterceptorActive;
   }
 
   handleMouseEvent(event: MouseEvent): void {

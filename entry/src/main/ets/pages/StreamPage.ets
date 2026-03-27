@@ -185,6 +185,7 @@ struct StreamPage {
   private useVdd: boolean = false;
   private cmdList: SuperCmd[] = [];
   private enableBackgroundTask: boolean = true;
+  private inputKitWasActive: boolean = false;
 
   aboutToAppear(): void {
     const params = router.getParams() as StreamPageParams;
@@ -457,6 +458,7 @@ struct StreamPage {
     this.touchInputHandler.dispose();
 
     InputInterceptorService.getInstance().stop();
+    this.inputHandler.stopInputKitInterceptor();
     this.inputHandler.stopMouseInterceptor();
     this.stopMouseKeepAlive();
 
@@ -508,7 +510,7 @@ struct StreamPage {
   private buildGameMenuCallbacks(): GameMenuCallbacks {
     return {
       onDismiss: () => {
-        this.resumeMouseInterceptor();
+        this.resumeInterceptors();
       },
       onDisconnect: () => {
         this.stopStreaming();
@@ -631,6 +633,8 @@ struct StreamPage {
   showStreamMenu(): void {
     if (!this.menuManager) return;
 
+    this.inputKitWasActive = this.inputHandler.isInputKitInterceptorActive();
+    this.inputHandler.stopInputKitInterceptor();
     this.inputHandler.stopMouseInterceptor();
     this.stopMouseKeepAlive();
 
@@ -737,6 +741,19 @@ struct StreamPage {
     }
   }
 
+  private resumeInterceptors(): void {
+    if (!this.viewModel.isConnected) return;
+    if (this.inputKitWasActive) {
+      this.inputKitWasActive = false;
+      this.inputHandler.startInputKitInterceptor(
+        this.getXComponentWidthVp(),
+        this.getXComponentHeightVp(),
+      );
+    } else {
+      this.resumeMouseInterceptor();
+    }
+  }
+
   private startMouseKeepAlive(): void {
     if (this.mouseDisplaySync) return;
     try {
@@ -796,10 +813,10 @@ struct StreamPage {
               );
               promptAction.showToast({ message: `快捷键 "${data.name}" 已添加` });
             }
-            this.resumeMouseInterceptor();
+            this.resumeInterceptors();
           },
           onCancel: () => {
-            this.resumeMouseInterceptor();
+            this.resumeInterceptors();
           },
         },
       }),
@@ -954,10 +971,21 @@ struct StreamPage {
         this.inputHandler.startKeyInterceptor();
       }
 
-      const monitorOk = this.inputHandler.startMouseInterceptor(
-        this.getXComponentWidthVp(),
-        this.getXComponentHeightVp(),
-      );
+      if (this.viewModel.inputSettings?.enableInputKitTouch) {
+        // Use Input Kit interceptor for touch + mouse + keyboard.
+        // Do NOT also start the mouse event monitor to avoid conflicts.
+        this.inputHandler.startInputKitInterceptor(
+          this.getXComponentWidthVp(),
+          this.getXComponentHeightVp(),
+        );
+      }
+
+      const monitorOk = this.viewModel.inputSettings?.enableInputKitTouch
+        ? false // Skip regular mouse monitor when Input Kit interceptor is active
+        : this.inputHandler.startMouseInterceptor(
+            this.getXComponentWidthVp(),
+            this.getXComponentHeightVp(),
+          );
       if (!monitorOk) {
         this.startMouseKeepAlive();
       }

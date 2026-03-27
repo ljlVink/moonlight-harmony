@@ -21,12 +21,10 @@
 #include "game_controller_native.h"
 #include "input_interceptor.h"
 #include "mouse_interceptor.h"
+#include "input_kit_interceptor.h"
 #include "usb_helper.h"
 #include "usb_ddk_poller.h"
 // #include "sdl3/sdl3_gamepad_napi.h"
-
-#define LOG_TAG "MoonlightNative"
-#define LOG_DOMAIN 0x0000
 
 #define LOGI(...) OH_LOG_INFO(LOG_APP, __VA_ARGS__)
 #define LOGE(...) OH_LOG_ERROR(LOG_APP, __VA_ARGS__)
@@ -127,6 +125,8 @@ static napi_value Init(napi_env env, napi_value exports) {
     InputInterceptor_Init(env, exports);
     
     MouseInterceptor_Init(env, exports);
+    
+    InputKitInterceptor_Init(env, exports);
     
     UsbHelper_Init(env, exports);
     
