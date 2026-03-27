@@ -123,6 +123,8 @@ export class SettingsKeys {
 
   static readonly SMALL_ICON_MODE: string = "settings_small_icon_mode";
   static readonly RESUME_STREAM: string = "settings_resume_stream";
+  static readonly AUTO_CONNECT_LAST: string = "settings_auto_connect_last";
+  static readonly LAST_CONNECTED_COMPUTER_ID: string = "settings_last_connected_computer_id";
 
   static readonly DEVELOPER_MODE: string = "settings_developer_mode";
   static readonly DEV_KEY_ACTIVATED: string = "settings_dev_key_activated";

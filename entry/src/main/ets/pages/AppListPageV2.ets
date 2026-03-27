@@ -25,6 +25,7 @@ import { ConfirmDialog, ConfirmDialogConfig } from "../components/ConfirmDialog"
 
 interface AppListPageParams {
   computerId: string;
+  autoLaunch?: boolean;
 }
 
 const VERTICAL_SINGLE_ROW_THRESHOLD = 5;
@@ -50,6 +51,7 @@ struct AppListPageV2 {
   @State useVirtualDisplay: boolean = false;
   @State supportsDisplayApi: boolean = false;
   private computerId: string = "";
+  private autoLaunch: boolean = false;
   private computerManager: ComputerManager = ComputerManager.getInstance();
   private nvHttp: NvHttp | null = null;
   private searchDebounceTimer: number = -1;
@@ -94,6 +96,7 @@ struct AppListPageV2 {
     const params = router.getParams() as AppListPageParams;
     if (params?.computerId) {
       this.computerId = params.computerId;
+      this.autoLaunch = params.autoLaunch === true;
       this.loadApps();
     } else if (this.isLoading) {
       this.isLoading = false;
@@ -226,6 +229,14 @@ struct AppListPageV2 {
       this.viewModel.setApps(apps, this.nvHttp);
       this.calculateOptimalRowCount();
       this.loadDisplays();
+
+      if (this.autoLaunch && apps.length > 0) {
+        this.autoLaunch = false;
+        const firstApp = this.viewModel.filteredApps[0];
+        if (firstApp) {
+          this.doLaunchApp(firstApp);
+        }
+      }
     } catch (err) {
       promptAction.showToast({ message: `Load failed: ${(err as Error).message}` });
     } finally {

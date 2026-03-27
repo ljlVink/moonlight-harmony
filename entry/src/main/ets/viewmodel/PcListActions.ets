@@ -18,6 +18,8 @@ import { NvHttp, ServerInfo } from "../service/NvHttp";
 import { ComputerInfo, ComputerState, PairState, selectBestAddress } from "../model/ComputerInfo";
 import { ConfirmDialogConfig, InfoDialogConfig } from "../components/ConfirmDialog";
 import { AppColors } from "../common/Theme";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { SettingsKeys } from "../service/SettingsService";
 
 interface AddressTestResult {
   address: string;
@@ -49,6 +51,7 @@ export class PcListActions {
       return;
     }
     if (computer.isPaired) {
+      PreferencesUtil.put(SettingsKeys.LAST_CONNECTED_COMPUTER_ID, computer.uuid);
       router.pushUrl({ url: "pages/AppListPageV2", params: { computerId: computer.uuid } });
       return;
     }
@@ -141,6 +144,7 @@ export class PcListActions {
           serverCert: serverCertBase64,
           pairName: result.pairName || "",
         });
+        PreferencesUtil.put(SettingsKeys.LAST_CONNECTED_COMPUTER_ID, computer.uuid);
         this.ui.syncViewModel();
         promptAction.showToast({ message: "配对成功！" });
         router.pushUrl({ url: "pages/AppListPageV2", params: { computerId: computer.uuid } });

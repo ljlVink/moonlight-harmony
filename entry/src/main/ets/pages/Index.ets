@@ -24,12 +24,7 @@ interface PrivacySection {
 @Component
 struct Index {
   @State isLoading: boolean = true;
-  @State logoScale: number = 0.6;
-  @State logoOpacity: number = 0;
-  @State contentOpacity: number = 0;
-  @State bottomOpacity: number = 0;
   @State showPrivacyConsent: boolean = false;
-  @State privacyDialogOpacity: number = 0;
 
   private privacySections: PrivacySection[] = [
     {
@@ -83,23 +78,13 @@ struct Index {
     try {
       const accepted = await PreferencesUtil.get<boolean>(PRIVACY_ACCEPTED_KEY, false);
       if (accepted) {
-        this.startAnimation();
+        this.navigateToMain();
       } else {
-        animateTo({ duration: 500, curve: Curve.EaseOut }, () => {
-          this.logoOpacity = 1;
-          this.logoScale = 1;
-        });
-        setTimeout(() => {
-          this.showPrivacyConsent = true;
-          animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
-            this.privacyDialogOpacity = 1;
-          });
-        }, 600);
+        this.showPrivacyConsent = true;
       }
     } catch (err) {
       console.error("Index: Failed to check privacy policy status", err);
       this.showPrivacyConsent = true;
-      this.privacyDialogOpacity = 1;
     }
   }
 
@@ -112,13 +97,8 @@ struct Index {
     } catch (err) {
       console.error("Index: Failed to save privacy policy consent status", err);
     }
-    animateTo({ duration: 200, curve: Curve.EaseOut }, () => {
-      this.privacyDialogOpacity = 0;
-    });
-    setTimeout(() => {
-      this.showPrivacyConsent = false;
-      this.proceedToMain();
-    }, 250);
+    this.showPrivacyConsent = false;
+    this.navigateToMain();
   }
 
   /**
@@ -130,128 +110,24 @@ struct Index {
   }
 
   /**
-   * Navigate to main page after consent
+   * Navigate to main page
    */
-  private proceedToMain(): void {
-    animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
-      this.contentOpacity = 1;
-      this.bottomOpacity = 1;
-    });
-    setTimeout(() => {
-      this.isLoading = false;
-      try {
-        router.replaceUrl({ url: "pages/PcListPageV2" });
-      } catch (e) {
-        console.error("Index: navigation failed - " + e);
-      }
-    }, 800);
-  }
-
-  startAnimation(): void {
-    animateTo(
-      {
-        duration: 500,
-        curve: Curve.EaseOut,
-      },
-      () => {
-        this.logoOpacity = 1;
-        this.logoScale = 1;
-      },
-    );
-
-    setTimeout(() => {
-      animateTo(
-        {
-          duration: 400,
-          curve: Curve.EaseOut,
-        },
-        () => {
-          this.contentOpacity = 1;
-        },
-      );
-    }, 300);
-    setTimeout(() => {
-      animateTo(
-        {
-          duration: 400,
-          curve: Curve.EaseOut,
-        },
-        () => {
-          this.bottomOpacity = 1;
-        },
-      );
-    }, 500);
-
-    setTimeout(() => {
-      this.isLoading = false;
-      try {
-        router.replaceUrl({ url: "pages/PcListPageV2" });
-      } catch (e) {
-        console.error("Index: navigation failed - " + e);
-      }
-    }, 2000);
+  private navigateToMain(): void {
+    this.isLoading = false;
+    try {
+      router.replaceUrl({ url: "pages/PcListPageV2" });
+    } catch (e) {
+      console.error("Index: navigation failed - " + e);
+    }
   }
 
   build() {
     Stack() {
-      Column() {
-        Blank().layoutWeight(1)
-        Image($r("app.media.app_icon"))
-          .width(100)
-          .height(100)
-          .borderRadius(20)
-          .scale({ x: this.logoScale, y: this.logoScale })
-          .opacity(this.logoOpacity)
-          .margin({ bottom: 24 })
-        Column() {
-          Text("Moonlight")
-            .fontSize(36)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.TextPrimary)
-          Row() {
-            Text("V+")
-              .fontSize(14)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(AppColors.Primary)
-              .backgroundColor(AppColors.PrimaryGlow)
-              .borderRadius(4)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .margin({ right: 6 })
-            Text("for HarmonyOS")
-              .fontSize(14)
-              .fontColor(AppColors.TextSecondary)
-          }
-          .margin({ top: 8 })
-        }
-        .opacity(this.contentOpacity)
-        .margin({ bottom: 48 })
-
-        if (this.isLoading) {
-          LoadingProgress()
-            .width(36)
-            .height(36)
-            .color(AppColors.Primary)
-            .opacity(this.contentOpacity);
-        }
-        Blank().layoutWeight(1)
-        Column() {
-          Text("Powered by AlkaidLab")
-            .fontSize(12)
-            .fontColor(AppColors.TextTertiary)
-        }
-        .opacity(this.bottomOpacity)
-        .margin({ bottom: 32 })
-      }
-      .width("100%")
-      .height("100%")
-      .alignItems(HorizontalAlign.Center)
-
       if (this.showPrivacyConsent) {
         Column()
           .width("100%")
           .height("100%")
-          .backgroundColor("#80000000")
-          .opacity(this.privacyDialogOpacity);
+          .backgroundColor("#80000000");
 
         Column() {
           Column({ space: 4 }) {
@@ -340,7 +216,6 @@ struct Index {
           offsetX: 0,
           offsetY: 8,
         })
-        .opacity(this.privacyDialogOpacity);
       }
     }
     .width("100%")

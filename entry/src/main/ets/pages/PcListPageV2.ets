@@ -9,7 +9,7 @@
  */
 
 import { promptAction, router } from "@kit.ArkUI";
-import { ComputerInfo, PairState, selectBestAddress } from "../model/ComputerInfo";
+import { ComputerInfo, PairState, selectBestAddress, ComputerState } from "../model/ComputerInfo";
 import { ComputerManager } from "../service/ComputerManager";
 import { ComputerCard } from "../components/ComputerCard";
 import {
@@ -39,6 +39,8 @@ import { QrShareService } from "../service/QrShareService";
 import { CustomKeyStore } from "../service/CustomKeyStore";
 import { PcListTitleBar, TitleBarConfig } from "../components/PcListTitleBar";
 import { AboutDialogView, PinDialogView } from "../components/PcListDialogs";
+import { PreferencesUtil } from "../utils/PreferencesUtil";
+import { SettingsKeys } from "../service/SettingsService";
 
 /**
  * Computer list page (modern version)
@@ -66,6 +68,7 @@ struct PcListPageV2 {
   private lastShakeTime: number = 0;
   private shakeThreshold: number = 15;
   private shakeCooldown: number = 2000;
+  private autoConnectAttempted: boolean = false;
 
   private optionPickerDialogConfig: OptionPickerDialogConfig = {
     title: "",
@@ -158,6 +161,7 @@ struct PcListPageV2 {
         .then(() => {
           this.syncViewModelFromManager();
           this.computerManager.startPolling();
+          this.checkAutoConnect();
         })
         .catch((err: Error) => {
           console.error("[MOONLIGHT] PcListPage: Refresh failed", err);
@@ -304,6 +308,22 @@ struct PcListPageV2 {
     try {
       sensor.off(sensor.SensorId.ACCELEROMETER);
     } catch (err) {}
+  }
+
+  private async checkAutoConnect(): Promise<void> {
+    if (this.autoConnectAttempted) return;
+    this.autoConnectAttempted = true;
+    try {
+      const autoConnect = await PreferencesUtil.get<boolean>(SettingsKeys.AUTO_CONNECT_LAST, false);
+      if (!autoConnect) return;
+      const lastId = await PreferencesUtil.get<string>(SettingsKeys.LAST_CONNECTED_COMPUTER_ID, "");
+      if (!lastId) return;
+      const computer = this.computerManager.getComputer(lastId);
+      if (!computer || computer.state !== ComputerState.ONLINE || computer.pairState !== PairState.PAIRED) return;
+      router.pushUrl({ url: "pages/AppListPageV2", params: { computerId: lastId, autoLaunch: true } });
+    } catch (err) {
+      console.error("[MOONLIGHT] PcListPage: Auto-connect failed", err);
+    }
   }
 
   build() {

@@ -221,6 +221,7 @@ struct SettingsPageV2 {
 
   @State smallIconMode: boolean = false;
   @State resumeStream: boolean = false;
+  @State autoConnectLast: boolean = false;
   @State developerMode: boolean = true;
   private devKeyActivated: boolean = false;
 
@@ -1624,6 +1625,16 @@ struct SettingsPageV2 {
                       },
                     },
                     {
+                      title: "自动连接上次主机",
+                      subtitle: "启动时自动跳转到上次连接的主机应用列表",
+                      type: "toggle",
+                      value: this.autoConnectLast,
+                      action: () => {
+                        this.autoConnectLast = !this.autoConnectLast;
+                        this.saveSetting(SettingsKeys.AUTO_CONNECT_LAST, this.autoConnectLast);
+                      },
+                    },
+                    {
                       title: "启用 ESC 菜单",
                       subtitle: "按 ESC 键显示菜单",
                       type: "toggle",
@@ -2254,6 +2265,7 @@ struct SettingsPageV2 {
 
       this.smallIconMode = await this.loadBoolean(SettingsKeys.SMALL_ICON_MODE, false);
       this.resumeStream = await this.loadBoolean(SettingsKeys.RESUME_STREAM, false);
+      this.autoConnectLast = await this.loadBoolean(SettingsKeys.AUTO_CONNECT_LAST, false);
       this.developerMode = true;
       this.devKeyActivated = await this.loadBoolean(SettingsKeys.DEV_KEY_ACTIVATED, false);
     } catch (error) {
