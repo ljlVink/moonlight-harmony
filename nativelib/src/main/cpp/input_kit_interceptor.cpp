@@ -71,6 +71,12 @@ static constexpr int32_t EDGE_THRESHOLD = 50;
 // Reusable inject event for cursor warping
 static Input_MouseEvent* g_warpInjectEvent = nullptr;
 
+// Whether to intercept touch events (false when touch mode is TRACKPAD or MOUSE)
+static std::atomic<bool> g_handleTouch{true};
+
+// Persistent interceptor callback struct (re-used on reregister)
+static Input_InterceptorEventCallback s_callback;
+
 // Keyboard JS callback
 struct InterceptedKeyEventData {
     int32_t keyCode;
@@ -334,6 +340,31 @@ static void OnInputKitKeyCallback(const Input_KeyEvent* event)
 }
 
 // ---------------------------------------------------------------------------
+// Reregister the input event interceptor with updated touch flag
+// Must only be called while g_inputEventActive == true
+// ---------------------------------------------------------------------------
+
+static void ReregisterInputEventInterceptor()
+{
+    if (!g_inputEventActive.load()) return;
+
+    OH_Input_RemoveInputEventInterceptor();
+
+    s_callback.mouseCallback = OnInputKitMouseCallback;
+    s_callback.touchCallback = g_handleTouch.load() ? OnInputKitTouchCallback : nullptr;
+    s_callback.axisCallback  = nullptr;
+
+    Input_Result ret = OH_Input_AddInputEventInterceptor(&s_callback, nullptr);
+    if (ret != INPUT_SUCCESS) {
+        g_inputEventActive.store(false);
+        LOGE("ReregisterInputEventInterceptor failed: %{public}d", ret);
+    } else {
+        LOGI("Input event interceptor reregistered (touch=%{public}s)",
+             g_handleTouch.load() ? "on" : "off");
+    }
+}
+
+// ---------------------------------------------------------------------------
 // NAPI: addInputKitInterceptor(keyCallback: Function): number
 // ---------------------------------------------------------------------------
 
@@ -369,10 +400,9 @@ static napi_value AddInputKitInterceptor(napi_env env, napi_callback_info info)
         g_warpInjectEvent = OH_Input_CreateMouseEvent();
     }
 
-    // Register input event interceptor (mouse + touch, no axis)
-    static Input_InterceptorEventCallback s_callback;
+    // Register input event interceptor (mouse always; touch only when handleTouch is true)
     s_callback.mouseCallback = OnInputKitMouseCallback;
-    s_callback.touchCallback = OnInputKitTouchCallback;
+    s_callback.touchCallback = g_handleTouch.load() ? OnInputKitTouchCallback : nullptr;
     s_callback.axisCallback  = nullptr; // Axis events not handled
 
     Input_Result ret = OH_Input_AddInputEventInterceptor(&s_callback, nullptr);
@@ -383,7 +413,8 @@ static napi_value AddInputKitInterceptor(napi_env env, napi_callback_info info)
         return result;
     }
     g_inputEventActive.store(true);
-    LOGI("Input event interceptor started (mouse + touch, no axis)");
+    LOGI("Input event interceptor started (mouse=on, touch=%{public}s)",
+         g_handleTouch.load() ? "on" : "off");
 
     // Register key event interceptor if callback was provided
     if (argc >= 1) {
@@ -481,8 +512,8 @@ static napi_value IsInputKitInterceptorActive(napi_env env, napi_callback_info i
 
 static napi_value ConfigureInputKitInterceptor(napi_env env, napi_callback_info info)
 {
-    size_t argc = 7;
-    napi_value argv[7];
+    size_t argc = 8;
+    napi_value argv[8];
     napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
 
     if (argc >= 7) {
@@ -521,6 +552,17 @@ static napi_value ConfigureInputKitInterceptor(napi_env env, napi_callback_info 
              windowX, windowY, windowWidth, windowHeight,
              screenWidth, screenHeight,
              relativeMode ? "relative" : "absolute");
+    }
+
+    if (argc >= 8) {
+        bool handleTouch;
+        napi_get_value_bool(env, argv[7], &handleTouch);
+        bool prev = g_handleTouch.load(std::memory_order_relaxed);
+        g_handleTouch.store(handleTouch, std::memory_order_relaxed);
+        if (handleTouch != prev) {
+            ReregisterInputEventInterceptor();
+            LOGI("Touch interception %{public}s", handleTouch ? "enabled" : "disabled");
+        }
     }
 
     napi_value undefined;

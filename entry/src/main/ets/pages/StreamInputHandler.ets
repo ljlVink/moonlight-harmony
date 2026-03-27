@@ -13,7 +13,7 @@
  */
 import { display, window, promptAction } from "@kit.ArkUI";
 import { common } from "@kit.AbilityKit";
-import { StreamViewModel } from "../viewmodel/StreamViewModel";
+import { StreamViewModel, TouchMode } from "../viewmodel/StreamViewModel";
 import { GamepadManager } from "../service/GamepadManager";
 
 import {
@@ -240,6 +240,8 @@ export class StreamInputHandler {
     this.screenHeightPx = screenHeightPx;
 
     const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
+    const touchMode = this.viewModel?.touchMode ?? TouchMode.DIRECT;
+    const handleTouch = touchMode === TouchMode.DIRECT;
 
     service.configure(
       0,
@@ -249,6 +251,7 @@ export class StreamInputHandler {
       screenWidthPx,
       screenHeightPx,
       relativeMode,
+      handleTouch,
     );
 
     const result = service.start((event) => {
@@ -315,6 +318,8 @@ export class StreamInputHandler {
           const rect = win.getWindowProperties().windowRect;
           if (rect && this.inputKitInterceptorActive) {
             const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
+            const touchMode = this.viewModel?.touchMode ?? TouchMode.DIRECT;
+            const handleTouch = touchMode === TouchMode.DIRECT;
             InputKitInterceptorService.getInstance().configure(
               rect.left,
               rect.top,
@@ -323,6 +328,7 @@ export class StreamInputHandler {
               this.screenWidthPx,
               this.screenHeightPx,
               relativeMode,
+              handleTouch,
             );
             console.info(
               `StreamInputHandler: Input Kit 窗口坐标已更新 (${rect.left},${rect.top},${rect.width}x${rect.height})`,
@@ -343,6 +349,31 @@ export class StreamInputHandler {
 
   isInputKitInterceptorActive(): boolean {
     return this.inputKitInterceptorActive;
+  }
+
+  /**
+   * Update whether InputKit intercepts touch events based on the new touch mode.
+   * Called when the user switches touch mode while InputKit is active.
+   */
+  updateInputKitTouchHandling(mode: string): void {
+    if (!this.inputKitInterceptorActive) return;
+    const handleTouch = mode === TouchMode.DIRECT;
+    const relativeMode = this.viewModel?.inputSettings?.gameMouseMode ?? false;
+    InputKitInterceptorService.getInstance().configure(
+      0,
+      0,
+      this.screenWidthPx,
+      this.screenHeightPx,
+      this.screenWidthPx,
+      this.screenHeightPx,
+      relativeMode,
+      handleTouch,
+    );
+    console.info(
+      `StreamInputHandler: Input Kit 触摸拦截已${handleTouch ? '开启' : '关闭'} (模式=${mode})`,
+    );
+    // Trigger window rect update with the new handleTouch value
+    this.fetchAndUpdateWindowRectForInputKit();
   }
 
   handleMouseEvent(event: MouseEvent): void {

@@ -1108,6 +1108,9 @@ struct StreamPage {
   setTouchMode(mode: string): void {
     this.viewModel.setTouchMode(mode as TouchMode);
     this.touchInputHandler.setMode(mode as TouchInputMode);
+    if (this.inputHandler.isInputKitInterceptorActive()) {
+      this.inputHandler.updateInputKitTouchHandling(mode);
+    }
     console.info(`StreamPage: 触摸模式切换为 ${mode}`);
   }
 

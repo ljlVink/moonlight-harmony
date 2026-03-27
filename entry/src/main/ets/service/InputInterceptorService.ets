@@ -53,6 +53,7 @@ interface InputKitInterceptorNative {
     screenWidth: number,
     screenHeight: number,
     relativeMode: boolean,
+    handleTouch?: boolean,
   ): void;
 }
 
@@ -258,6 +259,8 @@ export class InputKitInterceptorService {
   /**
    * Configure the stream view dimensions used for coordinate normalization.
    * Must be called before or after start() whenever the view size changes.
+   * @param handleTouch  When true (default), touch events are intercepted (DIRECT mode).
+   *                     When false, touch events pass through to ArkUI (TRACKPAD/MOUSE mode).
    */
   configure(
     windowX: number,
@@ -267,6 +270,7 @@ export class InputKitInterceptorService {
     screenWidth: number,
     screenHeight: number,
     relativeMode: boolean,
+    handleTouch: boolean = true,
   ): void {
     if (!this.native) return;
     this.native.configureInputKitInterceptor(
@@ -277,6 +281,7 @@ export class InputKitInterceptorService {
       screenWidth,
       screenHeight,
       relativeMode,
+      handleTouch,
     );
   }
 
